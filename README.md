@@ -1,58 +1,172 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# VCY Accounting
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A modern accounting system web application built with **Laravel**, **Inertia.js**, **Svelte 4**, **Shadcn-Svelte**, and **Tailwind CSS v4**.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Local Development Setup (Docker & Laravel Sail)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Follow these steps to get the application running locally on your computer.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Prerequisites
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+- [Git](https://git-scm.com/) installed.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Step-by-Step Installation
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
+#### 1. Clone the Repository
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone git@github.com:dwiazizmf/vcy-akunting.git
+cd vcy-akunting
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+#### 2. Set Up Environment Variables
+Copy the example environment file:
+```bash
+cp .env.example .env
+```
+*Note: The default `.env.example` is configured to work out-of-the-box with Laravel Sail's services (PostgreSQL, Redis, etc.).*
 
-## Contributing
+#### 3. Install Dependencies (If `vendor/` or `node_modules/` is missing)
+If you just cloned the repository and do not have Composer installed on your host machine, you can install the PHP dependencies using a temporary Docker container:
+```bash
+docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$(pwd):/var/www/html" \
+    -w /var/www/html \
+    laravelsail/php8.5-composer:latest \
+    composer install --ignore-platform-reqs
+```
+Install NPM packages:
+```bash
+npm install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+#### 4. Configure Laravel Sail Alias (Optional)
+To avoid typing `./vendor/bin/sail` for every command, add an alias to your shell configuration (`~/.bashrc` or `~/.zshrc`):
+```bash
+echo "alias sail='./vendor/bin/sail'" >> ~/.bashrc
+source ~/.bashrc
+```
 
-## Code of Conduct
+#### 5. Start the Docker Containers
+Start the Sail server in detached mode (background):
+```bash
+sail up -d
+```
+This starts:
+- **Laravel Application** (`http://localhost`)
+- **PostgreSQL Database** (Port `5432`)
+- **Redis Cache/Queue** (Port `6379`)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+#### 6. Run Database Migrations and Seeders
+Run the migrations to create the database schema:
+```bash
+sail artisan migrate --seed
+```
 
-## Security Vulnerabilities
+#### 7. Start the Vite Dev Server
+Start the frontend compiler for live hot-reloading:
+```bash
+sail npm run dev
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Open `http://localhost` in your web browser.
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🛠️ Common Sail Development Commands
+
+- **Stop all services:**
+  ```bash
+  sail down
+  ```
+- **Run Artisan commands:**
+  ```bash
+  sail artisan <command>
+  ```
+  *(Example: `sail artisan make:controller InvoiceController`)*
+- **Run Composer commands:**
+  ```bash
+  sail composer <command>
+  ```
+- **Access the container shell:**
+  ```bash
+  sail shell
+  ```
+
+---
+
+## 🏭 Production Deployment
+
+When deploying to a production server, follow these steps to ensure a secure, fast, and optimized application.
+
+### 1. Set Up Production `.env`
+Update your production `.env` with the following critical settings:
+```ini
+APP_NAME="VCY Accounting"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://accounting.vcy.co.id # Replace with your production domain
+
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1 # Or Docker service name
+DB_PORT=5432
+DB_DATABASE=vcy_accounting
+DB_USERNAME=your_secure_user
+DB_PASSWORD=your_secure_password
+```
+
+### 2. Deploy Code and Install Dependencies
+Pull the latest code and install dependencies without development tools:
+```bash
+git pull origin main
+
+# Install optimized PHP dependencies
+composer install --no-dev --optimize-autoloader
+
+# Install and build frontend assets
+npm install
+npm run build
+```
+
+### 3. Folder Permissions
+Ensure the web server (usually `www-data`) has write permissions to the storage and bootstrap cache directories:
+```bash
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
+```
+
+### 4. Cache Configurations for Speed
+Run these cache commands to compile configurations, routes, and views:
+```bash
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
+```
+
+### 5. Run Database Migrations
+Run the migrations safely with the `--force` flag to avoid confirmation prompts:
+```bash
+php artisan migrate --force
+```
+
+### 6. Process Queue / Background Jobs (Supervisor)
+If you use queues for background processes, configure a process manager like **Supervisor** to keep the queue worker running:
+```ini
+[program:vcy-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/html/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=2
+redirect_stderr=true
+stdout_logfile=/var/www/html/storage/logs/worker.log
+stopwaitsecs=3600
+```
