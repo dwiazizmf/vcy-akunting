@@ -1,13 +1,16 @@
 # Proyek VCY Accounting - Project Overview
 
-Dokumen ini berfungsi sebagai peta jalan dan spesifikasi fitur untuk aplikasi web akuntansi VCY Accounting. Anda dapat mengisi detail, menyesuaikan fitur, atau mengubah aturan bisnis di bawah ini sesuai kebutuhan bisnis Anda.
+Dokumen ini berfungsi sebagai peta jalan dan spesifikasi fitur utama untuk VCY Accounting. Dokumentasi proyek dibagi menjadi tiga bagian terpisah:
+1. **Peta Jalan & Aturan Bisnis**: [project_overview.md](file:///home/dwiazizmf/work/vcy-accounting/project_overview.md) (File ini)
+2. **Desain Tampilan & Interaksi Frontend**: [desain.md](file:///home/dwiazizmf/work/vcy-accounting/desain.md)
+3. **Desain Struktur Database PostgreSQL**: [database_desain.md](file:///home/dwiazizmf/work/vcy-accounting/database_desain.md)
 
 ---
 
 ## 🎯 1. Informasi Umum
 * **Nama Aplikasi**: VCY Accounting
-* **Tujuan Utama**: [Tulis deskripsi singkat, contoh: Pencatatan keuangan harian, rekonsiliasi bank, dan pelaporan keuangan otomatis untuk operasional kapal dan logistik.]
-* **Target Pengguna**: [Contoh: Tim Keuangan, Auditor, Manajemen Perusahaan.]
+* **Tujuan Utama**: Aplikasi akuntansi berbasis web untuk mencatat transaksi keuangan dua perusahaan jasa logistik yang berbeda secara terpisah (multi-perusahaan).
+* **Target Pengguna**: Tim akunting dan tim invoicing.
 
 ---
 
@@ -16,7 +19,7 @@ Dokumen ini berfungsi sebagai peta jalan dan spesifikasi fitur untuk aplikasi we
 * **Frontend**: Svelte 4 / Inertia.js (SPA feel, SSR compatible)
 * **CSS Framework**: Tailwind CSS v4
 * **UI Component**: Shadcn-Svelte (Radix Svelte / Bits-UI)
-* **Database**: PostgreSQL (Development & Production)
+* **Database**: PostgreSQL
 * **Docker Environment**: Laravel Sail (Nginx, PGSQL, Redis)
 
 ---
@@ -24,105 +27,76 @@ Dokumen ini berfungsi sebagai peta jalan dan spesifikasi fitur untuk aplikasi we
 ## 📦 3. Modul & Fitur Utama
 
 ### A. Modul Buku Besar (General Ledger & Double-Entry)
-* [ ] **Daftar Akun / Chart of Accounts (COA)**: Pengelolaan nomor rekening akuntansi (Aktiva, Pasiva, Modal, Pendapatan, Beban).
-* [ ] **Jurnal Umum (Journal Entries)**: Input transaksi manual berpasangan (Debit & Kredit wajib seimbang).
-* [ ] **Buku Besar (Ledger)**: Filter per perincian akun dan per tanggal transaksi.
-* [ ] **Jurnal Penyesuaian (Adjustment Entries)**: Pembuatan jurnal koreksi akhir bulan.
+* **Chart of Accounts (COA)**: Pengelolaan nomor rekening akuntansi (Aktiva, Pasiva, Modal, Pendapatan, Beban) yang terpisah untuk masing-masing perusahaan.
+* **Jurnal Umum (Journal Entries)**: Input transaksi manual berpasangan (Debit & Kredit wajib seimbang).
+* **Buku Besar (Ledger)**: Filter per perincian akun dan per tanggal transaksi.
+* **Jurnal Penyesuaian (Adjustment Entries)**: Pembuatan jurnal koreksi akhir bulan/periode.
 
 ### B. Modul Pendapatan (Incomes & Accounts Receivable)
-* [ ] **Daftar Pelanggan (Customers)**: Database lengkap klien/customer.
-* [ ] **Invoices**: Pembuatan invoice tagihan penjualan/jasa lengkap dengan detail term pembayaran.
-* [ ] **Penerimaan Pembayaran (Payments)**: Pencatatan pelunasan invoice baik secara parsial maupun lunas.
-* [ ] **Tanda Terima Dokumen / Faktur**: Pengelolaan dokumen tukar faktur atau tanda terima fisik.
+* **Daftar Pelanggan (Customers)**: Database lengkap klien/customer logistik.
+* **Invoices**: Pembuatan invoice tagihan penjualan/jasa dengan term pembayaran.
+* **Kwitansi**: Pencatatan bukti bayar dengan nomor seri tersendiri yang dibuat dan dicetak secara manual oleh karyawan (terpisah dari nomor seri invoice).
+* **Penerimaan Pembayaran (Payments)**: Pencatatan pelunasan invoice baik secara parsial maupun lunas.
 
 ### C. Modul Pengeluaran (Expenses & Accounts Payable)
-* [ ] **Daftar Supplier / Vendor**: Database penyedia barang/jasa.
-* [ ] **Tagihan Pembelian (Vendor Bills)**: Pencatatan hutang atas pembelian barang/operasional.
-* [ ] **Pembayaran Hutang (Bill Payments)**: Pencatatan pelunasan tagihan supplier.
-* [ ] **Pengeluaran Kas/Bank (Direct Expenses)**: Pencatatan biaya operasional langsung tanpa tagihan terlebih dahulu (misal: bayar listrik, ATK).
+* **Daftar Supplier / Vendor**: Database penyedia barang/jasa logistik.
+* **Tagihan Pembelian (Vendor Bills)**: Pencatatan hutang atas pembelian jasa vendor/operasional.
+* **Pembayaran Hutang (Bill Payments)**: Pencatatan pelunasan tagihan supplier.
+* **Pengeluaran Kas/Bank (Direct Expenses)**: Pencatatan biaya operasional langsung tanpa tagihan terlebih dahulu.
 
 ### D. Manajemen Kas & Bank
-* [ ] **Mutasi Kas & Bank**: Rekam jejak transfer antar-rekening kas internal (Kas Besar ke Bank, dsb).
-* [ ] **Rekonsiliasi Bank**: Pencocokan otomatis/manual antara rekening koran bank dengan pencatatan sistem.
+* **Mutasi Kas & Bank**: Rekam jejak transfer antar-rekening kas internal.
+* **Rekonsiliasi Bank**: Proses pengunggahan mutasi rekening koran format Excel, pencocokan otomatis jumlah oleh sistem, dan persetujuan (approval) manual oleh user berwenang.
 
 ### E. Modul Pelaporan Keuangan (Financial Reports)
-* [ ] **Laba Rugi (Profit & Loss Statement)**: Analisis pendapatan dikurangi beban pengeluaran.
-* [ ] **Neraca Keuangan (Balance Sheet)**: Laporan Aset vs (Kewajiban + Modal) yang wajib seimbang.
-* [ ] **Arus Kas (Cash Flow Statement)**: Laporan arus kas masuk/keluar metode langsung/tidak langsung.
-* [ ] **Neraca Saldo (Trial Balance)**: Ringkasan saldo debit dan kredit semua akun COA.
+* **Laba Rugi (Profit & Loss Statement)**: Analisis pendapatan dikurangi beban pengeluaran per perusahaan.
+* **Neraca Keuangan (Balance Sheet)**: Laporan Aset vs (Kewajiban + Modal) per perusahaan.
+* **Arus Kas (Cash Flow Statement)**: Laporan arus kas masuk/keluar.
+* **Neraca Saldo (Trial Balance)**: Laporan neraca saldo dengan opsi **8 Kolom** (Saldo Awal D/K, Mutasi D/K, Penyesuaian D/K, Saldo Akhir D/K).
+* **Mutasi Piutang**: Laporan mutasi piutang customer dengan rumus `Saldo Awal + Penambahan (Invoice Baru) - Pengurangan (Payment) = Saldo Akhir`.
+* **Aging Report Piutang & Summary**: Laporan umur piutang berdasarkan **tanggal jatuh tempo** invoice.
+* **Aging Dokumen & Summary**: Laporan untuk melacak umur fisik dokumen (seperti surat tanda terima, list kirim, surat tagihan) guna memantau efisiensi pengiriman dokumen hingga penagihan.
 
 ---
 
-## 🗄️ 4. Struktur Database (Rencana Tabel Utama)
+## 🔒 4. Aturan Bisnis & Validasi Utama
 
-### 1. Tabel `accounts` (COA)
-Menyimpan daftar nomor rekening/akun keuangan.
-* `id` (Primary Key)
-* `code` (string, unik - contoh: '11101')
-* `name` (string - contoh: 'Kas Besar')
-* `type` (enum: 'Asset', 'Liability', 'Equity', 'Revenue', 'Expense')
-* `parent_id` (foreign key ke self, untuk sub-akun)
-* `is_active` (boolean)
-
-### 2. Tabel `journal_entries`
-Menyimpan kepala/header dari setiap jurnal transaksi.
-* `id` (Primary Key)
-* `reference_number` (string, unik - contoh: 'JV-202605001')
-* `date` (date)
-* `description` (text)
-* `created_by` (foreign key ke users)
-
-### 3. Tabel `journal_items`
-Menyimpan baris detail Debit/Kredit dari setiap jurnal (satu header `journal_entries` memiliki banyak `journal_items`).
-* `id` (Primary Key)
-* `journal_entry_id` (foreign key ke `journal_entries`)
-* `account_id` (foreign key ke `accounts`)
-* `debit` (decimal/numeric, default: 0)
-* `credit` (decimal/numeric, default: 0)
-
-### 4. Tabel `invoices`
-Menyimpan data penagihan ke customer.
-* `id` (Primary Key)
-* `invoice_number` (string, unik)
-* `customer_name` (string)
-* `amount` (decimal)
-* `status` (enum: 'Draft', 'Sent', 'Paid', 'Overdue')
-* `invoice_date` (date)
-* `due_date` (date)
-* `journal_entry_id` (foreign key ke `journal_entries`, dibuat otomatis saat invoice status 'Sent' atau 'Paid')
+1. **Multi-Perusahaan**: Seluruh data transaksi, COA, customer/vendor, dan laporan keuangan diisolasi secara ketat per masing-masing perusahaan (tidak saling mencampuri).
+2. **Aturan Keseimbangan Jurnal**: `SUM(journal_items.debit) === SUM(journal_items.credit)` pada setiap jurnal. Jika tidak seimbang, database transaksi di-rollback.
+3. **Kunci Periode Buku**: Transaksi pada tanggal di luar periode aktif atau periode yang sudah dikunci tidak boleh diubah atau dihapus.
+4. **Pemisahan Status Dokumen & Status Pembayaran**:
+   * Dalam dokumen transaksi (seperti *Invoice* dan *Bill*), terdapat dua kolom status terpisah untuk menciptakan matriks data yang sangat jelas (*clean architecture*):
+   * **Status Dokumen (`status`)**: Menandakan tahapan dokumen itu sendiri. Nilainya: `draft` (baru dibuat/belum diproses), `posted` (sudah tervalidasi dan dijurnal ke Buku Besar), dan `void` (dibatalkan).
+   * **Status Pembayaran (`payment_status`)**: Menandakan status pelunasan. Nilainya: `unpaid` (belum dibayar), `partial` (dibayar sebagian), dan `paid` (lunas).
+   * Dengan pemisahan ini, Anda bisa memiliki invoice yang berstatus `posted` dan `unpaid` secara bersamaan (sudah diakui sebagai piutang, tapi pelanggan belum membayar).
+5. **Alur Posting, Unposting & Modifikasi**:
+   * Setiap transaksi (Invoice, Bill, Jurnal Manual) berstatus **Draft** saat pertama kali dibuat.
+   * Ketika di-**Posting**, sistem otomatis membuat Jurnal Entry ke Buku Besar dan mengunci dokumen transaksi tersebut secara total.
+   * Ketika di-**Unposting** (hanya oleh user berwenang), sistem menghapus jurnal otomatis dan mengembalikan status transaksi menjadi **Draft**.
+   * **Aturan Edit Terbatas**: Dokumen berstatus Draft boleh diedit, **tetapi HANYA pada data keterangan/inputan teks (seperti tanggal, deskripsi, atau referensi)**. Perubahan jumlah/nominal keuangan (*amount*) **SANGAT DILARANG**. Jika nominal salah, user harus membatalkan dokumen dan membuatnya ulang.
+   * **Cegat Hapus (Intercept Delete) & Revisi Cpanel**: Saat klien membatalkan/menghapus tagihan lewat aplikasi *cpanel* via API, **Sistem Akunting akan MENOLAK Hard Delete**. Sebagai gantinya, sistem akan mengubah status dokumen tersebut menjadi `void`. Saat Cpanel mengirimkan data perbaikan, sistem Akunting mendeteksi kecocokan `base_invoice_number` yang sama lalu menyimpannya sebagai *draft* baru dengan menambahkan *Revision Tag* di belakangnya (`INV-001.R1`, `INV-001.R2`, dst).
+   * **Manajemen UI (Hidden Void)**: Agar UI tabel utama tetap bersih (*clean*), *Frontend* harus secara otomatis mem-filter tabel dengan aturan `WHERE status != 'void'`. Namun saat *User* membuka detail tagihan (misal: `INV-001.R2`), *Frontend* dapat menampilkan seluruh riwayat perjalanan dokumen ini (menarik data `INV-001` asli dan `R1` yang berstatus *void* dari tabel yang sama).
+6. **Integrasi API Eksternal & Penjurnalan**:
+   * Data transaksi (seperti Invoice) yang masuk dari aplikasi eksternal (misal: *cpanel*) via API, maupun yang dibuat manual oleh user, wajib tersimpan dengan status awal **Draft**.
+   * **Sistem dilarang keras membuat entri Jurnal** pada saat dokumen masih berstatus Draft. Jurnal Buku Besar hanya diciptakan secara otomatis ketika staf akunting sudah melakukan *review* dan menekan tombol **Posting**. Aturan ini dibuat untuk menjaga kebersihan tabel jurnal dari data transaksi yang batal atau mengandung *error* input.
 
 ---
 
-## 🔢 5. Standar Akun (Daftar Awal COA)
-[Isi atau sesuaikan daftar akun default perusahaan Anda di sini]
-* **10000 - Aset / Aktiva**
-  * 11000 - Aset Lancar
-    * 11101 - Kas Besar
-    * 11201 - Bank BCA
-    * 11301 - Piutang Usaha
-* **20000 - Kewajiban / Hutang / Liabilitas**
-  * 21101 - Hutang Dagang / Usaha
-* **30000 - Ekuitas / Modal**
-  * 31101 - Modal Disetor
-* **40000 - Pendapatan / Penjualan**
-  * 41101 - Pendapatan Jasa Penjualan
-* **50000 - Beban / Pengeluaran**
-  * 51101 - Beban Gaji Karyawan
-  * 51102 - Beban Listrik, Air & Internet
-  * 51103 - Beban Operasional Kapal
+## 🛡️ 5. Sistem Logging & Keamanan (Audit Trail)
+
+Mengingat integritas data sangat krusial dalam akuntansi, sistem diwajibkan memiliki dua jenis pelacakan:
+1. **Audit Trail Transaksi**: Menggunakan **Spatie Laravel Activitylog** untuk mencatat jejak rekam setiap perubahan data keuangan (Invoice, Bill, Jurnal, Mutasi). Log ini mencakup:
+   * Siapa user yang melakukan tindakan (`causer_id`).
+   * Tindakan yang dilakukan (misal: "Created", "Updated", "Posted", "Unposted", "Deleted").
+   * Kapan tindakan dilakukan (`created_at`).
+   * Detail perubahan data (Nilai sebelum / *old values* dan nilai sesudah / *new values*, serta rekam jejak utuh jika terjadi *Hard Delete*).
+2. **Log Sistem / Error Log**: Menggunakan sistem log bawaan Laravel (Monolog) dengan konfigurasi log harian (`daily`) untuk mendeteksi *error bug* atau masalah performa server.
 
 ---
 
-## 🔒 6. Aturan Bisnis & Validasi Utama
-1. **Aturan Keseimbangan Jurnal**: `SUM(journal_items.debit) === SUM(journal_items.credit)` pada setiap transaksi jurnal. Jika tidak sama, database transaksi harus di-rollback.
-2. **Kunci Periode Buku**: Transaksi dengan tanggal di masa lalu yang periode bulannya sudah "ditutup" (locked) tidak boleh ditambah, diubah, atau dihapus.
-3. **Sinkronisasi Otomatis**: Setiap pembuatan Invoice (Incomes) atau Pembayaran harus memicu (*trigger*) pembuatan Jurnal Entry secara otomatis agar buku besar langsung ter-update tanpa input manual ulang.
-
----
-
-## 📅 7. Rencana Pengembangan (Roadmap)
-- **Fase 1: Setup & Core Ledger** (Inisialisasi database, COA, Jurnal Manual, Buku Besar per Akun). -> *[Sedang Berjalan]*
-- **Fase 2: Invoice & Pelanggan** (Pembuatan Invoice penjualan, pencatatan pembayaran customer).
-- **Fase 3: Pengeluaran & Supplier** (Pencatatan biaya operasional, pembelian inventaris/jasa vendor).
-- **Fase 4: Laporan Keuangan** (Laporan Neraca Saldo, Laba Rugi, Neraca Keuangan).
-- **Fase 5: Rekonsiliasi & Pajak** (Import rekening koran bank, penghitungan PPN/PPh).
+## 📅 6. Rencana Pengembangan (Roadmap)
+- **Fase 1: Setup & Core Ledger** (Inisialisasi database multi-company, COA, Jurnal Manual, Buku Besar per Akun). -> *[Sedang Berjalan]*
+- **Fase 2: Invoices & Payments** (Manajemen Invoices, Kwitansi manual, Penerimaan Pembayaran, serta pelacakan Aging Dokumen).
+- **Fase 3: Expenses & Bills** (Pembelian operasional, Vendor Bills, dan Bill Payments).
+- **Fase 4: Rekonsiliasi Bank** (Fitur upload Excel rekening koran, auto-matching, dan manual approval).
+- **Fase 5: Laporan Keuangan Lengkap** (Neraca 8-Kolom, Laba Rugi, Mutasi Piutang, Aging Report Piutang).

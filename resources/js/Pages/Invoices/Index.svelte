@@ -119,7 +119,7 @@
       {/if}
       <Button variant="outline" size="sm" class="bg-white shadow-sm">Print Tanda Terima</Button>
       <Button variant="outline" size="sm" class="bg-white shadow-sm">Export</Button>
-      <Button size="sm" class="bg-teal-700 hover:bg-teal-800 text-white shadow-sm flex items-center gap-1.5">
+      <Button size="sm" class="bg-teal-700 hover:bg-teal-800 text-white shadow-sm flex items-center gap-1.5" on:click={() => router.visit('/invoices/create')}>
         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         Create Invoice
       </Button>

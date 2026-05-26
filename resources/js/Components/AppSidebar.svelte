@@ -114,7 +114,8 @@
             Invoices
           </a>
           {#each subItems as item}
-            <a href="#{item.toLowerCase().replace(/ /g, '-')}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white rounded hover:bg-slate-700/30 transition-colors">
+            {@const href = item === 'Customers' ? '/customers' : (item === 'Create Dokumen' ? '/documents/create' : (item === 'Tanda Terima' ? '/tanda-terima' : (item === 'Tanda Terima New' ? '/tanda-terima/new' : (item === 'List Kirim Tagihan' ? '/list-kirim-tagihan' : `#${item.toLowerCase().replace(/ /g, '-')}`))))}
+            <a href={href} class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white rounded hover:bg-slate-700/30 transition-colors">
               <span class="w-1.5 h-1.5 bg-gray-500 rounded-full shrink-0"></span>
               {item}
             </a>

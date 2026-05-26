@@ -7,12 +7,12 @@
   let mobileIncomesOpen = false;
 
   const subItems = [
-    { name: 'Customers', href: '#customers' },
+    { name: 'Customers', href: '/customers' },
     { name: 'Download E-Faktur', href: '#download-e-faktur' },
-    { name: 'Create Dokumen', href: '#create-dokumen' },
-    { name: 'Tanda Terima', href: '#tanda-terima' },
-    { name: 'Tanda Terima New', href: '#tanda-terima-new' },
-    { name: 'List Kirim Tagihan', href: '#list-kirim-tagihan' },
+    { name: 'Create Dokumen', href: '/documents/create' },
+    { name: 'Tanda Terima', href: '/tanda-terima' },
+    { name: 'Tanda Terima New', href: '/tanda-terima/new' },
+    { name: 'List Kirim Tagihan', href: '/list-kirim-tagihan' },
     { name: 'Schedule Tukar Faktur', href: '#schedule-tukar-faktur' },
     { name: 'Surat Tagihan', href: '#surat-tagihan' },
     { name: 'History Invoice', href: '#history-invoice' },
@@ -27,9 +27,7 @@
   <!-- Brand / Top Bar -->
   <div class="h-14 px-4 lg:px-8 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-teal-600/30 border border-teal-500/50 flex items-center justify-center font-extrabold text-white text-base shadow-inner">
-        V
-      </div>
+      <img src="/images/logo.png" alt="VCY Logo" class="w-8 h-8 rounded-lg object-contain bg-white p-0.5 shadow-md border border-teal-500/30 shrink-0" />
       <span class="font-bold text-white text-lg tracking-tight">VCY Accounting</span>
     </div>
 
