@@ -69,11 +69,16 @@ Dokumen ini berfungsi sebagai peta jalan dan spesifikasi fitur utama untuk VCY A
    * **Status Dokumen (`status`)**: Menandakan tahapan dokumen itu sendiri. Nilainya: `draft` (baru dibuat/belum diproses), `posted` (sudah tervalidasi dan dijurnal ke Buku Besar), dan `void` (dibatalkan).
    * **Status Pembayaran (`payment_status`)**: Menandakan status pelunasan. Nilainya: `unpaid` (belum dibayar), `partial` (dibayar sebagian), dan `paid` (lunas).
    * Dengan pemisahan ini, Anda bisa memiliki invoice yang berstatus `posted` dan `unpaid` secara bersamaan (sudah diakui sebagai piutang, tapi pelanggan belum membayar).
-5. **Alur Posting, Unposting & Modifikasi**:
+5. **Alur Posting, Unposting, dan Kunci Periode (Accounting Period Lock)**:
+   * **Kunci Periode (`list_posted_periode`)**: Semua dokumen dilindungi oleh pengunci periode (berdasarkan bulan dan tahun). Jika manajer keuangan menetapkan suatu periode sebagai *closed* (Tutup Buku), maka semua dokumen dalam periode tersebut tidak bisa diedit, dihapus, atau di-unpost.
    * Setiap transaksi (Invoice, Bill, Jurnal Manual) berstatus **Draft** saat pertama kali dibuat.
-   * Ketika di-**Posting**, sistem otomatis membuat Jurnal Entry ke Buku Besar dan mengunci dokumen transaksi tersebut secara total.
-   * Ketika di-**Unposting** (hanya oleh user berwenang), sistem menghapus jurnal otomatis dan mengembalikan status transaksi menjadi **Draft**.
-   * **Aturan Edit Terbatas**: Dokumen berstatus Draft boleh diedit, **tetapi HANYA pada data keterangan/inputan teks (seperti tanggal, deskripsi, atau referensi)**. Perubahan jumlah/nominal keuangan (*amount*) **SANGAT DILARANG**. Jika nominal salah, user harus membatalkan dokumen dan membuatnya ulang.
+   * Ketika di-**Posting**, sistem otomatis membuat Jurnal Entry ke Buku Besar, mengubah `isPosted` menjadi `true`, dan mengubah `invoice_status_code` menjadi `posted`.
+   * **Revisi & Unposting Tingkat Dokumen (Document-level Unposting)**: 
+     * Jika terjadi kesalahan pada dokumen yang sudah diposting, staf tidak bisa langsung mengubah nominal.
+     * Manajer Keuangan harus **membuka akses periode** di tabel `list_posted_periode` (jika sedang ditutup). Proses buka periode ini **tidak menghapus jurnal masal apapun**.
+     * Setelah periode terbuka, staf melakukan **Unposting khusus pada dokumen yang salah tersebut**. Sistem akan mengubah `isPosted` menjadi `false`, status kembali menjadi **Draft**, dan **hanya jurnal milik dokumen tersebut yang dihapus**.
+     * Setelah berstatus **Draft**, dokumen bisa direvisi atau dihapus sepenuhnya.
+     * Setelah revisi selesai, dokumen wajib di-**Posting** kembali untuk menghitung ulang dan membentuk jurnal baru.
    * **Cegat Hapus (Intercept Delete) & Revisi Cpanel**: Saat klien membatalkan/menghapus tagihan lewat aplikasi *cpanel* via API, **Sistem Akunting akan MENOLAK Hard Delete**. Sebagai gantinya, sistem akan mengubah status dokumen tersebut menjadi `void`. Saat Cpanel mengirimkan data perbaikan, sistem Akunting mendeteksi kecocokan `base_invoice_number` yang sama lalu menyimpannya sebagai *draft* baru dengan menambahkan *Revision Tag* di belakangnya (`INV-001.R1`, `INV-001.R2`, dst).
    * **Manajemen UI (Hidden Void)**: Agar UI tabel utama tetap bersih (*clean*), *Frontend* harus secara otomatis mem-filter tabel dengan aturan `WHERE status != 'void'`. Namun saat *User* membuka detail tagihan (misal: `INV-001.R2`), *Frontend* dapat menampilkan seluruh riwayat perjalanan dokumen ini (menarik data `INV-001` asli dan `R1` yang berstatus *void* dari tabel yang sama).
 6. **Integrasi API Eksternal & Penjurnalan**:
