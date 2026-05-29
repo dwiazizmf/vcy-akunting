@@ -8,4 +8,10 @@ createInertiaApp({
     setup({ el, App, props }) {
         new App({ target: el, props })
     },
+    progress: {
+        delay: 0, // Segera tampilkan
+        color: '#FF0000', // Warna merah cerah yang sangat kontras
+        includeCSS: true,
+        showSpinner: true, // Tampilkan spinner loading juga
+    },
 })

@@ -1,7 +1,13 @@
 <?php
 
 use Inertia\Inertia;
-use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\Incomes\InvoiceController;
+use App\Http\Controllers\Settings\SettingsController;
+use App\Http\Controllers\Settings\CompanyController;
+use App\Http\Controllers\Settings\TaxController;
+use App\Http\Controllers\Settings\UserController;
+use App\Http\Controllers\Settings\RoleController;
+use App\Http\Controllers\Settings\InvoiceSettingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,13 +33,21 @@ Route::post('/login', function (Illuminate\Http\Request $request) {
     $password = $request->input('password');
 
     if ($email === 'admin@vcy.com' && $password === 'password') {
-        return redirect('/invoices');
+        return redirect('/dashboard');
     }
 
     return back()->withErrors([
         'error' => 'Kombinasi email dan password tidak cocok.',
     ]);
 });
+
+Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+
+Route::post('/set-company', function (Illuminate\Http\Request $request) {
+    $request->validate(['company_id' => 'required|integer']);
+    session(['company_id' => $request->company_id]);
+    return back();
+})->name('set-company');
 
 Route::get('/ledger', function () {
     return Inertia::render('Ledger/Index');
@@ -428,4 +442,45 @@ Route::get('/list-kirim-tagihan', function (Illuminate\Http\Request $request) {
             'per_page' => $perPage
         ]
     ]);
+});
+
+// =============================================
+// SETTINGS ROUTES
+// =============================================
+
+// Main Settings page (Inertia)
+Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+
+// Companies API
+Route::prefix('api/settings')->group(function () {
+    // Companies
+    Route::get('/companies', [CompanyController::class, 'index']);
+    Route::post('/companies', [CompanyController::class, 'store']);
+    Route::post('/companies/{id}', [CompanyController::class, 'update']); // POST with _method=PUT for file uploads
+    Route::delete('/companies/{id}', [CompanyController::class, 'destroy']);
+
+    // Taxes
+    Route::get('/taxes', [TaxController::class, 'index']);
+    Route::post('/taxes', [TaxController::class, 'store']);
+    Route::put('/taxes/{id}', [TaxController::class, 'update']);
+    Route::delete('/taxes/{id}', [TaxController::class, 'destroy']);
+
+    // Users
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+    // Roles & Permissions
+    Route::get('/roles', [RoleController::class, 'index']);
+    Route::post('/roles', [RoleController::class, 'store']);
+    Route::put('/roles/{id}', [RoleController::class, 'update']);
+    Route::delete('/roles/{id}', [RoleController::class, 'destroy']);
+    Route::get('/permissions', [RoleController::class, 'permissions']);
+    Route::post('/permissions', [RoleController::class, 'storePermission']);
+    Route::delete('/permissions/{id}', [RoleController::class, 'destroyPermission']);
+
+    // Invoice Settings
+    Route::get('/invoice-setting', [InvoiceSettingController::class, 'index']);
+    Route::post('/invoice-setting', [InvoiceSettingController::class, 'save']);
 });

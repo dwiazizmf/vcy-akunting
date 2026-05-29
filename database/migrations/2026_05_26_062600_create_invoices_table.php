@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('invoices')) {
+            // Table exists, skip creation
+            return;
+        }
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained('companies');
@@ -60,8 +64,9 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index('company_id');
-            $table->index('order_number');
-            $table->index('invoice_text');
+            // Note: order_number is varchar(500) so it may need prefix index in MySQL
+            // $table->index('order_number');  // removed: too long for index
+            // $table->index('invoice_text'); // removed: TEXT column cannot be indexed directly
             $table->index('invoiced_at');
             $table->index('invoice_number');
             $table->index('amount');

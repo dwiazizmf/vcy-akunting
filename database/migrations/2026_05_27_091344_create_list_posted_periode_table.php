@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('list_posted_periode')) { return; }
         Schema::create('list_posted_periode', function (Blueprint $table) {
             $table->id();
             $table->integer('bulan');

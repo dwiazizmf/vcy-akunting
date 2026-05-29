@@ -1,14 +1,23 @@
 <script>
+  import { page, router } from '@inertiajs/svelte';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import { Button } from '$lib/components/ui/button';
   import { cn } from '$lib/utils.js';
+
+  $: companies = $page.props.companies || [];
+  $: activeCompanyId = $page.props.active_company_id;
+  $: activeCompany = companies.find(c => c.id === activeCompanyId);
+
+  function setCompany(id) {
+    if (!id) return;
+    router.post('/set-company', { company_id: id });
+  }
 
   let mobileMenuOpen = false;
   let mobileIncomesOpen = false;
 
   const subItems = [
     { name: 'Customers', href: '/customers' },
-    { name: 'Download E-Faktur', href: '#download-e-faktur' },
     { name: 'Create Dokumen', href: '/documents/create' },
     { name: 'Tanda Terima', href: '/tanda-terima' },
     { name: 'Tanda Terima New', href: '/tanda-terima/new' },
@@ -32,6 +41,37 @@
     </div>
 
     <div class="flex items-center gap-3">
+      <!-- Company Selection Dropdown -->
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild let:builder>
+          <Button builders={[builder]} variant="ghost" class="flex items-center gap-2 hover:bg-teal-800/50 text-teal-100 hover:text-white px-3 py-1.5 h-auto rounded-lg border border-teal-800/40">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+            <span class="text-xs font-medium hidden sm:inline-block truncate max-w-[120px]">
+              {activeCompany ? activeCompany.domain : 'Select Company'}
+            </span>
+            <svg class="h-3 w-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </Button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content class="w-48 bg-white border border-slate-200 rounded-lg p-1 shadow-lg">
+          <DropdownMenu.Label class="text-xs font-semibold text-slate-500 px-3 py-2">Pilih Perusahaan</DropdownMenu.Label>
+          <DropdownMenu.Separator class="bg-slate-100 my-1" />
+          {#each companies as company}
+            <DropdownMenu.Item class="px-3 py-2 text-sm text-slate-700 hover:bg-teal-50 rounded-md cursor-pointer flex items-center justify-between" on:click={() => setCompany(company.id)}>
+              <span>{company.domain}</span>
+              {#if company.id === activeCompanyId}
+                <svg class="h-4 w-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              {/if}
+            </DropdownMenu.Item>
+          {/each}
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
+
       <!-- Notification Dropdown -->
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild let:builder>
@@ -182,6 +222,16 @@
   <!-- Mobile Menu Drawer -->
   {#if mobileMenuOpen}
     <nav class="lg:hidden bg-teal-900 border-t border-teal-800 px-4 py-3 flex flex-col gap-1 transition-all duration-200">
+      <!-- Mobile Company Selection -->
+      <div class="px-1 py-2 border-b border-teal-800 mb-2">
+        <label class="text-[10px] font-bold text-teal-400 uppercase tracking-wider mb-1.5 block">Company</label>
+        <select class="w-full bg-teal-850 border-teal-700 text-teal-100 text-sm rounded-md focus:ring-teal-500 py-1.5 px-2" value={activeCompanyId} on:change={(e) => setCompany(parseInt(e.target.value))}>
+          {#each companies as company}
+            <option value={company.id}>{company.domain}</option>
+          {/each}
+        </select>
+      </div>
+
       <a href="/dashboard" class="px-3 py-2 text-sm font-medium text-teal-100 hover:text-white hover:bg-teal-850 rounded-md transition" on:click={() => mobileMenuOpen = false}>
         Dashboard
       </a>

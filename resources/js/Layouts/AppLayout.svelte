@@ -1,6 +1,7 @@
 <script>
   import AppHeader from '../Components/AppHeader.svelte';
   import AppFooter from '../Components/AppFooter.svelte';
+  export let fullWidth = false;
 </script>
 
 <div class="min-h-screen bg-muted/40 flex flex-col">
@@ -8,7 +9,7 @@
 
   <!-- 52px brand bar + 40px nav bar = 92px (approx 5.75rem) -->
   <main class="flex-1 px-4 pb-4 pt-20 lg:px-8 lg:pb-8 lg:pt-32 min-h-screen">
-    <div class="max-w-7xl mx-auto space-y-6">
+    <div class={fullWidth ? "w-full space-y-6" : "max-w-7xl mx-auto space-y-6"}>
       <slot />
     </div>
   </main>
