@@ -444,6 +444,81 @@ Route::get('/list-kirim-tagihan', function (Illuminate\Http\Request $request) {
     ]);
 });
 
+Route::get('/schedule-tukar-faktur', function (Illuminate\Http\Request $request) {
+    $noTF = $request->input('no_tf', '');
+    $customerName = $request->input('customer_name', '');
+    $orderNumber = $request->input('order_number', '');
+    $perPage = (int) $request->input('per_page', 25);
+    $page = (int) $request->input('page', 1);
+
+    $allSchedules = [
+        [
+            'id' => 2676,
+            'tanggal_kirim' => '29 May 2026',
+            'no_tf' => 'TF-0000218',
+            'invoices' => [
+                ['number' => '0001698', 'customer_name' => 'PT. Ajinomoto Sales Indonesia', 'order_number' => '260202887', 'amount' => 15000000],
+                ['number' => '0001700', 'customer_name' => 'PT. Ajinomoto Sales Indonesia', 'order_number' => '260202983', 'amount' => 8500005],
+                ['number' => '0001704', 'customer_name' => 'PT. Ajinomoto Sales Indonesia', 'order_number' => '260203181', 'amount' => 12500000]
+            ]
+        ],
+        [
+            'id' => 2675,
+            'tanggal_kirim' => '29 May 2026',
+            'no_tf' => 'TF-0000217',
+            'invoices' => [
+                ['number' => '0001261', 'customer_name' => 'PT. Inbisco Niagatama Semesta', 'order_number' => '260103747', 'amount' => 22400000],
+                ['number' => '0001386', 'customer_name' => 'PT. Inbisco Niagatama Semesta', 'order_number' => '260403135', 'amount' => 12300000]
+            ]
+        ]
+    ];
+
+    if ($noTF) {
+        $allSchedules = array_filter($allSchedules, function ($s) use ($noTF) {
+            return str_contains($s['no_tf'], $noTF);
+        });
+    }
+    if ($customerName) {
+        $allSchedules = array_filter($allSchedules, function ($s) use ($customerName) {
+            foreach ($s['invoices'] as $inv) {
+                if (str_contains(strtolower($inv['customer_name']), strtolower($customerName))) return true;
+            }
+            return false;
+        });
+    }
+    if ($orderNumber) {
+        $allSchedules = array_filter($allSchedules, function ($s) use ($orderNumber) {
+            foreach ($s['invoices'] as $inv) {
+                if (str_contains(strtolower($inv['order_number']), strtolower($orderNumber))) return true;
+            }
+            return false;
+        });
+    }
+
+    $allSchedules = array_values($allSchedules);
+    $total = count($allSchedules);
+    $offset = ($page - 1) * $perPage;
+    $items = array_slice($allSchedules, $offset, $perPage);
+
+    return Inertia::render('ScheduleTukarFaktur/Index', [
+        'schedules' => $items,
+        'pagination' => [
+            'total' => $total,
+            'perPage' => $perPage,
+            'currentPage' => $page,
+            'lastPage' => (int) ceil($total / $perPage),
+            'from' => $total > 0 ? $offset + 1 : 0,
+            'to' => min($offset + $perPage, $total),
+        ],
+        'filters' => [
+            'no_tf' => $noTF,
+            'customer_name' => $customerName,
+            'order_number' => $orderNumber,
+            'per_page' => $perPage
+        ]
+    ]);
+});
+
 // =============================================
 // SETTINGS ROUTES
 // =============================================

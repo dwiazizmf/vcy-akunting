@@ -22,7 +22,7 @@
     { name: 'Tanda Terima', href: '/tanda-terima' },
     { name: 'Tanda Terima New', href: '/tanda-terima/new' },
     { name: 'List Kirim Tagihan', href: '/list-kirim-tagihan' },
-    { name: 'Schedule Tukar Faktur', href: '#schedule-tukar-faktur' },
+    { name: 'Schedule Tukar Faktur', href: '/schedule-tukar-faktur' },
     { name: 'Surat Tagihan', href: '#surat-tagihan' },
     { name: 'History Invoice', href: '#history-invoice' },
     { name: 'Report Mayora', href: '#report-mayora' },
