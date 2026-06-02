@@ -62,3 +62,15 @@ Fungsi/komponen berikut **HARUS dibuat sebagai komponen Svelte terpisah** jika s
 2. Apakah ini kandidat komponen reusable? → jika ya, buat terpisah
 3. Apakah tampilan mobile sudah dicek? → jangan pakai `overflow-hidden` di container yang ada dropdown
 4. Apakah sudah build untuk verifikasi tidak ada error?
+
+1. Aturan Penanganan Pajak & Diskon (JSONB Hybrid)
+
+✅ Manajemen Pajak & Diskon: Jangan pernah membuat tabel pivot/relasi untuk pajak (seperti invoice_taxes). Selalu gunakan kolom JSONB (tax_details) di tabel transaksi. Data master tarif pajak diambil dari tabel taxes, lalu dihitung secara reaktif di Svelte dan disimpan sebagai JSON saat submit.
+
+2. Aturan Penomoran Dokumen (Race-Condition)
+
+✅ Generate Nomor Jurnal/Invoice: Jangan menggunakan auto-increment ID untuk nomor dokumen cetak. Selalu gunakan helper service (DocumentNumberService) yang mengimplementasikan Pessimistic Locking (lockForUpdate()) untuk menghindari race condition dan reset nomor bulanan/tahunan.
+
+3. Aturan Komunikasi Data (Inertia vs AJAX)
+
+✅ Form vs Data Fetching: Gunakan useForm bawaan @inertiajs/svelte untuk semua operasi CRUD utama agar error validation dari Laravel otomatis ter- handle. Gunakan AJAX (axios/fetch) HANYA untuk mengambil data parsial di latar belakang (misal: dependent dropdown).

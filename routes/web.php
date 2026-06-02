@@ -519,6 +519,313 @@ Route::get('/schedule-tukar-faktur', function (Illuminate\Http\Request $request)
     ]);
 });
 
+Route::get('/surat-tagihan', function (Illuminate\Http\Request $request) {
+    $orderNumber = $request->input('order_number', '');
+    $customerName = $request->input('customer_name', '');
+    $tanggalKirim = $request->input('tanggal_kirim', '');
+    $perPage = (int) $request->input('per_page', 25);
+    $page = (int) $request->input('page', 1);
+
+    $allSuratTagihans = [
+        [
+            'id' => 1,
+            'tanggal' => '29 May 2026',
+            'nomor' => '1067/YAN-ST/ACC/V.2026',
+            'customer_name' => 'PT. Khong Guan Biscuit Factory Indonesia',
+            'up_person' => 'Bapak Anas',
+            'no_tlp' => '021 - 5213738',
+            'address' => 'Gedung Wira Usaha Kav. C5, Jl H R. Rasuna Said No.5, Kuningan Timur, Rt.3 / Rw.1, Karet, Jakarta Selatan, DKI Jakarta 12920',
+            'invoices' => [
+                ['number' => '0001698', 'status' => 'Paid', 'orders' => ['260400613', '260400628', '260400629', '260400631']],
+                ['number' => '0001700', 'status' => 'Paid', 'orders' => ['260403160', '260403161', '260403162', '260403163']],
+                ['number' => '0001704', 'status' => 'Paid', 'orders' => ['260403164', '260403165', '260403166', '260403167']],
+                ['number' => '0001714', 'status' => 'Sent', 'orders' => ['260403168', '260403169', '260403170', '260403171']]
+            ]
+        ],
+        [
+            'id' => 2,
+            'tanggal' => '29 May 2026',
+            'nomor' => '1066/YAN-ST/ACC/V.2026',
+            'customer_name' => 'PT FKS FOOD SEJAHTERA, TBK',
+            'up_person' => 'Ibu Mayang / Ibu Nurul (Accounting)',
+            'no_tlp' => '021 8672409 / 8670360',
+            'address' => 'Jl. Pancasila IV Desa Cicadas Kec. Gunung Putri Kab. Bogor, Jawa Barat 16964',
+            'invoices' => [
+                ['number' => '0000567', 'status' => 'Paid', 'orders' => ['260501798']]
+            ]
+        ],
+        [
+            'id' => 3,
+            'tanggal' => '29 May 2026',
+            'nomor' => '1065/YAN-ST/ACC/V.2026',
+            'customer_name' => 'PT. Inbisco Niagatama Semesta',
+            'up_person' => 'Bp.Hasanudin/Ibu Umi /Logistic Dept /Gdg.MLC',
+            'no_tlp' => '021-59400933',
+            'address' => 'Jln. Raya Serang Km.12.5 - Cikupa Tangerang 15710',
+            'invoices' => [
+                ['number' => '0001261', 'status' => 'Sent', 'orders' => ['260302153']]
+            ]
+        ]
+    ];
+
+    if ($orderNumber) {
+        $allSuratTagihans = array_filter($allSuratTagihans, function ($st) use ($orderNumber) {
+            foreach ($st['invoices'] as $inv) {
+                foreach ($inv['orders'] as $ord) {
+                    if (str_contains($ord, $orderNumber)) return true;
+                }
+            }
+            return false;
+        });
+    }
+    if ($customerName) {
+        $allSuratTagihans = array_filter($allSuratTagihans, function ($st) use ($customerName) {
+            return str_contains(strtolower($st['customer_name']), strtolower($customerName));
+        });
+    }
+    if ($tanggalKirim) {
+        $allSuratTagihans = array_filter($allSuratTagihans, function ($st) use ($tanggalKirim) {
+            return str_contains(strtolower($st['tanggal']), strtolower($tanggalKirim));
+        });
+    }
+
+    $allSuratTagihans = array_values($allSuratTagihans);
+    $total = count($allSuratTagihans);
+    $offset = ($page - 1) * $perPage;
+    $items = array_slice($allSuratTagihans, $offset, $perPage);
+
+    return Inertia::render('SuratTagihan/Index', [
+        'letters' => $items,
+        'pagination' => [
+            'total' => $total,
+            'perPage' => $perPage,
+            'currentPage' => $page,
+            'lastPage' => (int) ceil($total / $perPage),
+            'from' => $total > 0 ? $offset + 1 : 0,
+            'to' => min($offset + $perPage, $total),
+        ],
+        'filters' => [
+            'order_number' => $orderNumber,
+            'customer_name' => $customerName,
+            'tanggal_kirim' => $tanggalKirim,
+            'per_page' => $perPage
+        ]
+    ]);
+});
+
+Route::get('/report-mayora', function (Illuminate\Http\Request $request) {
+    $noKode = $request->input('no_kode', '');
+    $tanggalKirim = $request->input('tanggal_kirim', '');
+    $perPage = (int) $request->input('per_page', 25);
+    $page = (int) $request->input('page', 1);
+
+    $allReports = [
+        ['id' => 1, 'tanggal_kirim' => '2021-09-22', 'no_dokumen' => '0001/YAN-IX/2021', 'invoice_number' => '0001/YAN-IX/2021', 'order_number' => '0001/YAN-IX/2021'],
+        ['id' => 2, 'tanggal_kirim' => '2021-09-29', 'no_dokumen' => '0002/YAN-IX/2021', 'invoice_number' => '0002/YAN-IX/2021', 'order_number' => '0002/YAN-IX/2021'],
+        ['id' => 3, 'tanggal_kirim' => '2021-10-13', 'no_dokumen' => '0003/YAN-X/2021', 'invoice_number' => '0003/YAN-X/2021', 'order_number' => '0003/YAN-X/2021'],
+        ['id' => 4, 'tanggal_kirim' => '2021-10-21', 'no_dokumen' => '0004/YAN-X/2021', 'invoice_number' => '0004/YAN-X/2021', 'order_number' => '0004/YAN-X/2021'],
+        ['id' => 5, 'tanggal_kirim' => '2021-10-27', 'no_dokumen' => '0005/YAN-X/2021', 'invoice_number' => '0005/YAN-X/2021', 'order_number' => '0005/YAN-X/2021'],
+        ['id' => 6, 'tanggal_kirim' => '2021-11-03', 'no_dokumen' => '0006/YAN-XI/2021', 'invoice_number' => '0006/YAN-XI/2021', 'order_number' => '0006/YAN-XI/2021'],
+        ['id' => 7, 'tanggal_kirim' => '2021-11-03', 'no_dokumen' => '0007/YAN-XI/2021', 'invoice_number' => '0007/YAN-XI/2021', 'order_number' => '0007/YAN-XI/2021'],
+        ['id' => 8, 'tanggal_kirim' => '2021-11-10', 'no_dokumen' => '0008/YAN-XI/2021', 'invoice_number' => '0008/YAN-XI/2021', 'order_number' => '0008/YAN-XI/2021'],
+        ['id' => 9, 'tanggal_kirim' => '2021-11-17', 'no_dokumen' => '0009/YAN-XI/2021', 'invoice_number' => '0009/YAN-XI/2021', 'order_number' => '0009/YAN-XI/2021'],
+        ['id' => 10, 'tanggal_kirim' => '2021-11-24', 'no_dokumen' => '0010/YAN-XI/2021', 'invoice_number' => '0010/YAN-XI/2021', 'order_number' => '0010/YAN-XI/2021'],
+        ['id' => 11, 'tanggal_kirim' => '2021-12-01', 'no_dokumen' => '0011/YAN-XI/2021', 'invoice_number' => '0011/YAN-XI/2021', 'order_number' => '0011/YAN-XI/2021'],
+        ['id' => 12, 'tanggal_kirim' => '2021-12-01', 'no_dokumen' => '0012/YAN-XI/2021', 'invoice_number' => '0012/YAN-XI/2021', 'order_number' => '0012/YAN-XI/2021'],
+        ['id' => 13, 'tanggal_kirim' => '2021-12-08', 'no_dokumen' => '0013/YAN-XII/2021', 'invoice_number' => '0013/YAN-XII/2021', 'order_number' => '0013/YAN-XII/2021'],
+        ['id' => 14, 'tanggal_kirim' => '2021-12-15', 'no_dokumen' => '0014/YAN-XII/2021', 'invoice_number' => '0014/YAN-XII/2021', 'order_number' => '0014/YAN-XII/2021'],
+        ['id' => 15, 'tanggal_kirim' => '2021-12-22', 'no_dokumen' => '0015/YAN-XII/2021', 'invoice_number' => '0015/YAN-XII/2021', 'order_number' => '0015/YAN-XII/2021'],
+    ];
+
+    if ($noKode) {
+        $allReports = array_filter($allReports, function ($r) use ($noKode) {
+            return str_contains(strtolower($r['no_dokumen']), strtolower($noKode)) ||
+                   str_contains(strtolower($r['invoice_number']), strtolower($noKode)) ||
+                   str_contains(strtolower($r['order_number']), strtolower($noKode));
+        });
+    }
+    if ($tanggalKirim) {
+        $allReports = array_filter($allReports, function ($r) use ($tanggalKirim) {
+            return str_contains(strtolower($r['tanggal_kirim']), strtolower($tanggalKirim));
+        });
+    }
+
+    $allReports = array_values($allReports);
+    $total = count($allReports);
+    $offset = ($page - 1) * $perPage;
+    $items = array_slice($allReports, $offset, $perPage);
+
+    return Inertia::render('ReportMayora/Index', [
+        'reports' => $items,
+        'pagination' => [
+            'total' => $total,
+            'perPage' => $perPage,
+            'currentPage' => $page,
+            'lastPage' => (int) ceil($total / $perPage),
+            'from' => $total > 0 ? $offset + 1 : 0,
+            'to' => min($offset + $perPage, $total),
+        ],
+        'filters' => [
+            'no_kode' => $noKode,
+            'tanggal_kirim' => $tanggalKirim,
+            'per_page' => $perPage
+        ]
+    ]);
+});
+
+Route::get('/kwitansi', function (Illuminate\Http\Request $request) {
+    $customerName = $request->input('customer_name', '');
+    $tanggalReport = $request->input('tanggal_report', '');
+    $perPage = (int) $request->input('per_page', 25);
+    $page = (int) $request->input('page', 1);
+
+    $allKwitansis = [
+        [
+            'id' => 1,
+            'tanggal_report' => '2026-05-28',
+            'no_faktur' => '05002600194846225',
+            'alamat' => 'JL TIPAR CAKUNG KAV F 5-7 Blok - No.- RT:000 RW:000 Kel.CAKUNG BARAT Kec.CAKUNG Kota/Kab.JAKARTA TIMUR DKI JAKARTA 13910',
+            'keterangan' => 'PEMBAYARAN ONGKOS ANGKUTAN BARANG',
+            'no_kwitansi' => '043/KWT-FP/V/2026',
+            'terima_dari' => 'PT. Sayap Mas Utama'
+        ],
+        [
+            'id' => 2,
+            'tanggal_report' => '2026-05-18',
+            'no_faktur' => '05002600183665577',
+            'alamat' => 'JL TIPAR CAKUNG KAV F 5-7 Blok - No.- RT:000 RW:000 Kel.CAKUNG BARAT Kec.CAKUNG Kota/Kab.JAKARTA TIMUR DKI JAKARTA 13910',
+            'keterangan' => 'PEMBAYARAN ONGKOS ANGKUTAN BARANG',
+            'no_kwitansi' => '042/KWT-FP/V/2026',
+            'terima_dari' => 'PT. Sayap Mas Utama'
+        ],
+        [
+            'id' => 3,
+            'tanggal_report' => '2026-05-08',
+            'no_faktur' => '05002600164228030',
+            'alamat' => 'HARAPAN RAYA LOT LL-1 & 2 KAWASAN INDUSTRI KIIC Blok - No.- RT:000 RW:000 Kel.SIRNABAYA Kec.TELUK JAMBE Kota/Kab.KARAWANG JAWA BARAT 41361',
+            'keterangan' => 'PEMBAYARAN ONGKOS ANGKUTAN BARANG',
+            'no_kwitansi' => '041/KWT-FP/V/2026',
+            'terima_dari' => 'PT. Sharp Electronics Indonesia'
+        ],
+        [
+            'id' => 4,
+            'tanggal_report' => '2026-05-08',
+            'no_faktur' => '05002600164228028',
+            'alamat' => 'HARAPAN RAYA LOT LL-1 & 2 KAWASAN INDUSTRI KIIC Blok - No.- RT:000 RW:000 Kel.SIRNABAYA Kec.TELUK JAMBE Kota/Kab.KARAWANG JAWA BARAT 41361',
+            'keterangan' => 'PEMBAYARAN ONGKOS ANGKUTAN BARANG',
+            'no_kwitansi' => '040/KWT-FP/V/2026',
+            'terima_dari' => 'PT. Sharp Electronics Indonesia'
+        ],
+        [
+            'id' => 5,
+            'tanggal_report' => '2026-05-02',
+            'no_faktur' => '05002600164228020',
+            'alamat' => 'HARAPAN RAYA LOT LL-1 & 2 KAWASAN INDUSTRI KIIC Blok - No.- RT:000 RW:000 Kel.SIRNABAYA Kec.TELUK JAMBE Kota/Kab.KARAWANG JAWA BARAT 41361',
+            'keterangan' => 'PEMBAYARAN ONGKOS ANGKUTAN BARANG',
+            'no_kwitansi' => '039/KWT-FP/V/2026',
+            'terima_dari' => 'PT. Sharp Electronics Indonesia'
+        ]
+    ];
+
+    if ($customerName) {
+        $allKwitansis = array_filter($allKwitansis, function ($k) use ($customerName) {
+            return str_contains(strtolower($k['terima_dari']), strtolower($customerName));
+        });
+    }
+
+    if ($tanggalReport) {
+        $allKwitansis = array_filter($allKwitansis, function ($k) use ($tanggalReport) {
+            return str_contains(strtolower($k['tanggal_report']), strtolower($tanggalReport));
+        });
+    }
+
+    $allKwitansis = array_values($allKwitansis);
+    $total = count($allKwitansis);
+    $offset = ($page - 1) * $perPage;
+    $items = array_slice($allKwitansis, $offset, $perPage);
+
+    return Inertia::render('Kwitansi/Index', [
+        'kwitansis' => $items,
+        'pagination' => [
+            'total' => $total,
+            'perPage' => $perPage,
+            'currentPage' => $page,
+            'lastPage' => (int) ceil($total / $perPage),
+            'from' => $total > 0 ? $offset + 1 : 0,
+            'to' => min($offset + $perPage, $total),
+        ],
+        'filters' => [
+            'customer_name' => $customerName,
+            'tanggal_report' => $tanggalReport,
+            'per_page' => $perPage
+        ]
+    ]);
+});
+
+Route::get('/titip-internal', function (Illuminate\Http\Request $request) {
+    $orderNumber = $request->input('order_number', '');
+    $customerName = $request->input('customer_name', '');
+    $tanggalKirim = $request->input('tanggal_kirim', '');
+    $perPage = (int) $request->input('per_page', 25);
+    $page = (int) $request->input('page', 1);
+
+    $allTitips = [
+        ['id' => 1, 'tanggal' => '29 May 2026', 'nomor' => 'TI-0237', 'customer_name' => 'DAKOU FOOD INDUSTRY', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260501243'],
+        ['id' => 2, 'tanggal' => '26 May 2026', 'nomor' => 'TI-0236', 'customer_name' => 'TJUA MENG HUI', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260500559'],
+        ['id' => 3, 'tanggal' => '26 May 2026', 'nomor' => 'TI-0235', 'customer_name' => 'HENDRI', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260500579'],
+        ['id' => 4, 'tanggal' => '26 May 2026', 'nomor' => 'TI-0234', 'customer_name' => 'HERY', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260500288'],
+        ['id' => 5, 'tanggal' => '26 May 2026', 'nomor' => 'TI-0233', 'customer_name' => 'PRIMA BINTANG SELATAN', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260500891'],
+        ['id' => 6, 'tanggal' => '26 May 2026', 'nomor' => 'TI-0232', 'customer_name' => 'PT. BORNEO TWINDO GROUP', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260403888'],
+        ['id' => 7, 'tanggal' => '25 May 2026', 'nomor' => 'TI-0231', 'customer_name' => 'NUSANTARA PERKASA MESINDO.PT', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260403883'],
+        ['id' => 8, 'tanggal' => '22 May 2026', 'nomor' => 'TI-0230', 'customer_name' => 'GARUDA INTI OPTIMAL', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260403853'],
+        ['id' => 9, 'tanggal' => '21 May 2026', 'nomor' => 'TI-0229', 'customer_name' => 'CIPTA RASA UTAMA', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260502038'],
+        ['id' => 10, 'tanggal' => '21 May 2026', 'nomor' => 'TI-0228', 'customer_name' => 'CV. CIPTA RAYA DISTRIBUSINDO-YAN', 'up_person' => '', 'no_tlp' => '', 'address' => '', 'order_number' => '260502038'],
+    ];
+
+    if ($orderNumber) {
+        $allTitips = array_filter($allTitips, function ($t) use ($orderNumber) {
+            return str_contains(strtolower($t['order_number']), strtolower($orderNumber));
+        });
+    }
+    if ($customerName) {
+        $allTitips = array_filter($allTitips, function ($t) use ($customerName) {
+            return str_contains(strtolower($t['customer_name']), strtolower($customerName));
+        });
+    }
+    if ($tanggalKirim) {
+        $allTitips = array_filter($allTitips, function ($t) use ($tanggalKirim) {
+            return str_contains(strtolower($t['tanggal']), strtolower($tanggalKirim));
+        });
+    }
+
+    $allTitips = array_values($allTitips);
+    $total = count($allTitips);
+    $offset = ($page - 1) * $perPage;
+    $items = array_slice($allTitips, $offset, $perPage);
+
+    return Inertia::render('TitipInternal/Index', [
+        'items' => $items,
+        'pagination' => [
+            'total' => $total,
+            'perPage' => $perPage,
+            'currentPage' => $page,
+            'lastPage' => (int) ceil($total / $perPage),
+            'from' => $total > 0 ? $offset + 1 : 0,
+            'to' => min($offset + $perPage, $total),
+        ],
+        'filters' => [
+            'order_number' => $orderNumber,
+            'customer_name' => $customerName,
+            'tanggal_kirim' => $tanggalKirim,
+            'per_page' => $perPage
+        ]
+    ]);
+});
+
+Route::get('/upload-no-faktur', function () {
+    return Inertia::render('UploadNoFaktur/Index');
+});
+
 // =============================================
 // SETTINGS ROUTES
 // =============================================

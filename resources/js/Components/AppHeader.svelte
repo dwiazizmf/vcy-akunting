@@ -23,12 +23,12 @@
     { name: 'Tanda Terima New', href: '/tanda-terima/new' },
     { name: 'List Kirim Tagihan', href: '/list-kirim-tagihan' },
     { name: 'Schedule Tukar Faktur', href: '/schedule-tukar-faktur' },
-    { name: 'Surat Tagihan', href: '#surat-tagihan' },
+    { name: 'Surat Tagihan', href: '/surat-tagihan' },
     { name: 'History Invoice', href: '#history-invoice' },
-    { name: 'Report Mayora', href: '#report-mayora' },
-    { name: 'Kwitansi', href: '#kwitansi' },
-    { name: 'Titip Internal', href: '#titip-internal' },
-    { name: 'Upload No Faktur', href: '#upload-no-faktur' }
+    { name: 'Report Mayora', href: '/report-mayora' },
+    { name: 'Kwitansi', href: '/kwitansi' },
+    { name: 'Titip Internal', href: '/titip-internal' },
+    { name: 'Upload No Faktur', href: '/upload-no-faktur' }
   ];
 </script>
 
