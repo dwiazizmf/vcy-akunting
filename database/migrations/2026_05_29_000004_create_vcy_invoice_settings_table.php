@@ -3,13 +3,17 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasTable('vcy_invoice_settings')) { return; }
-        Schema::create('vcy_invoice_settings', function (Blueprint $table) {
+        if (Schema::hasTable('invoice_settings')) {
+            return;
+        }
+
+        Schema::create('invoice_settings', function (Blueprint $table) {
             $table->id();
             $table->string('first_faktur', 50)->nullable()->comment('Bagian pertama no faktur');
             $table->string('second_faktur', 50)->nullable()->comment('Bagian kedua no faktur');
@@ -21,7 +25,7 @@ return new class extends Migration
         });
 
         // Seed data awal
-        DB::table('vcy_invoice_settings')->insert([
+        DB::table('invoice_settings')->insert([
             'first_faktur'  => 'INV',
             'second_faktur' => null,
             'third_faktur'  => null,
@@ -35,6 +39,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('vcy_invoice_settings');
+        Schema::dropIfExists('invoice_settings');
     }
 };

@@ -6,15 +6,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Builder;
-use App\Models\Company\Company;
+use App\Models\Settings\Company;
 
 class Invoice extends Model
 {
-    use HasFactory, Filterable;
+    use HasFactory, Filterable, \App\Traits\HasHybridTaxes;
 
-    protected $table = 'vcy_invoices';
+    protected $table = 'invoices';
 
     protected $guarded = [];
+
+    protected $casts = [
+        'header_tax_details' => 'array',
+    ];
 
     protected static function booted()
     {
@@ -29,5 +33,10 @@ class Invoice extends Model
     public function modelFilter()
     {
         return $this->provideFilter(\App\Filters\Incomes\Invoices::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(InvoiceItem::class);
     }
 }

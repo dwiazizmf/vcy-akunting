@@ -1,6 +1,8 @@
 <script>
   import AppHeader from '../Components/AppHeader.svelte';
   import AppFooter from '../Components/AppFooter.svelte';
+  import Toast from '../Components/Toast.svelte';
+  import ConfirmModal from '../Components/ConfirmModal.svelte';
   export let fullWidth = false;
 </script>
 
@@ -15,6 +17,8 @@
   </main>
 
   <AppFooter />
+  <Toast />
+  <ConfirmModal />
 </div>
 
 <style>

@@ -46,3 +46,37 @@ Mengingat **client tetap membutuhkan fitur navigasi halaman berangka (1, 2, 3, d
 
 ## 📝 Kesimpulan
 Saat aplikasi memasuki fase optimasi data besar, infrastruktur standar harus ditingkatkan dengan memadukan **Laravel Scout (Meilisearch)** untuk pencarian dan **Redis** untuk statistik/agregasi *cache*.
+
+---
+
+## 🔐 Akses Login Lokal (Development)
+
+> Kredensial berikut hanya untuk environment **lokal/development**. Jangan gunakan di production.
+
+### Aplikasi Web
+| Info | Detail |
+|---|---|
+| URL | `http://localhost` |
+| Email | `admin@vcy.test` |
+| Password | `password123` |
+| Role | `super-admin` (akses penuh semua fitur) |
+
+### Database PostgreSQL (Sail)
+| Info | Detail |
+|---|---|
+| Host | `localhost` (dari luar container) / `pgsql` (dari dalam container) |
+| Port | `5432` |
+| Database | `vcy-akunting` |
+| Username | `sail` |
+| Password | `password` |
+
+### Roles yang Tersedia
+| Role | Keterangan |
+|---|---|
+| `super-admin` | Semua permission (18 permission) |
+| `admin` | Semua fitur kecuali kelola roles |
+| `staff` | View + create/edit invoice & customer, view report |
+
+> ⚠️ **Ganti password** `password123` segera setelah login pertama di production!
+
+> Tambah prefix no invoice di companies. contoh jika dia MBK, bisa di tambahkan /MBK di invoice text jika tidak ada prefix jangan di tambahkan

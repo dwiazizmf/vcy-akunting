@@ -64,7 +64,7 @@ class UserController extends Controller
             'roles'      => 'nullable|array',
             'roles.*'    => 'exists:roles,id',
             'companies'  => 'nullable|array',
-            'companies.*' => 'exists:vcy_companies,id',
+            'companies.*' => 'exists:companies,id',
         ]);
 
         $user = User::create([
@@ -96,7 +96,7 @@ class UserController extends Controller
             'roles'      => 'nullable|array',
             'roles.*'    => 'exists:roles,id',
             'companies'  => 'nullable|array',
-            'companies.*' => 'exists:vcy_companies,id',
+            'companies.*' => 'exists:companies,id',
         ]);
 
         $data = [

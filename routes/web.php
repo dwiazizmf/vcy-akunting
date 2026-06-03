@@ -53,12 +53,8 @@ Route::get('/ledger', function () {
     return Inertia::render('Ledger/Index');
 });
 
-// Invoice route sekarang pakai Controller
-Route::get('/invoices', [InvoiceController::class, 'index']);
-
-Route::get('/invoices/create', function () {
-    return Inertia::render('Invoices/Create');
-});
+// Invoice routes menggunakan Controller
+Route::resource('invoices', InvoiceController::class);
 
 Route::get('/customers', function (Illuminate\Http\Request $request) {
     // Generate dummy customer data

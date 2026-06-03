@@ -46,4 +46,4 @@ Untuk memudahkan navigasi data akuntansi dalam jumlah besar, ikuti pola interaks
 - **Debouncing Search**: Terapkan penundaan (delay) pencarian (~300ms) saat user mengetik di kotak pencarian untuk mencegah pengiriman request berlebih ke server.
 - **URL State Sync**: Setiap kali filter atau pencarian diubah di frontend, sinkronkan nilai tersebut ke parameter URL browser (menggunakan router Inertia `preserveState: true` dan `replace: true`) agar halaman dapat di-refresh tanpa kehilangan filter aktif.
 - **Pagination**: Tampilkan navigasi halaman yang ringkas di bagian bawah tabel data dengan indikator jumlah data (misal: "Showing 1 to 10 of 120 entries").
-
+- **Notifikasi Aksi (Toast)**: Setiap kali aksi modifikasi data (Create, Update, Delete/Void) berhasil atau gagal dilakukan, **wajib** memunculkan notifikasi *Toast* sebagai *feedback* visual untuk memastikan pengguna sadar bahwa perintahnya telah berhasil (atau gagal) dijalankan.

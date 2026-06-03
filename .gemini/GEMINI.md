@@ -49,8 +49,26 @@ Fungsi/komponen berikut **HARUS dibuat sebagai komponen Svelte terpisah** jika s
 - ✅ Semua tabel harus punya: pagination, sortable header, dan state kosong (empty state)
 - ✅ Responsive: mobile-first, pastikan tampilan mobile tidak rusak
 
-### Tools
-- ✅ Gunakan `greppy` untuk mencari file sebelum editing
+### Tools & Pencarian File (WAJIB)
+
+> ⚠️ **CRITICAL**: Gunakan `greppy` sebagai tool **utama dan wajib** untuk semua pencarian kode, file, dan fungsi. Jangan gunakan `grep_search` atau `view_file` bawaan kecuali `greppy` gagal/tidak tersedia.
+
+#### Perintah `greppy` yang diizinkan:
+
+| Perintah | Kegunaan |
+|---|---|
+| `greppy search "query"` | Semantic search — mencari kode yang konseptual/mirip secara makna |
+| `greppy exact "pattern"` | Exact match — mencari nama fungsi, variabel, atau string spesifik |
+| `greppy read path/to/file` | Membaca isi file dengan batas konteks yang efisien |
+
+#### Kapan menggunakan masing-masing:
+- **Sebelum membuat file baru** → `greppy search "nama fitur"` — pastikan belum ada yang serupa
+- **Mencari definisi fungsi/class** → `greppy exact "NamaFungsi"` atau `greppy exact "class NamaClass"`
+- **Mencari semua penggunaan suatu variabel/method** → `greppy exact "namaMethod"`
+- **Membaca isi file yang relevan** → `greppy read app/Models/Foo.php`
+- **Eksplorasi fitur yang belum dikenal** → `greppy search "deskripsi fitur"`
+
+#### Tools lainnya:
 - ✅ Gunakan `sail npm run build` untuk verifikasi kompilasi setelah perubahan besar
 - ✅ `sail npm run dev` sudah running — HMR aktif untuk development
 

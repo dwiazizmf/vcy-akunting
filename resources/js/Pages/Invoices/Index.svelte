@@ -5,6 +5,11 @@
   import { Input } from '$lib/components/ui/input';
   import * as Card from '$lib/components/ui/card';
   import * as Table from '$lib/components/ui/table';
+  import {
+    Plus, Search, Pencil, Trash2, ArrowLeft, ArrowRight, XCircle, MoreVertical, Building2, Calendar, Download, RefreshCw, FileText
+  } from 'lucide-svelte';
+  import { showToast } from '../../Stores/toast.js';
+  import { showConfirm } from '../../Stores/confirmStore.js';
   import { cn } from '$lib/utils.js';
 
   import Pagination from '../../Components/Pagination.svelte';
@@ -69,6 +74,27 @@
     expandedRows = expandedRows.includes(id)
       ? expandedRows.filter(rId => rId !== id)
       : [...expandedRows, id];
+  }
+
+  // ================================================
+  // VOID INVOICE
+  // ================================================
+  async function voidInvoice(id) {
+    if (await showConfirm('Are you sure you want to void this invoice?')) {
+      router.delete(`/invoices/${id}`, { 
+        preserveScroll: true,
+        onSuccess: () => {
+          showToast('Invoice berhasil divoid/dihapus.', 'success');
+        },
+        onError: () => {
+          showToast('Gagal membatalkan invoice.', 'error');
+        }
+      });
+    }
+  }
+
+  function editInvoice(id) {
+    router.visit(`/invoices/${id}/edit`);
   }
 
   // ================================================
@@ -278,11 +304,20 @@
                 <input type="checkbox" checked={selectedRows.includes(inv.id)} on:change={() => toggleRow(inv.id)} class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer" />
               </Table.Cell>
 
-              <!-- Aksi (titik 3) di depan -->
-              <Table.Cell class="w-8">
-                <Button variant="ghost" size="icon" class="h-7 w-7 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer">
-                  <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-                </Button>
+              <!-- Aksi (Edit & Void) -->
+              <Table.Cell class="w-16 whitespace-nowrap">
+                <div class="flex items-center gap-1">
+                  {#if inv.status !== 'void'}
+                    <Button variant="ghost" size="icon" class="h-6 w-6 text-slate-400 hover:text-teal-700 rounded-md cursor-pointer" on:click={() => editInvoice(inv.id)} title="Edit Invoice">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </Button>
+                    <Button variant="ghost" size="icon" class="h-6 w-6 text-slate-400 hover:text-red-600 rounded-md cursor-pointer" on:click={() => voidInvoice(inv.id)} title="Void Invoice">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </Button>
+                  {:else}
+                    <span class="text-[10px] font-bold text-red-500 uppercase">VOIDED</span>
+                  {/if}
+                </div>
               </Table.Cell>
 
               {#if colVisible['no']}
@@ -429,8 +464,42 @@
             {#if isExpanded}
               <Table.Row class="bg-slate-50/20 hover:bg-slate-50/20">
                 <Table.Cell colspan="25" class="p-0">
-                  <div class="mx-4 my-3 grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+                  <div class="mx-4 my-3 space-y-4">
 
+                    <!-- ── TABLE 0: Invoice Items ── -->
+                    {#if inv.items && inv.items.length > 0}
+                    <div class="bg-white border border-slate-150 rounded-xl shadow-sm overflow-hidden">
+                      <div class="flex items-center gap-2 px-4 py-2.5 bg-sky-50/70 border-b border-sky-100/60">
+                        <svg class="h-3.5 w-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        <span class="text-[11px] font-bold text-sky-800 uppercase tracking-wider">Invoice Items</span>
+                        <span class="ml-auto text-[10px] text-sky-500">{inv.items.length} items</span>
+                      </div>
+                      <table class="w-full text-xs">
+                        <thead class="bg-slate-50 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
+                          <tr>
+                            <th class="px-4 py-2 text-left w-12">No.</th>
+                            <th class="px-4 py-2 text-left">Nama Item</th>
+                            <th class="px-4 py-2 text-right w-24">Qty</th>
+                            <th class="px-4 py-2 text-right w-40">Harga Satuan</th>
+                            <th class="px-4 py-2 text-right w-40">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50 bg-white">
+                          {#each inv.items as item, idx}
+                            <tr class="hover:bg-sky-50/20 transition-colors">
+                              <td class="px-4 py-2.5 text-slate-400 font-mono text-center">{idx + 1}</td>
+                              <td class="px-4 py-2.5 font-medium text-slate-800">{item.name}</td>
+                              <td class="px-4 py-2.5 text-right font-mono">{item.quantity}</td>
+                              <td class="px-4 py-2.5 text-right font-mono">Rp {(parseFloat(item.price)||0).toLocaleString('id-ID')}</td>
+                              <td class="px-4 py-2.5 text-right font-mono font-semibold">Rp {(parseFloat(item.total)||0).toLocaleString('id-ID')}</td>
+                            </tr>
+                          {/each}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/if}
+
+                  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
                     <!-- ── TABLE 1: List Dokumen ── -->
                     <div class="bg-white border border-slate-150 rounded-xl shadow-sm overflow-hidden">
                       <div class="flex items-center gap-2 px-4 py-2.5 bg-teal-50/70 border-b border-teal-100/60">

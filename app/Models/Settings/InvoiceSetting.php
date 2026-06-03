@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class InvoiceSetting extends Model
 {
-    protected $table = 'no_faktur_periode';
+    protected $table = 'invoice_settings';
 
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'first_faktur',
@@ -17,17 +17,15 @@ class InvoiceSetting extends Model
         'fourth_faktur',
         'no_awal',
         'no_akhir',
-        'company',
     ];
 
     protected $casts = [
         'no_awal'  => 'integer',
         'no_akhir' => 'integer',
-        'company'  => 'integer',
     ];
 
     /**
-     * Get the single active setting (first row)
+     * Ambil setting aktif (baris pertama), buat jika belum ada.
      */
     public static function getSetting(): static
     {

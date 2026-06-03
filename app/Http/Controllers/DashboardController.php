@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use App\Models\Incomes\Invoice;
-use App\Models\Company\Company;
+use App\Models\Settings\Company;
 use Carbon\Carbon;
 
 class DashboardController extends Controller

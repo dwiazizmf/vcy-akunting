@@ -13,27 +13,33 @@
   import { showToast } from '../../Stores/toast.js';
   import SearchableSelect from '../../Components/SearchableSelect.svelte';
 
-  export let activeTaxes = []; // Supplied by controller
-  export let customers = []; // Supplied by controller
+  export let activeTaxes = [];
+  export let customers = [];
+  export let invoice = null;
 
-  let form = useForm({
-    customer_id: null,
-    customer_name: '',
-    invoiced_at: new Date().toISOString().split('T')[0],
-    due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    order_number: '',
-    nama_kapal: '',
-    departure_date: '',
-    notes: '',
-    no_faktur_pajak: '',
-    items: [
+  const form = useForm({
+    customer_id: invoice?.customer_id || null,
+    customer_name: invoice?.customer_name || '',
+    invoiced_at: invoice?.invoiced_at ? invoice.invoiced_at.split(' ')[0] : new Date().toISOString().split('T')[0],
+    due_at: invoice?.due_at ? invoice.due_at.split(' ')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    order_number: invoice?.order_number || '',
+    nama_kapal: invoice?.nama_kapal || '',
+    departure_date: invoice?.departure_date ? invoice.departure_date.split(' ')[0] : '',
+    notes: invoice?.notes || '',
+    no_faktur_pajak: invoice?.no_faktur_pajak || '',
+    items: invoice?.items?.length ? invoice.items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })) : [
       { name: '', quantity: 1, price: 0 }
     ],
-    header_tax_details: [] // e.g. [{name: 'PPN', rate: 11, amount: 0}]
+    header_tax_details: invoice?.header_tax_details || []
   });
 
-  let isTax = false;
+  let isTax = $form.header_tax_details.length > 0;
+  
   let selectedTaxIds = [];
+  if (isTax) {
+    const existingTaxNames = $form.header_tax_details.map(t => t.name);
+    selectedTaxIds = activeTaxes.filter(t => existingTaxNames.includes(t.name)).map(t => t.id);
+  }
 
   $: subtotal = $form.items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
 
@@ -76,9 +82,9 @@
     if (isProcessing) return;
     isProcessing = true;
     $form.header_tax_details = computedTaxDetails;
-    $form.post('/invoices', {
+    $form.put(`/invoices/${invoice.id}`, {
       onSuccess: () => {
-        showToast('Invoice created successfully!', 'success');
+        showToast('Invoice updated successfully!', 'success');
       },
       onFinish: () => {
         isProcessing = false;
@@ -122,7 +128,7 @@
                 <Input type="date" bind:value={$form.invoiced_at} class="pl-9 h-9 text-sm bg-white" />
               </div>
             </div>
-            <div class="space-y-2">
+            <div class="space-y-1.5">
               <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="due_date">Due Date</label>
               <Input id="due_date" type="date" bind:value={$form.due_at} min={$form.invoiced_at} required />
             </div>
@@ -160,10 +166,8 @@
           </div>
           
           <div class="space-y-1.5 col-span-1">
-             <div class="space-y-2 md:col-span-2">
              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="notes">Notes / Keterangan</label>
-             <textarea id="notes" bind:value={$form.notes} class="w-full min-h-[150px] p-3 rounded-md border border-slate-200 bg-white text-sm outline-none focus:border-teal-500 shadow-sm resize-none" placeholder="Additional notes for the invoice..." rows="3"></textarea>
-            </div>
+             <textarea id="notes" bind:value={$form.notes} class="w-full min-h-[150px] p-3 rounded-md border border-slate-200 bg-white text-sm outline-none focus:border-teal-500 shadow-sm resize-none" placeholder="Additional notes for the invoice..." rows="7"></textarea>
           </div>
         </div>
 
@@ -283,7 +287,7 @@
                   Processing...
                 {:else}
                   <Save class="h-4 w-4" />
-                  Save Invoice
+                  Update Invoice
                 {/if}
               </Button>
             </div>

@@ -76,6 +76,7 @@
     toast = { show: true, msg, type };
     setTimeout(() => toast = { ...toast, show: false }, 3000);
   }
+  import { showConfirm } from '../../Stores/confirmStore.js';
 
   // ============================================================
   // CSRF TOKEN
@@ -158,7 +159,7 @@
   }
 
   async function deleteCompany(id) {
-    if (!confirm('Hapus perusahaan ini?')) return;
+    if (!(await showConfirm('Hapus perusahaan ini?'))) return;
     try {
       await apiFetch(`/api/settings/companies/${id}`, { method: 'DELETE' });
       showToast('Perusahaan dihapus');
@@ -204,7 +205,7 @@
   }
 
   async function deleteTax(id) {
-    if (!confirm('Hapus pajak ini?')) return;
+    if (!(await showConfirm('Hapus pajak ini?'))) return;
     try {
       await apiFetch(`/api/settings/taxes/${id}`, { method: 'DELETE' });
       showToast('Pajak dihapus');
@@ -253,7 +254,7 @@
   }
 
   async function deleteUser(id) {
-    if (!confirm('Hapus user ini?')) return;
+    if (!(await showConfirm('Hapus user ini?'))) return;
     try {
       await apiFetch(`/api/settings/users/${id}`, { method: 'DELETE' });
       showToast('User dihapus');
@@ -305,7 +306,7 @@
   }
 
   async function deleteRole(id) {
-    if (!confirm('Hapus role ini?')) return;
+    if (!(await showConfirm('Hapus role ini?'))) return;
     try {
       await apiFetch(`/api/settings/roles/${id}`, { method: 'DELETE' });
       showToast('Role dihapus');
@@ -324,7 +325,7 @@
   }
 
   async function deletePermission(id) {
-    if (!confirm('Hapus permission ini?')) return;
+    if (!(await showConfirm('Hapus permission ini?'))) return;
     try {
       await apiFetch(`/api/settings/permissions/${id}`, { method: 'DELETE' });
       allPermissions = allPermissions.filter(p => p.id !== id);
