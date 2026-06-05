@@ -45,6 +45,7 @@ class TaxController extends Controller
             'name'        => 'required|string|max:100',
             'rate'        => 'required|numeric|min:0|max:999.99',
             'type'        => 'required|in:percentage,fixed',
+            'account_id'  => 'nullable|integer|exists:accounts,id',
             'description' => 'nullable|string',
             'enabled'   => 'boolean',
         ]);
@@ -62,6 +63,7 @@ class TaxController extends Controller
             'name'        => 'required|string|max:100',
             'rate'        => 'required|numeric|min:0|max:999.99',
             'type'        => 'required|in:percentage,fixed',
+            'account_id'  => 'nullable|integer|exists:accounts,id',
             'description' => 'nullable|string',
             'enabled'   => 'boolean',
         ]);

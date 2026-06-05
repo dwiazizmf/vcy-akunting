@@ -1,5 +1,6 @@
 <script>
   import AppLayout from '../../Layouts/AppLayout.svelte';
+  import CoaSelect from '../../Components/CoaSelect.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import * as Card from '$lib/components/ui/card';
@@ -16,6 +17,7 @@
 
   export let activeTaxes = []; // Supplied by controller
   export let customers = []; // Supplied by controller
+  export let revenueAccounts = []; // Supplied by controller
   export let errors = {}; // Supplied by Inertia validation
   export let companies = []; // Global Inertia prop
   export let active_company_id = null; // Global Inertia prop
@@ -33,6 +35,7 @@
     departure_date: '',
     notes: '',
     no_faktur_pajak: '',
+    account_id: null, // Revenue account COA
     items: [
       { name: '', quantity: 1, price: 0 }
     ],
@@ -157,6 +160,12 @@
                   <Plus class="h-5 w-5" />
                 </button>
               </div>
+            </div>
+
+            <!-- Akun Pendapatan -->
+            <div class="space-y-1.5 md:col-span-2">
+              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Akun Pendapatan <span class="text-red-500">*</span></label>
+              <CoaSelect bind:value={$form.account_id} options={revenueAccounts} placeholder="Pilih Akun Pendapatan..." />
             </div>
 
             <!-- Dates -->

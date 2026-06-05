@@ -7,17 +7,21 @@ use Illuminate\Http\Request;
 use App\Models\Incomes\Invoice;
 use App\Models\Incomes\InvoiceItem;
 use App\Models\Customer;
+use App\Models\Account;
 use App\Helpers\InvoiceHelper;
 use Inertia\Inertia;
 use App\Services\TaxService;
+use App\Services\JournalService;
 
 class InvoiceController extends Controller
 {
     protected TaxService $taxService;
+    protected JournalService $journalService;
 
-    public function __construct(TaxService $taxService)
+    public function __construct(TaxService $taxService, JournalService $journalService)
     {
-        $this->taxService = $taxService;
+        $this->taxService     = $taxService;
+        $this->journalService = $journalService;
     }
 
     public function index(Request $request)
@@ -106,12 +110,18 @@ class InvoiceController extends Controller
 
     public function create()
     {
+        $companyId = session('company_id') ?: 1;
         $activeTaxes = $this->taxService->getActiveTaxes();
-        $customers = Customer::select('id', 'name')->get();
+        $customers   = Customer::select('id', 'name')->get();
+        $revenueAccounts = Account::whereHas('type', fn($q) => $q->where('category', 'Revenue'))
+            ->where('company_id', $companyId)
+            ->where('enabled', 1)
+            ->get(['id', 'code', 'name', 'parent_id']);
         
         return Inertia::render('Invoices/Create', [
-            'activeTaxes' => $activeTaxes,
-            'customers' => $customers
+            'activeTaxes'     => $activeTaxes,
+            'customers'       => $customers,
+            'revenueAccounts' => $revenueAccounts,
         ]);
     }
 
@@ -120,6 +130,7 @@ class InvoiceController extends Controller
         $validated = $request->validate([
             'customer_id'         => 'required|integer',
             'customer_name'       => 'required|string',
+            'account_id'          => 'nullable|integer|exists:accounts,id',
             'invoiced_at'         => 'required|date',
             'due_at'              => 'required|date|after_or_equal:invoiced_at',
             'order_number'        => 'nullable|string',
@@ -158,11 +169,15 @@ class InvoiceController extends Controller
             'company_id'          => $companyId,
             'customer_id'         => $validated['customer_id'],
             'customer_name'       => $validated['customer_name'],
+            'account_id'          => $validated['account_id'] ?? null,
             'invoice_number'      => $invoiceData['invoice_number'], 
             'invoice_text'        => $invoiceData['invoice_text'],
             'order_number'        => $validated['order_number'] ?? null,
             'nama_kapal'          => $validated['nama_kapal'] ?? null,
             'departure_date'      => $validated['departure_date'] ?? null,
+            'pelabuhan_asal'      => $validated['pelabuhan_asal'] ?? null,
+            'pelabuhan_tujuan'    => $validated['pelabuhan_tujuan'] ?? null,
+            'voy'                 => $validated['voy'] ?? null,
             'notes'               => $validated['notes'] ?? null,
             'no_faktur_pajak'     => $validated['no_faktur_pajak'] ?? null,
             'invoiced_at'         => $validated['invoiced_at'],
@@ -174,6 +189,7 @@ class InvoiceController extends Controller
             'grand_total'         => $grandTotal,
             'header_tax_details'  => $headerTaxes,
             'invoice_status_code' => 'draft',
+            'payment_status'      => 'unpaid',
         ]);
 
         foreach ($validated['items'] as $item) {
@@ -190,6 +206,27 @@ class InvoiceController extends Controller
         }
 
         return redirect()->route('invoices.index')->with('success', 'Invoice created successfully.');
+    }
+
+    /**
+     * Post an invoice: generate journal entries.
+     */
+    public function post(Invoice $invoice)
+    {
+        if ($invoice->isPosted) {
+            return back()->with('error', 'Invoice sudah diposting sebelumnya.');
+        }
+
+        if (!$invoice->account_id) {
+            return back()->with('error', 'Pilih Akun Pendapatan terlebih dahulu sebelum posting.');
+        }
+
+        try {
+            $this->journalService->createInvoiceJournal($invoice);
+            return back()->with('success', "Invoice {$invoice->invoice_text} berhasil diposting ke jurnal.");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal posting: ' . $e->getMessage());
+        }
     }
 
     public function edit(Invoice $invoice)

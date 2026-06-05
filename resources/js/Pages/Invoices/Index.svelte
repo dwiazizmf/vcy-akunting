@@ -6,7 +6,7 @@
   import * as Card from '$lib/components/ui/card';
   import * as Table from '$lib/components/ui/table';
   import {
-    Plus, Search, Pencil, Trash2, ArrowLeft, ArrowRight, XCircle, MoreVertical, Building2, Calendar, Download, RefreshCw, FileText
+    Plus, Search, Pencil, Trash2, ArrowLeft, ArrowRight, XCircle, MoreVertical, Building2, Calendar, Download, RefreshCw, FileText, SendHorizonal
   } from 'lucide-svelte';
   import { showToast } from '../../Stores/toast.js';
   import { showConfirm } from '../../Stores/confirmStore.js';
@@ -95,6 +95,16 @@
 
   function editInvoice(id) {
     router.visit(`/invoices/${id}/edit`);
+  }
+
+  async function postInvoice(id) {
+    if (await showConfirm('Posting invoice ini ke jurnal akuntansi? Proses ini tidak dapat dibatalkan.')) {
+      router.post(`/invoices/${id}/post`, {}, {
+        preserveScroll: true,
+        onSuccess: () => showToast('Invoice berhasil diposting ke jurnal!', 'success'),
+        onError: (e) => showToast(Object.values(e)[0] || 'Gagal posting invoice.', 'error'),
+      });
+    }
   }
 
   // ================================================
@@ -304,10 +314,15 @@
                 <input type="checkbox" checked={selectedRows.includes(inv.id)} on:change={() => toggleRow(inv.id)} class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer" />
               </Table.Cell>
 
-              <!-- Aksi (Edit & Void) -->
-              <Table.Cell class="w-16 whitespace-nowrap">
+              <!-- Aksi (Post, Edit & Void) -->
+              <Table.Cell class="w-24 whitespace-nowrap">
                 <div class="flex items-center gap-1">
                   {#if inv.status !== 'void'}
+                    {#if inv.status === 'draft'}
+                      <Button variant="ghost" size="icon" class="h-6 w-6 text-teal-500 hover:text-teal-700 hover:bg-teal-50 rounded-md cursor-pointer" on:click={() => postInvoice(inv.id)} title="Post Invoice ke Jurnal">
+                        <SendHorizonal class="h-3.5 w-3.5" />
+                      </Button>
+                    {/if}
                     <Button variant="ghost" size="icon" class="h-6 w-6 text-slate-400 hover:text-teal-700 rounded-md cursor-pointer" on:click={() => editInvoice(inv.id)} title="Edit Invoice">
                       <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </Button>

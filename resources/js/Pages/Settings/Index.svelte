@@ -1,5 +1,6 @@
 <script>
   import AppLayout from '../../Layouts/AppLayout.svelte';
+  import CoaSelect from '../../Components/CoaSelect.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import * as Card from '$lib/components/ui/card';
@@ -22,6 +23,7 @@
   export let allCompaniesForForm = [];
   export let initialTaxes      = { data: [], pagination: {} };
   export let invoiceSetting    = {};
+  export let accounts          = [];
 
   // ============================================================
   // STATE
@@ -46,7 +48,7 @@
   let taxLoading = false;
   let showTaxModal = false;
   let editingTax = null;
-  let taxForm = { name: '', rate: '', type: 'percentage', description: '', enabled: true };
+  let taxForm = { name: '', rate: '', type: 'percentage', account_id: '', description: '', enabled: true };
 
   // Users
   let users = initialUsers.data;
@@ -183,9 +185,9 @@
   function openTaxModal(tax = null) {
     editingTax = tax;
     if (tax) {
-      taxForm = { name: tax.name, rate: tax.rate, type: tax.type, description: tax.description || '', enabled: tax.enabled };
+      taxForm = { name: tax.name, rate: tax.rate, type: tax.type, account_id: tax.account_id || '', description: tax.description || '', enabled: tax.enabled };
     } else {
-      taxForm = { name: '', rate: '', type: 'percentage', description: '', enabled: true };
+      taxForm = { name: '', rate: '', type: 'percentage', account_id: '', description: '', enabled: true };
     }
     showTaxModal = true;
   }
@@ -976,6 +978,10 @@
             <option value="fixed">Nominal Tetap</option>
           </select>
         </div>
+      </div>
+      <div class="space-y-1.5">
+        <label class="text-xs font-medium">Akun Pajak (COA)</label>
+        <CoaSelect bind:value={taxForm.account_id} options={accounts} placeholder="Pilih Akun Pajak..." />
       </div>
       <div class="space-y-1.5">
         <label class="text-xs font-medium">Keterangan</label>

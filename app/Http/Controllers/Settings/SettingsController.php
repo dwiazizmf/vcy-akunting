@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Settings\Permission;
 use App\Models\Settings\Role;
+use App\Models\Account;
 
 class SettingsController extends Controller
 {
@@ -49,6 +50,8 @@ class SettingsController extends Controller
 
         // Invoice settings
         $invoiceSetting = InvoiceSetting::getSetting();
+
+        $companyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
 
         return Inertia::render('Settings/Index', [
             'activeTab'       => $tab,
@@ -89,6 +92,11 @@ class SettingsController extends Controller
                 ],
             ],
             'invoiceSetting' => $invoiceSetting,
+            'accounts' => Account::where('company_id', $companyId)
+                ->where('code', 'not like', '12%')
+                ->where('enabled', 1)
+                ->get(['id', 'code', 'name', 'parent_id'])
+                ->toArray(),
         ]);
     }
 }

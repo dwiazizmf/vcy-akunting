@@ -8,9 +8,11 @@ use App\Http\Controllers\Settings\TaxController;
 use App\Http\Controllers\Settings\UserController;
 use App\Http\Controllers\Settings\RoleController;
 use App\Http\Controllers\Settings\InvoiceSettingController;
+use App\Http\Controllers\Settings\BankAccountController;
 use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\JournalController;
 use App\Http\Controllers\Accounting\LedgerController;
+use App\Http\Controllers\Payments\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,6 +56,14 @@ Route::post('/set-company', function (Illuminate\Http\Request $request) {
 
 // Invoice routes menggunakan Controller
 Route::resource('invoices', InvoiceController::class);
+Route::post('invoices/{invoice}/post', [InvoiceController::class, 'post'])->name('invoices.post');
+
+// Payment routes
+Route::resource('payments', PaymentController::class)->except(['edit', 'update']);
+Route::get('/api/payments/outstanding/{customer}', [PaymentController::class, 'outstandingInvoices']);
+
+// Bank Accounts (Settings)
+Route::resource('settings/bank-accounts', BankAccountController::class)->names('bank-accounts');
 
 // Accounting Routes
 Route::resource('accounts', AccountController::class)->except(['create', 'show', 'edit']);

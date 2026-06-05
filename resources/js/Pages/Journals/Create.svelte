@@ -1,5 +1,6 @@
 <script>
   import AppLayout from '../../Layouts/AppLayout.svelte';
+  import CoaSelect from '../../Components/CoaSelect.svelte';
   import { router, useForm } from '@inertiajs/svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -150,16 +151,7 @@
             {#each $form.lines as line, i (line.id)}
               <Table.Row>
                 <Table.Cell class="p-2">
-                  <select 
-                    class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                    bind:value={line.account_id}
-                    required
-                  >
-                    <option value="" disabled>Pilih Akun...</option>
-                    {#each accounts as account}
-                      <option value={account.id}>{account.code} - {account.name}</option>
-                    {/each}
-                  </select>
+                  <CoaSelect bind:value={line.account_id} options={accounts} placeholder="Pilih Akun..." />
                   {#if $form.errors[`lines.${i}.account_id`]}<p class="text-xs text-red-500 mt-1">{$form.errors[`lines.${i}.account_id`]}</p>{/if}
                 </Table.Cell>
                 <Table.Cell class="p-2">

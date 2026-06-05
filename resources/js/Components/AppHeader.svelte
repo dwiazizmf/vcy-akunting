@@ -141,7 +141,7 @@
     <!-- Incomes Dropdown -->
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild let:builder>
-        <Button builders={[builder]} variant="ghost" class={cn("flex items-center gap-1.5 px-3 py-1.5 h-auto text-xs font-medium rounded-md transition", (pathname.startsWith('/invoices') || pathname.startsWith('/customers')) ? "bg-teal-700 text-white shadow-inner ring-1 ring-teal-600" : "text-teal-100 hover:text-white hover:bg-teal-700/40")}>
+        <Button builders={[builder]} variant="ghost" class={cn("flex items-center gap-1.5 px-3 py-1.5 h-auto text-xs font-medium rounded-md transition", (pathname.startsWith('/invoices') || pathname.startsWith('/customers') || pathname.startsWith('/payments')) ? "bg-teal-700 text-white shadow-inner ring-1 ring-teal-600" : "text-teal-100 hover:text-white hover:bg-teal-700/40")}>
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
@@ -155,6 +155,10 @@
         <DropdownMenu.Item class={cn("flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold", pathname.startsWith('/invoices') ? "bg-teal-50 text-teal-700" : "text-slate-700 hover:bg-slate-50")}>
           <span class={cn("w-1.5 h-1.5 rounded-full", pathname.startsWith('/invoices') ? "bg-teal-600" : "bg-slate-300")}></span>
           <a href="/invoices" class="w-full">Invoices</a>
+        </DropdownMenu.Item>
+        <DropdownMenu.Item class={cn("flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold", pathname.startsWith('/payments') ? "bg-teal-50 text-teal-700" : "text-slate-700 hover:bg-slate-50")}>
+          <span class={cn("w-1.5 h-1.5 rounded-full", pathname.startsWith('/payments') ? "bg-teal-600" : "bg-slate-300")}></span>
+          <a href="/payments" class="w-full">Pembayaran</a>
         </DropdownMenu.Item>
         <DropdownMenu.Separator class="bg-slate-100 my-1" />
         {#each subItems as item}
@@ -208,6 +212,10 @@
         </DropdownMenu.Item>
         <DropdownMenu.Item class="px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md cursor-pointer">
           <a href="/ledger" class="w-full">General Ledger</a>
+        </DropdownMenu.Item>
+        <DropdownMenu.Separator class="bg-slate-100 my-1" />
+        <DropdownMenu.Item class={cn("px-3 py-2 text-sm rounded-md cursor-pointer", pathname.startsWith('/settings/bank-accounts') ? "bg-teal-50 text-teal-700 font-medium" : "text-slate-700 hover:bg-slate-50")}>
+          <a href="/settings/bank-accounts" class="w-full">Master Bank & Kas</a>
         </DropdownMenu.Item>
       </DropdownMenu.Content>
     </DropdownMenu.Root>

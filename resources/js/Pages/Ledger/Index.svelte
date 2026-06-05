@@ -1,5 +1,6 @@
 <script>
   import AppLayout from '../../Layouts/AppLayout.svelte';
+  import CoaSelect from '../../Components/CoaSelect.svelte';
   import { router } from '@inertiajs/svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -70,16 +71,7 @@
     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="md:col-span-2 space-y-1.5">
         <label class="text-xs font-medium text-slate-600">Pilih Akun</label>
-        <select 
-          class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          bind:value={account_id}
-          on:change={applyFilters}
-        >
-          <option value="" disabled>-- Pilih Akun --</option>
-          {#each accounts as account}
-            <option value={account.id}>{account.code} - {account.name}</option>
-          {/each}
-        </select>
+        <CoaSelect bind:value={account_id} options={accounts} placeholder="Pilih Akun..." on:change={applyFilters} />
       </div>
       
       <div class="space-y-1.5">

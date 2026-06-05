@@ -11,4 +11,9 @@ class Customer extends Model
     use HasFactory, SoftDeletes;
 
     protected $guarded = ['id'];
+
+    public function account()
+    {
+        return $this->belongsTo(Account::class);
+    }
 }

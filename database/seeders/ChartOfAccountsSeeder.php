@@ -45,7 +45,7 @@ class ChartOfAccountsSeeder extends Seeder
         foreach ($companies as $company) {
             Account::firstOrCreate([
                 'company_id' => $company->id,
-                'code' => '1-1000'
+                'code' => '110000'
             ], [
                 'type_id' => $assetId,
                 'name' => 'Kas & Bank',
@@ -55,7 +55,7 @@ class ChartOfAccountsSeeder extends Seeder
 
             Account::firstOrCreate([
                 'company_id' => $company->id,
-                'code' => '1-2000'
+                'code' => '120000'
             ], [
                 'type_id' => $assetId,
                 'name' => 'Piutang Usaha',
@@ -65,7 +65,7 @@ class ChartOfAccountsSeeder extends Seeder
 
             Account::firstOrCreate([
                 'company_id' => $company->id,
-                'code' => '2-1000'
+                'code' => '210000'
             ], [
                 'type_id' => $liabilityId,
                 'name' => 'Hutang Usaha',
@@ -75,7 +75,7 @@ class ChartOfAccountsSeeder extends Seeder
 
             Account::firstOrCreate([
                 'company_id' => $company->id,
-                'code' => '3-1000'
+                'code' => '310000'
             ], [
                 'type_id' => $equityId,
                 'name' => 'Laba Ditahan',
@@ -85,7 +85,7 @@ class ChartOfAccountsSeeder extends Seeder
 
             Account::firstOrCreate([
                 'company_id' => $company->id,
-                'code' => '4-1000'
+                'code' => '410000'
             ], [
                 'type_id' => $revenueId,
                 'name' => 'Pendapatan Penjualan',
