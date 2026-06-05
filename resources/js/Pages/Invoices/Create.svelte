@@ -12,9 +12,13 @@
   } from 'lucide-svelte';
   import { showToast } from '../../Stores/toast.js';
   import SearchableSelect from '../../Components/SearchableSelect.svelte';
+  import axios from 'axios';
 
   export let activeTaxes = []; // Supplied by controller
   export let customers = []; // Supplied by controller
+  export let errors = {}; // Supplied by Inertia validation
+  export let companies = []; // Global Inertia prop
+  export let active_company_id = null; // Global Inertia prop
 
   let form = useForm({
     customer_id: null,
@@ -23,6 +27,9 @@
     due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     order_number: '',
     nama_kapal: '',
+    voy: '',
+    pelabuhan_asal: '',
+    pelabuhan_tujuan: '',
     departure_date: '',
     notes: '',
     no_faktur_pajak: '',
@@ -31,6 +38,37 @@
     ],
     header_tax_details: [] // e.g. [{name: 'PPN', rate: 11, amount: 0}]
   });
+
+  let showCustomerModal = false;
+  let newCustomer = { name: '', address: '', npwp: '' };
+  let isSavingCustomer = false;
+
+  async function saveCustomer() {
+    if (!newCustomer.name) {
+      showToast('Nama Customer wajib diisi', 'error');
+      return;
+    }
+    isSavingCustomer = true;
+    try {
+      const response = await axios.post('/api/customers', newCustomer);
+      const added = response.data;
+      
+      // Update customers list and auto-select
+      customers = [...customers, { id: added.id, name: added.name }];
+      $form.customer_id = added.id;
+      $form.customer_name = added.name;
+      
+      // Reset state
+      showCustomerModal = false;
+      newCustomer = { name: '', address: '', npwp: '' };
+      showToast('Customer berhasil ditambahkan!', 'success');
+    } catch (error) {
+      console.error(error);
+      showToast('Gagal menambahkan customer. Periksa kembali isian Anda.', 'error');
+    } finally {
+      isSavingCustomer = false;
+    }
+  }
 
   let isTax = false;
   let selectedTaxIds = [];
@@ -100,18 +138,25 @@
       <Card.Content class="p-6">
         
         <!-- HEADER FORM -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-slate-100 pb-6 mb-6">
-          <div class="space-y-4 col-span-2 grid grid-cols-2 gap-4">
+        <div class="border-b border-slate-100 pb-6 mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             
             <!-- Customer -->
-            <div class="space-y-1.5 col-span-2">
+            <div class="space-y-1.5 md:col-span-2">
               <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="customer">Customer</label>
-              <SearchableSelect 
-                options={customers} 
-                bind:value={$form.customer_id} 
-                on:change={updateCustomerName} 
-                placeholder="Select a customer..." 
-              />
+              <div class="flex items-center gap-2">
+                <div class="flex-1">
+                  <SearchableSelect 
+                    options={customers} 
+                    bind:value={$form.customer_id} 
+                    on:change={updateCustomerName} 
+                    placeholder="Select a customer..." 
+                  />
+                </div>
+                <button type="button" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border bg-background hover:bg-accent hover:text-accent-foreground shrink-0 h-10 w-10 p-0 text-teal-600 border-teal-200 hover:bg-teal-50 hover:text-teal-700" title="Tambah Customer Baru" on:click={() => showCustomerModal = true}>
+                  <Plus class="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             <!-- Dates -->
@@ -144,6 +189,30 @@
             </div>
 
             <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Voy</label>
+              <div class="relative">
+                <Anchor class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input type="text" bind:value={$form.voy} placeholder="Voyage" class="pl-9 h-9 text-sm bg-white" />
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Pelabuhan Asal</label>
+              <div class="relative">
+                <MapPin class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input type="text" bind:value={$form.pelabuhan_asal} placeholder="Pelabuhan Asal" class="pl-9 h-9 text-sm bg-white" />
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Pelabuhan Tujuan</label>
+              <div class="relative">
+                <MapPin class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input type="text" bind:value={$form.pelabuhan_tujuan} placeholder="Pelabuhan Tujuan" class="pl-9 h-9 text-sm bg-white" />
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
               <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Dep. Date (Kapal)</label>
               <div class="relative">
                 <Anchor class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -157,12 +226,10 @@
                 <Input type="text" bind:value={$form.no_faktur_pajak} placeholder="No Faktur" class="pl-9 h-9 text-sm bg-white" />
               </div>
             </div>
-          </div>
-          
-          <div class="space-y-1.5 col-span-1">
-             <div class="space-y-2 md:col-span-2">
-             <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="notes">Notes / Keterangan</label>
-             <textarea id="notes" bind:value={$form.notes} class="w-full min-h-[150px] p-3 rounded-md border border-slate-200 bg-white text-sm outline-none focus:border-teal-500 shadow-sm resize-none" placeholder="Additional notes for the invoice..." rows="3"></textarea>
+            <!-- Notes -->
+            <div class="space-y-2 md:col-span-2 mt-2">
+              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="notes">Notes / Keterangan</label>
+              <textarea id="notes" bind:value={$form.notes} class="w-full min-h-[100px] p-3 rounded-md border border-slate-200 bg-white text-sm outline-none focus:border-teal-500 shadow-sm resize-none" placeholder="Additional notes for the invoice..." rows="3"></textarea>
             </div>
           </div>
         </div>
@@ -293,4 +360,44 @@
       </Card.Content>
     </Card.Root>
   </div>
+
+  <!-- Customer Modal -->
+  {#if showCustomerModal}
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 class="text-lg font-bold text-slate-900">Tambah Customer Baru</h2>
+          <button class="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100 transition" on:click={() => showCustomerModal = false}>
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        
+        <div class="p-6 space-y-4">
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Nama Perusahaan / Customer <span class="text-red-500">*</span></label>
+            <Input bind:value={newCustomer.name} placeholder="Misal: PT. Maju Bersama" />
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Alamat Lengkap</label>
+            <Input bind:value={newCustomer.address} placeholder="Misal: Jl. Sudirman No. 123, Jakarta" />
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">NPWP</label>
+            <Input bind:value={newCustomer.npwp} placeholder="00.000.000.0-000.000" />
+          </div>
+        </div>
+
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+          <Button variant="ghost" on:click={() => showCustomerModal = false}>Batal</Button>
+          <Button class="bg-teal-600 hover:bg-teal-700 text-white" disabled={isSavingCustomer} on:click={saveCustomer}>
+            {#if isSavingCustomer}
+              <Loader2 class="h-4 w-4 mr-2 animate-spin" /> Menyimpan...
+            {:else}
+              Simpan Customer
+            {/if}
+          </Button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </AppLayout>

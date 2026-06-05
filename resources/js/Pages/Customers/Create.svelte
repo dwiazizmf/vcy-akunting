@@ -2,12 +2,10 @@
   import AppLayout from '../../Layouts/AppLayout.svelte';
   import { router } from '@inertiajs/svelte';
   import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import * as Card from '$lib/components/ui/card';
   import { cn } from '$lib/utils.js';
   import {
     User, Mail, Percent, ArrowLeftRight, Phone, Globe,
-    FileText, Save, ArrowLeft
+    FileText, Save, ArrowLeft, Building2, MapPin, CheckCircle2, Shield
   } from 'lucide-svelte';
 
   // ================================================
@@ -39,236 +37,279 @@
 </script>
 
 <AppLayout>
-  <div class="max-w-5xl mx-auto space-y-6">
-    <!-- Back Button & Header -->
-    <div class="flex items-center gap-3">
-      <button
-        class="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-slate-200 bg-white shadow-sm text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
-        on:click={() => router.visit('/customers')}
-      >
-        <ArrowLeft class="h-4 w-4" />
-      </button>
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">New Customer</h1>
+  <div class="max-w-4xl mx-auto space-y-8 pb-12">
+    
+    <!-- Header Section -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <button
+          class="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200 hover:shadow"
+          on:click={() => router.visit('/customers')}
+        >
+          <ArrowLeft class="h-4 w-4" />
+        </button>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900">New Customer</h1>
+          <p class="text-sm text-slate-500 mt-1">Add a new client or customer to your database.</p>
+        </div>
       </div>
+      
+      <!-- Top Action -->
+      <button
+        class="hidden sm:flex items-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white px-6 h-10 rounded-xl shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all duration-300 font-medium"
+        on:click={submit}
+        disabled={submitting}
+      >
+        <Save class="h-4 w-4" />
+        {submitting ? 'Saving...' : 'Save Customer'}
+      </button>
     </div>
 
-    <!-- Main Card Form -->
-    <Card.Root class="bg-white border-slate-200 border-t-4 border-t-emerald-600 shadow-sm">
-      <Card.Content class="p-6 space-y-6">
-        
-        <!-- ROW 1: Name & Email -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="name">
-              Name <span class="text-red-500">*</span>
+    <!-- Form Content -->
+    <div class="space-y-6">
+      
+      <!-- CARD 1: Basic Information -->
+      <div class="bg-white/80 backdrop-blur-xl border-0 ring-1 ring-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-2">
+          <Building2 class="h-5 w-5 text-teal-600" />
+          <h3 class="font-semibold text-slate-800">Basic Information</h3>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div class="space-y-2 md:col-span-2">
+            <label class="text-sm font-semibold text-slate-700" for="name">
+              Customer Name <span class="text-rose-500">*</span>
             </label>
-            <div class="relative">
-              <User class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
+            <div class="relative group">
+              <User class="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+              <input
                 id="name"
                 type="text"
-                placeholder="Enter Name"
+                placeholder="e.g. PT Maju Bersama"
                 bind:value={form.name}
-                class={cn("pl-9 bg-white border-slate-200 shadow-sm h-9 text-sm focus-visible:ring-emerald-500/20 focus-visible:border-emerald-600", errors.name && "border-red-450")}
+                class={cn("w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/50 border outline-none transition-all duration-200 focus:bg-white focus:ring-4", errors.name ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/20" : "border-slate-200 focus:border-teal-500 focus:ring-teal-500/20")}
               />
             </div>
             {#if errors.name}
-              <p class="text-xs text-red-500 mt-1">{errors.name}</p>
+              <p class="text-xs text-rose-500 font-medium animate-in slide-in-from-top-1">{errors.name}</p>
             {/if}
           </div>
 
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="email">
-              Email
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700" for="tax_number">
+              Tax Number (NPWP)
             </label>
-            <div class="relative">
-              <Mail class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter Email"
-                bind:value={form.email}
-                class={cn("pl-9 bg-white border-slate-200 shadow-sm h-9 text-sm", errors.email && "border-red-450")}
-              />
-            </div>
-            {#if errors.email}
-              <p class="text-xs text-red-500 mt-1">{errors.email}</p>
-            {/if}
-          </div>
-        </div>
-
-        <!-- ROW 2: Tax Number & Currency -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="tax_number">
-              Tax Number
-            </label>
-            <div class="relative">
-              <Percent class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
+            <div class="relative group">
+              <Percent class="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+              <input
                 id="tax_number"
                 type="text"
-                placeholder="Enter Tax Number"
+                placeholder="00.000.000.0-000.000"
                 bind:value={form.tax_number}
-                class="pl-9 bg-white border-slate-200 shadow-sm h-9 text-sm"
+                class="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/50 border border-slate-200 outline-none transition-all duration-200 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
               />
             </div>
           </div>
 
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="currency">
-              Currency <span class="text-red-500">*</span>
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700" for="currency">
+              Default Currency <span class="text-rose-500">*</span>
             </label>
-            <div class="relative">
-              <ArrowLeftRight class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <div class="relative group">
+              <ArrowLeftRight class="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors z-10" />
               <select
                 id="currency"
                 bind:value={form.currency}
-                class="w-full h-9 pl-9 pr-3 rounded-md border border-slate-200 bg-white text-sm outline-none focus:border-emerald-600 shadow-sm transition-colors"
+                class="w-full h-11 pl-10 pr-10 rounded-xl bg-slate-50/50 border border-slate-200 outline-none transition-all duration-200 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20 appearance-none relative"
               >
-                <option value="IDR">Indonesia Rupiah</option>
-                <option value="USD">United States Dollar</option>
-                <option value="SGD">Singapore Dollar</option>
+                <option value="IDR">IDR - Indonesia Rupiah</option>
+                <option value="USD">USD - United States Dollar</option>
+                <option value="SGD">SGD - Singapore Dollar</option>
               </select>
+              <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- ROW 3: Phone & Website -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="phone">
-              Phone
-            </label>
-            <div class="relative">
-              <Phone class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
+        </div>
+      </div>
+
+      <!-- CARD 2: Contact Details -->
+      <div class="bg-white/80 backdrop-blur-xl border-0 ring-1 ring-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-2">
+          <MapPin class="h-5 w-5 text-teal-600" />
+          <h3 class="font-semibold text-slate-800">Contact Details</h3>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700" for="email">Email Address</label>
+            <div class="relative group">
+              <Mail class="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+              <input
+                id="email"
+                type="email"
+                placeholder="hello@company.com"
+                bind:value={form.email}
+                class={cn("w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/50 border outline-none transition-all duration-200 focus:bg-white focus:ring-4", errors.email ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/20" : "border-slate-200 focus:border-teal-500 focus:ring-teal-500/20")}
+              />
+            </div>
+            {#if errors.email}
+              <p class="text-xs text-rose-500 font-medium animate-in slide-in-from-top-1">{errors.email}</p>
+            {/if}
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700" for="phone">Phone Number</label>
+            <div class="relative group">
+              <Phone class="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+              <input
                 id="phone"
                 type="text"
-                placeholder="Enter Phone"
+                placeholder="+62 812 3456 7890"
                 bind:value={form.phone}
-                class="pl-9 bg-white border-slate-200 shadow-sm h-9 text-sm"
+                class="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/50 border border-slate-200 outline-none transition-all duration-200 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
               />
             </div>
           </div>
 
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="website">
-              Website
-            </label>
-            <div class="relative">
-              <Globe class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
+          <div class="space-y-2 md:col-span-2">
+            <label class="text-sm font-semibold text-slate-700" for="website">Website</label>
+            <div class="relative group">
+              <Globe class="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+              <input
                 id="website"
                 type="text"
-                placeholder="Enter Website"
+                placeholder="https://www.company.com"
                 bind:value={form.website}
-                class="pl-9 bg-white border-slate-200 shadow-sm h-9 text-sm"
+                class="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/50 border border-slate-200 outline-none transition-all duration-200 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
               />
             </div>
           </div>
-        </div>
 
-        <!-- Address -->
-        <div class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="address">
-            Address
-          </label>
-          <textarea
-            id="address"
-            bind:value={form.address}
-            placeholder="Enter Address"
-            class="w-full min-h-[90px] p-3 rounded-md border border-slate-200 bg-white text-sm outline-none focus:border-emerald-600 shadow-sm resize-y transition-colors"
-          ></textarea>
-        </div>
-
-        <!-- ROW 5: Enabled & Reference -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="space-y-1.5">
-            <span class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Enabled
-            </span>
-            <div class="flex items-center gap-1">
-              <button
-                type="button"
-                class={cn(
-                  "px-4 py-1.5 text-xs font-semibold rounded transition-colors shadow-sm border",
-                  form.is_active
-                    ? "bg-emerald-600 border-emerald-600 text-white"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                )}
-                on:click={() => form.is_active = true}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                class={cn(
-                  "px-4 py-1.5 text-xs font-semibold rounded transition-colors shadow-sm border",
-                  !form.is_active
-                    ? "bg-red-500 border-red-500 text-white"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                )}
-                on:click={() => form.is_active = false}
-              >
-                No
-              </button>
-            </div>
+          <div class="space-y-2 md:col-span-2">
+            <label class="text-sm font-semibold text-slate-700" for="address">Full Address</label>
+            <textarea
+              id="address"
+              bind:value={form.address}
+              placeholder="Enter complete building, street, and city..."
+              class="w-full min-h-[100px] p-4 rounded-xl bg-slate-50/50 border border-slate-200 outline-none transition-all duration-200 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20 resize-y"
+            ></textarea>
           </div>
 
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="reference">
-              Reference
-            </label>
-            <div class="relative">
-              <FileText class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
+        </div>
+      </div>
+
+      <!-- CARD 3: Preferences & Security -->
+      <div class="bg-white/80 backdrop-blur-xl border-0 ring-1 ring-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-2">
+          <Shield class="h-5 w-5 text-teal-600" />
+          <h3 class="font-semibold text-slate-800">Preferences & Settings</h3>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700" for="reference">Internal Reference</label>
+            <div class="relative group">
+              <FileText class="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+              <input
                 id="reference"
                 type="text"
-                placeholder="Enter Reference"
+                placeholder="Any internal note or code..."
                 bind:value={form.reference}
-                class="pl-9 bg-white border-slate-200 shadow-sm h-9 text-sm"
+                class="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/50 border border-slate-200 outline-none transition-all duration-200 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20"
               />
             </div>
           </div>
-        </div>
 
-        <!-- Allow Login? -->
-        <div class="pt-2">
-          <label class="flex items-center gap-3 cursor-pointer w-fit">
-            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Allow Login?
-            </span>
-            <input
-              type="checkbox"
-              bind:checked={form.allow_login}
-              class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-5 w-5 cursor-pointer shadow-sm"
-            />
-          </label>
-        </div>
+          <!-- Toggles -->
+          <div class="space-y-6 md:pl-6 md:border-l border-slate-100">
+            <!-- Active Toggle -->
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-sm font-semibold text-slate-800">Active Status</h4>
+                <p class="text-xs text-slate-500 mt-0.5">Allow this customer to be used in transactions.</p>
+              </div>
+              <button
+                type="button"
+                class={cn(
+                  "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2",
+                  form.is_active ? "bg-teal-500" : "bg-slate-300"
+                )}
+                on:click={() => form.is_active = !form.is_active}
+              >
+                <span
+                  class={cn(
+                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                    form.is_active ? "translate-x-5" : "translate-x-0"
+                  )}
+                />
+              </button>
+            </div>
 
-        <!-- Submit Section -->
-        <div class="pt-4 border-t border-slate-100 flex gap-3">
-          <Button
-            class="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-semibold flex items-center gap-2 px-6"
-            on:click={submit}
-            disabled={submitting}
-          >
-            <Save class="h-4 w-4" />
-            {submitting ? 'Saving...' : 'Save'}
-          </Button>
-          <Button
-            variant="outline"
-            class="border-slate-200 text-slate-600 hover:bg-slate-50"
-            on:click={() => router.visit('/customers')}
-            disabled={submitting}
-          >
-            Cancel
-          </Button>
-        </div>
+            <!-- Login Toggle -->
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-sm font-semibold text-slate-800">Client Portal</h4>
+                <p class="text-xs text-slate-500 mt-0.5">Allow customer to login and view their invoices.</p>
+              </div>
+              <button
+                type="button"
+                class={cn(
+                  "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2",
+                  form.allow_login ? "bg-teal-500" : "bg-slate-300"
+                )}
+                on:click={() => form.allow_login = !form.allow_login}
+              >
+                <span
+                  class={cn(
+                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                    form.allow_login ? "translate-x-5" : "translate-x-0"
+                  )}
+                />
+              </button>
+            </div>
+          </div>
 
-      </Card.Content>
-    </Card.Root>
+        </div>
+      </div>
+
+    </div>
+    
+    <!-- Mobile Bottom Action -->
+    <div class="sm:hidden mt-8">
+      <button
+        class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white px-6 h-12 rounded-xl shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all duration-300 font-medium"
+        on:click={submit}
+        disabled={submitting}
+      >
+        <Save class="h-4 w-4" />
+        {submitting ? 'Saving...' : 'Save Customer'}
+      </button>
+    </div>
+
   </div>
 </AppLayout>
+
+<style>
+  /* Optional: Smooth fade-in animations for error messages */
+  @keyframes slide-in-from-top-1 {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-in {
+    animation-duration: 200ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-fill-mode: both;
+  }
+  .slide-in-from-top-1 {
+    animation-name: slide-in-from-top-1;
+  }
+</style>

@@ -8,6 +8,9 @@ use App\Http\Controllers\Settings\TaxController;
 use App\Http\Controllers\Settings\UserController;
 use App\Http\Controllers\Settings\RoleController;
 use App\Http\Controllers\Settings\InvoiceSettingController;
+use App\Http\Controllers\Accounting\AccountController;
+use App\Http\Controllers\Accounting\JournalController;
+use App\Http\Controllers\Accounting\LedgerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,12 +52,16 @@ Route::post('/set-company', function (Illuminate\Http\Request $request) {
     return back();
 })->name('set-company');
 
-Route::get('/ledger', function () {
-    return Inertia::render('Ledger/Index');
-});
-
 // Invoice routes menggunakan Controller
 Route::resource('invoices', InvoiceController::class);
+
+// Accounting Routes
+Route::resource('accounts', AccountController::class)->except(['create', 'show', 'edit']);
+
+Route::patch('journals/{journal}/status', [JournalController::class, 'updateStatus'])->name('journals.status');
+Route::resource('journals', JournalController::class)->except(['edit', 'update', 'destroy']);
+
+Route::get('/ledger', [LedgerController::class, 'index'])->name('ledger.index');
 
 Route::get('/customers', function (Illuminate\Http\Request $request) {
     // Generate dummy customer data
@@ -130,6 +137,21 @@ Route::get('/customers/create', function () {
 
 Route::post('/customers', function () {
     return redirect('/customers');
+});
+
+Route::post('/api/customers', function (\Illuminate\Http\Request $request) {
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'address' => 'nullable|string',
+        'npwp' => 'nullable|string',
+    ]);
+    
+    $validated['enabled'] = 1;
+    $validated['company_id'] = session('company_id') ?: \App\Models\Settings\Company::where('enabled', 1)->first()?->id;
+
+    $customer = \App\Models\Customer::create($validated);
+    
+    return response()->json($customer);
 });
 
 Route::get('/documents/create', function () {

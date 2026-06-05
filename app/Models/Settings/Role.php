@@ -13,7 +13,7 @@ class Role extends SpatieRole
     {
         return $this->morphedByMany(
             getModelForGuard($this->attributes['guard_name'] ?? config('auth.defaults.guard')),
-            'user',
+            'model',
             Config::modelHasRolesTable(),
             app(PermissionRegistrar::class)->pivotRole,
             Config::morphKey()

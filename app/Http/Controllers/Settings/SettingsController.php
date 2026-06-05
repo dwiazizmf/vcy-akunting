@@ -76,7 +76,7 @@ class SettingsController extends Controller
             ],
             'initialRoles'        => $roles->toArray(),
             'allPermissions'      => Permission::all(['id', 'name'])->toArray(),
-            'allCompaniesForForm' => Company::where('is_active', true)->get(['id', 'name'])->toArray(),
+            'allCompaniesForForm' => Company::where('enabled', true)->get(['id', 'name'])->toArray(),
             'initialTaxes' => [
                 'data'       => $taxes->items(),
                 'pagination' => [

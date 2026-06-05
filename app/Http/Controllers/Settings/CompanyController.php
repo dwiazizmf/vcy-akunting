@@ -51,7 +51,7 @@ class CompanyController extends Controller
             'address'   => 'nullable|string',
             'phone'     => 'nullable|string|max:30',
             'npwp'      => 'nullable|string|max:50',
-            'is_active' => 'boolean',
+            'enabled' => 'boolean',
             'logo'      => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
@@ -66,7 +66,7 @@ class CompanyController extends Controller
             'address'   => $validated['address'] ?? null,
             'phone'     => $validated['phone'] ?? null,
             'npwp'      => $validated['npwp'] ?? null,
-            'is_active' => $validated['is_active'] ?? true,
+            'enabled' => $validated['enabled'] ?? true,
             'logo_path' => $logoPath,
         ]);
 
@@ -83,7 +83,7 @@ class CompanyController extends Controller
             'address'   => 'nullable|string',
             'phone'     => 'nullable|string|max:30',
             'npwp'      => 'nullable|string|max:50',
-            'is_active' => 'boolean',
+            'enabled' => 'boolean',
             'logo'      => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
@@ -102,7 +102,7 @@ class CompanyController extends Controller
             'address'   => $validated['address'] ?? null,
             'phone'     => $validated['phone'] ?? null,
             'npwp'      => $validated['npwp'] ?? null,
-            'is_active' => $validated['is_active'] ?? true,
+            'enabled' => $validated['enabled'] ?? true,
             'logo_path' => $logoPath,
         ]);
 

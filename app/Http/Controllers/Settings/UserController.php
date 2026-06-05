@@ -51,7 +51,7 @@ class UserController extends Controller
             ],
             'filters'    => ['search' => $search, 'per_page' => $perPage],
             'roles'      => Role::all(['id', 'name']),
-            'companies'  => Company::where('is_active', true)->get(['id', 'name']),
+            'companies'  => Company::where('enabled', true)->get(['id', 'name']),
         ]);
     }
 

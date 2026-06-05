@@ -35,7 +35,7 @@
   let companyLoading = false;
   let showCompanyModal = false;
   let editingCompany = null;
-  let companyForm = { name: '', code: '', address: '', phone: '', npwp: '', is_active: true };
+  let companyForm = { name: '', code: '', address: '', phone: '', npwp: '', enabled: true };
   let companyLogoFile = null;
   let companyLogoPreview = null;
 
@@ -46,7 +46,7 @@
   let taxLoading = false;
   let showTaxModal = false;
   let editingTax = null;
-  let taxForm = { name: '', rate: '', type: 'percentage', description: '', is_active: true };
+  let taxForm = { name: '', rate: '', type: 'percentage', description: '', enabled: true };
 
   // Users
   let users = initialUsers.data;
@@ -123,10 +123,10 @@
     companyLogoPreview = null;
     companyLogoFile = null;
     if (company) {
-      companyForm = { name: company.name, code: company.code || '', address: company.address || '', phone: company.phone || '', npwp: company.npwp || '', is_active: company.is_active };
+      companyForm = { name: company.name, code: company.code || '', address: company.address || '', phone: company.phone || '', npwp: company.npwp || '', enabled: company.enabled };
       if (company.logo_path) companyLogoPreview = `/storage/${company.logo_path}`;
     } else {
-      companyForm = { name: '', code: '', address: '', phone: '', npwp: '', is_active: true };
+      companyForm = { name: '', code: '', address: '', phone: '', npwp: '', enabled: true };
     }
     showCompanyModal = true;
   }
@@ -183,9 +183,9 @@
   function openTaxModal(tax = null) {
     editingTax = tax;
     if (tax) {
-      taxForm = { name: tax.name, rate: tax.rate, type: tax.type, description: tax.description || '', is_active: tax.is_active };
+      taxForm = { name: tax.name, rate: tax.rate, type: tax.type, description: tax.description || '', enabled: tax.enabled };
     } else {
-      taxForm = { name: '', rate: '', type: 'percentage', description: '', is_active: true };
+      taxForm = { name: '', rate: '', type: 'percentage', description: '', enabled: true };
     }
     showTaxModal = true;
   }
@@ -483,8 +483,8 @@
                       <Table.Cell class="py-1.5 px-3 text-xs text-slate-600 font-mono">{co.npwp || '-'}</Table.Cell>
                       <Table.Cell class="py-1.5 px-3">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold
-                          {co.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
-                          {co.is_active ? 'Aktif' : 'Nonaktif'}
+                          {co.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+                          {co.enabled ? 'Aktif' : 'Nonaktif'}
                         </span>
                       </Table.Cell>
                       <Table.Cell class="py-1.5 px-3">
@@ -524,133 +524,185 @@
     <!-- TAB: USERS & ROLES -->
     <!-- ============================================================ -->
     {#if currentTab === 'users'}
-      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <!-- Users Table -->
         <div class="xl:col-span-2">
-          <Card.Root class="border border-slate-200 shadow-sm">
-            <Card.Header class="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between gap-3">
+          <div class="bg-white/80 backdrop-blur-xl border-0 ring-1 ring-slate-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
+            <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div class="flex items-center gap-2">
-                <Users class="h-4 w-4 text-teal-600" />
-                <span class="text-sm font-semibold text-slate-800">Manajemen User</span>
+                <Users class="h-5 w-5 text-teal-600" />
+                <h3 class="font-semibold text-slate-800">Manajemen User</h3>
               </div>
-              <div class="flex items-center gap-2">
-                <div class="relative">
-                  <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                  <Input bind:value={userSearch} on:input={onUserSearch} placeholder="Cari user..." class="pl-8 h-8 text-xs w-40 border-slate-200" />
+              <div class="flex items-center gap-3">
+                <div class="relative group">
+                  <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+                  <input
+                    type="text"
+                    bind:value={userSearch}
+                    on:input={onUserSearch}
+                    placeholder="Cari user..."
+                    class="h-9 pl-9 pr-4 text-sm w-48 sm:w-56 rounded-xl bg-white border border-slate-200 outline-none transition-all duration-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/20 shadow-sm"
+                  />
                 </div>
-                <Button class="h-8 text-xs gap-1.5 bg-teal-700 hover:bg-teal-800" on:click={() => openUserModal()}>
-                  <Plus class="h-3.5 w-3.5" /> Tambah
-                </Button>
+                <button
+                  class="flex items-center gap-1.5 h-9 px-4 rounded-xl font-medium text-sm text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all duration-300"
+                  on:click={() => openUserModal()}
+                >
+                  <Plus class="h-4 w-4" />
+                  Tambah
+                </button>
               </div>
-            </Card.Header>
-            <Card.Content class="p-0">
-              <Table.Root>
-                <Table.Header>
-                  <Table.Row class="bg-slate-50/80 border-b border-slate-100">
-                    <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Nama</Table.Head>
-                    <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Email</Table.Head>
-                    <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Role</Table.Head>
-                    <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Perusahaan</Table.Head>
-                    <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500 text-right">Aksi</Table.Head>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
+            </div>
+            
+            <div class="w-full overflow-x-auto flex-1">
+              <table class="w-full text-left text-sm text-slate-600">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-100">
+                  <tr>
+                    <th class="px-6 py-3 font-semibold">Nama</th>
+                    <th class="px-6 py-3 font-semibold">Email</th>
+                    <th class="px-6 py-3 font-semibold">Role</th>
+                    <th class="px-6 py-3 font-semibold">Perusahaan</th>
+                    <th class="px-6 py-3 font-semibold text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
                   {#if userLoading}
-                    <Table.Row><Table.Cell colspan="5" class="text-center py-8 text-xs text-slate-400">Memuat...</Table.Cell></Table.Row>
+                    <tr><td colspan="5" class="px-6 py-12 text-center text-slate-400">Memuat...</td></tr>
                   {:else if users.length === 0}
-                    <Table.Row><Table.Cell colspan="5" class="text-center py-8 text-xs text-slate-400">Belum ada user</Table.Cell></Table.Row>
+                    <tr><td colspan="5" class="px-6 py-12 text-center text-slate-400">Belum ada user yang terdaftar.</td></tr>
                   {:else}
                     {#each users as u}
-                      <Table.Row class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                        <Table.Cell class="py-1.5 px-3 text-xs font-medium text-slate-800">{u.name}</Table.Cell>
-                        <Table.Cell class="py-1.5 px-3 text-xs text-slate-500">{u.email}</Table.Cell>
-                        <Table.Cell class="py-1.5 px-3">
-                          <div class="flex flex-wrap gap-1">
+                      <tr class="hover:bg-slate-50/80 transition-colors group">
+                        <td class="px-6 py-3 font-medium text-slate-800">{u.name}</td>
+                        <td class="px-6 py-3 text-slate-500">{u.email}</td>
+                        <td class="px-6 py-3">
+                          <div class="flex flex-wrap gap-1.5">
                             {#each u.roles as r}
-                              <span class="px-1.5 py-0.5 text-[10px] rounded-full bg-teal-100 text-teal-700 font-semibold">{r}</span>
+                              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-100 text-teal-800 border border-teal-200/50">{r}</span>
                             {/each}
-                            {#if u.roles.length === 0}<span class="text-[10px] text-slate-400">-</span>{/if}
+                            {#if u.roles.length === 0}<span class="text-[11px] text-slate-400 italic">No roles</span>{/if}
                           </div>
-                        </Table.Cell>
-                        <Table.Cell class="py-1.5 px-3">
-                          <div class="flex flex-wrap gap-1">
+                        </td>
+                        <td class="px-6 py-3">
+                          <div class="flex flex-wrap gap-1.5">
                             {#each u.companies as c}
-                              <span class="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-100 text-slate-600">{c.name}</span>
+                              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200/60">{c.name}</span>
                             {/each}
-                            {#if u.companies.length === 0}<span class="text-[10px] text-slate-400">Semua</span>{/if}
+                            {#if u.companies.length === 0}<span class="text-[11px] font-semibold text-slate-400">Semua Akses</span>{/if}
                           </div>
-                        </Table.Cell>
-                        <Table.Cell class="py-1.5 px-3">
-                          <div class="flex items-center gap-1 justify-end">
-                            <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-teal-50 text-slate-400 hover:text-teal-600" on:click={() => openUserModal(u)}><Pencil class="h-3.5 w-3.5" /></button>
-                            <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-rose-50 text-slate-400 hover:text-rose-500" on:click={() => deleteUser(u.id)}><Trash2 class="h-3.5 w-3.5" /></button>
+                        </td>
+                        <td class="px-6 py-3">
+                          <div class="flex items-center gap-1.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-teal-50 text-slate-400 hover:text-teal-600 transition-colors" on:click={() => openUserModal(u)} title="Edit User"><Pencil class="h-4 w-4" /></button>
+                            <button class="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" on:click={() => deleteUser(u.id)} title="Hapus User"><Trash2 class="h-4 w-4" /></button>
                           </div>
-                        </Table.Cell>
-                      </Table.Row>
+                        </td>
+                      </tr>
                     {/each}
                   {/if}
-                </Table.Body>
-              </Table.Root>
-            </Card.Content>
-          </Card.Root>
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- User Pagination -->
+            {#if usersPag.lastPage > 1}
+              <div class="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+                <span class="text-xs text-slate-500 font-medium">Menampilkan {pagInfo(usersPag)}</span>
+                <div class="flex items-center gap-1.5">
+                  <button class="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:shadow-none transition-all" disabled={usersPag.currentPage <= 1} on:click={() => loadUsers(1)}><ChevronsLeft class="h-4 w-4" /></button>
+                  <button class="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:shadow-none transition-all" disabled={usersPag.currentPage <= 1} on:click={() => loadUsers(usersPag.currentPage - 1)}><ChevronLeft class="h-4 w-4" /></button>
+                  <span class="text-xs px-2 font-medium text-slate-600">{usersPag.currentPage} dari {usersPag.lastPage}</span>
+                  <button class="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:shadow-none transition-all" disabled={usersPag.currentPage >= usersPag.lastPage} on:click={() => loadUsers(usersPag.currentPage + 1)}><ChevronRight class="h-4 w-4" /></button>
+                  <button class="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:shadow-none transition-all" disabled={usersPag.currentPage >= usersPag.lastPage} on:click={() => loadUsers(usersPag.lastPage)}><ChevronsRight class="h-4 w-4" /></button>
+                </div>
+              </div>
+            {/if}
+          </div>
         </div>
 
-        <!-- Roles Panel -->
-        <div class="space-y-4">
-          <Card.Root class="border border-slate-200 shadow-sm">
-            <Card.Header class="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between">
+        <!-- Roles & Perms Panels -->
+        <div class="space-y-6">
+          <!-- Roles Panel -->
+          <div class="bg-white/80 backdrop-blur-xl border-0 ring-1 ring-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <Shield class="h-4 w-4 text-indigo-600" />
-                <span class="text-sm font-semibold text-slate-800">Roles</span>
+                <Shield class="h-5 w-5 text-indigo-600" />
+                <h3 class="font-semibold text-slate-800">Manajemen Role</h3>
               </div>
-              <Button class="h-7 text-[11px] gap-1 bg-indigo-600 hover:bg-indigo-700 px-2.5" on:click={() => openRoleModal()}>
-                <Plus class="h-3 w-3" /> Tambah
-              </Button>
-            </Card.Header>
-            <Card.Content class="p-0">
+              <button
+                class="flex items-center gap-1.5 h-8 px-3 rounded-lg font-medium text-xs text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 shadow-sm shadow-indigo-500/20 transition-all duration-300"
+                on:click={() => openRoleModal()}
+              >
+                <Plus class="h-3.5 w-3.5" />
+                Tambah
+              </button>
+            </div>
+            <div class="p-0">
               {#if roles.length === 0}
-                <p class="text-center py-6 text-xs text-slate-400">Belum ada role</p>
+                <div class="py-8 text-center text-sm text-slate-400">Belum ada role terdaftar.</div>
               {:else}
-                {#each roles as role}
-                  <div class="flex items-start justify-between gap-2 px-3 py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
-                    <div>
-                      <p class="text-xs font-semibold text-slate-800">{role.name}</p>
-                      <p class="text-[10px] text-slate-400 mt-0.5">{role.permissions.length} permission · {role.users_count} user</p>
+                <div class="divide-y divide-slate-50">
+                  {#each roles as role}
+                    <div class="flex items-start justify-between gap-3 px-5 py-3 hover:bg-slate-50/50 transition-colors group">
+                      <div>
+                        <p class="text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">{role.name}</p>
+                        <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                          <span class="inline-flex items-center gap-1"><Key class="h-3 w-3" /> {role.permissions.length} perms</span>
+                          <span class="text-slate-300">|</span>
+                          <span class="inline-flex items-center gap-1"><Users class="h-3 w-3" /> {role.users_count} users</span>
+                        </p>
+                      </div>
+                      <div class="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 transition-colors" on:click={() => openRoleModal(role)} title="Edit Role"><Pencil class="h-4 w-4" /></button>
+                        <button class="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" on:click={() => deleteRole(role.id)} title="Hapus Role"><Trash2 class="h-4 w-4" /></button>
+                      </div>
                     </div>
-                    <div class="flex gap-1 shrink-0">
-                      <button class="h-6 w-6 flex items-center justify-center rounded hover:bg-indigo-50 text-slate-400 hover:text-indigo-600" on:click={() => openRoleModal(role)}><Pencil class="h-3 w-3" /></button>
-                      <button class="h-6 w-6 flex items-center justify-center rounded hover:bg-rose-50 text-slate-400 hover:text-rose-500" on:click={() => deleteRole(role.id)}><Trash2 class="h-3 w-3" /></button>
-                    </div>
-                  </div>
-                {/each}
+                  {/each}
+                </div>
               {/if}
-            </Card.Content>
-          </Card.Root>
+            </div>
+          </div>
 
           <!-- Permissions Panel -->
-          <Card.Root class="border border-slate-200 shadow-sm">
-            <Card.Header class="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between">
+          <div class="bg-white/80 backdrop-blur-xl border-0 ring-1 ring-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <Key class="h-4 w-4 text-amber-600" />
-                <span class="text-sm font-semibold text-slate-800">Permissions</span>
+                <Key class="h-5 w-5 text-amber-500" />
+                <h3 class="font-semibold text-slate-800">Permissions</h3>
               </div>
-              <span class="text-[10px] text-slate-400">{allPermissions.length} total</span>
-            </Card.Header>
-            <Card.Content class="p-3 space-y-2">
+              <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{allPermissions.length} total</span>
+            </div>
+            <div class="p-5 space-y-4">
               <div class="flex gap-2">
-                <Input bind:value={newPermName} placeholder="nama.permission" class="h-7 text-xs border-slate-200 flex-1" />
-                <Button class="h-7 text-[11px] px-2.5 bg-amber-500 hover:bg-amber-600" on:click={saveNewPermission}><Plus class="h-3 w-3" /></Button>
+                <div class="relative flex-1 group">
+                  <input
+                    type="text"
+                    bind:value={newPermName}
+                    placeholder="Contoh: view_reports"
+                    class="w-full h-9 px-3 text-sm rounded-xl bg-white border border-slate-200 outline-none transition-all duration-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 shadow-sm font-mono placeholder:font-sans"
+                  />
+                </div>
+                <button
+                  class="flex items-center justify-center h-9 w-9 shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-sm shadow-amber-500/20 transition-all duration-300"
+                  on:click={saveNewPermission}
+                  title="Tambah Permission"
+                >
+                  <Plus class="h-4 w-4" />
+                </button>
               </div>
-              <div class="max-h-48 overflow-y-auto space-y-0.5">
+              <div class="max-h-64 overflow-y-auto space-y-1.5 pr-2 custom-scrollbar">
                 {#each allPermissions as perm}
-                  <div class="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 group">
-                    <span class="text-[11px] font-mono text-slate-600">{perm.name}</span>
-                    <button class="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-rose-50 text-rose-400" on:click={() => deletePermission(perm.id)}><X class="h-2.5 w-2.5" /></button>
+                  <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 hover:border-amber-200 hover:bg-amber-50/30 group transition-all">
+                    <span class="text-xs font-mono text-slate-700">{perm.name}</span>
+                    <button class="h-6 w-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 hover:bg-rose-100 text-rose-500 transition-all" on:click={() => deletePermission(perm.id)} title="Hapus Permission"><X class="h-3.5 w-3.5" /></button>
                   </div>
                 {/each}
+                {#if allPermissions.length === 0}
+                  <div class="text-center py-4 text-xs text-slate-400">Belum ada permission</div>
+                {/if}
               </div>
-            </Card.Content>
-          </Card.Root>
+            </div>
+          </div>
         </div>
       </div>
     {/if}
@@ -782,8 +834,8 @@
                     <Table.Cell class="py-1.5 px-3 text-xs text-slate-500">{tax.description || '-'}</Table.Cell>
                     <Table.Cell class="py-1.5 px-3">
                       <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold
-                        {tax.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
-                        {tax.is_active ? 'Aktif' : 'Nonaktif'}
+                        {tax.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+                        {tax.enabled ? 'Aktif' : 'Nonaktif'}
                       </span>
                     </Table.Cell>
                     <Table.Cell class="py-1.5 px-3">
@@ -885,7 +937,7 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <input type="checkbox" id="co-active" bind:checked={companyForm.is_active} class="rounded border-slate-300" />
+        <input type="checkbox" id="co-active" bind:checked={companyForm.enabled} class="rounded border-slate-300" />
         <label for="co-active" class="text-xs">Aktif</label>
       </div>
     </div>
@@ -930,7 +982,7 @@
         <Input bind:value={taxForm.description} placeholder="Keterangan opsional" class="h-8 text-xs border-slate-200" />
       </div>
       <div class="flex items-center gap-2">
-        <input type="checkbox" id="tax-active" bind:checked={taxForm.is_active} class="rounded border-slate-300" />
+        <input type="checkbox" id="tax-active" bind:checked={taxForm.enabled} class="rounded border-slate-300" />
         <label for="tax-active" class="text-xs">Aktif</label>
       </div>
     </div>

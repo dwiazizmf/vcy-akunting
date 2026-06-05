@@ -46,7 +46,7 @@ class TaxController extends Controller
             'rate'        => 'required|numeric|min:0|max:999.99',
             'type'        => 'required|in:percentage,fixed',
             'description' => 'nullable|string',
-            'is_active'   => 'boolean',
+            'enabled'   => 'boolean',
         ]);
 
         $tax = Tax::create($validated);
@@ -63,7 +63,7 @@ class TaxController extends Controller
             'rate'        => 'required|numeric|min:0|max:999.99',
             'type'        => 'required|in:percentage,fixed',
             'description' => 'nullable|string',
-            'is_active'   => 'boolean',
+            'enabled'   => 'boolean',
         ]);
 
         $tax->update($validated);
