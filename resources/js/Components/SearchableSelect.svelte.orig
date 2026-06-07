@@ -92,11 +92,11 @@
           {#each filteredOptions as option}
             <button
               type="button"
-              class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pr-2 text-sm outline-none hover:bg-slate-100 hover:text-slate-900 {value === option.id ? 'bg-slate-50 font-medium text-teal-700' : ''} {option.is_parent ? 'font-bold pl-3' : 'pl-8'}"
+              class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-slate-100 hover:text-slate-900 {value === option.id ? 'bg-slate-50 font-medium text-teal-700' : ''}"
               on:click={() => selectOption(option.id)}
             >
               {#if value === option.id}
-                <span class="absolute {option.is_parent ? 'left-0' : 'left-3'} flex h-3.5 w-3.5 items-center justify-center">
+                <span class="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                   <Check class="h-4 w-4 text-teal-600" />
                 </span>
               {/if}

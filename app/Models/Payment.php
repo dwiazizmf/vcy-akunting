@@ -27,10 +27,8 @@ class Payment extends Model
     protected static function booted(): void
     {
         static::addGlobalScope('company', function (Builder $builder) {
-            $companyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
-            if ($companyId) {
-                $builder->where('company_id', $companyId);
-            }
+            $companyId = session('company_id') ?: (Company::where('enabled', 1)->first()?->id ?? 0);
+            $builder->where('company_id', $companyId);
         });
     }
 

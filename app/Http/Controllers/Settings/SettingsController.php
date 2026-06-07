@@ -92,11 +92,10 @@ class SettingsController extends Controller
                 ],
             ],
             'invoiceSetting' => $invoiceSetting,
-            'accounts' => Account::where('company_id', $companyId)
+            'accounts' => \App\Helpers\AccountHelper::formatAccountsList(Account::where('company_id', $companyId)
                 ->where('code', 'not like', '12%')
                 ->where('enabled', 1)
-                ->get(['id', 'code', 'name', 'parent_id'])
-                ->toArray(),
+                ->get(['id', 'code', 'name', 'parent_id'])),
         ]);
     }
 }

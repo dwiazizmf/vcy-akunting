@@ -43,4 +43,12 @@ class Invoices extends ModelFilter
     {
         return $this->whereDate('invoiced_at', '<=', $date);
     }
+
+    public function isPosted($isPosted)
+    {
+        if ($isPosted !== null && $isPosted !== '') {
+            return $this->where('isPosted', $isPosted);
+        }
+        return $this;
+    }
 }

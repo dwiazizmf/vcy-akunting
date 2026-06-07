@@ -24,7 +24,7 @@
   export let invoices   = [];
   export let pagination = { total: 0, perPage: 10, currentPage: 1, lastPage: 1, from: 0, to: 0 };
   export let stats      = { total: 0, draft: 0, sent: 0, paid: 0, totalAmount: 0 };
-  export let filters    = { search: '', status: '', kapal: '', date_from: '', date_to: '', per_page: 10 };
+  export let filters    = { search: '', status: '', kapal: '', date_from: '', date_to: '', isPosted: '', per_page: 10 };
 
   // ================================================
   // STATE LOKAL
@@ -38,6 +38,7 @@
   let kapal    = filters.kapal     || '';
   let dateFrom = filters.date_from || '';
   let dateTo   = filters.date_to   || '';
+  let isPosted = filters.isPosted  || '';
   let perPage  = filters.per_page  || 10;
 
   // ================================================
@@ -107,12 +108,25 @@
     }
   }
 
+  async function bulkPostInvoices() {
+    if (await showConfirm(`Posting ${selectedRows.length} invoice terpilih ke jurnal akuntansi? Proses ini tidak dapat dibatalkan.`)) {
+      router.post('/invoices/bulk-post', { ids: selectedRows }, {
+        preserveScroll: true,
+        onSuccess: () => {
+          showToast(`${selectedRows.length} invoice berhasil diposting!`, 'success');
+          selectedRows = [];
+        },
+        onError: (e) => showToast(Object.values(e)[0] || 'Gagal bulk posting.', 'error')
+      });
+    }
+  }
+
   // ================================================
   // SERVER-SIDE NAVIGATION
   // ================================================
   function applyFilter() {
     router.get('/invoices', {
-      search, status, kapal,
+      search, status, kapal, isPosted,
       date_from: dateFrom,
       date_to: dateTo,
       per_page: perPage,
@@ -153,7 +167,7 @@
     selectedRows = allSel ? selectedRows.filter(id => !ids.includes(id)) : [...new Set([...selectedRows, ...ids])];
   }
 
-  $: hasActiveFilter = search || status || kapal || dateFrom || dateTo;
+  $: hasActiveFilter = search || status || kapal || dateFrom || dateTo || isPosted;
 
   const statusColor = {
     draft: 'bg-slate-50 text-slate-600 border-slate-200/60',
@@ -198,6 +212,9 @@
     </div>
     <div class="flex flex-wrap items-center gap-2">
       {#if selectedRows.length > 0}
+        <Button variant="outline" size="sm" class="bg-teal-50 text-teal-700 border-teal-200 shadow-sm cursor-pointer" on:click={bulkPostInvoices}>
+          {selectedRows.length} terpilih · Bulk Post
+        </Button>
         <Button variant="destructive" size="sm" class="shadow-sm cursor-pointer">
           {selectedRows.length} terpilih · Hapus
         </Button>
@@ -220,6 +237,14 @@
       <div>
         <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Cari (Customer/No/Order)</label>
         <Input bind:value={search} type="text" placeholder="Cari..." on:keydown={(e) => e.key === 'Enter' && applyFilter()} class="bg-white border-slate-200" />
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Status Posting</label>
+        <select bind:value={isPosted} on:change={applyFilter} class="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-inner outline-none focus:border-teal-500 cursor-pointer">
+          <option value="">Semua</option>
+          <option value="0">Belum Diposting</option>
+          <option value="1">Sudah Diposting</option>
+        </select>
       </div>
       <div>
         <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Status</label>

@@ -156,6 +156,7 @@ class PaymentController extends Controller
             // 2. Save allocations
             foreach ($validated['allocations'] as $alloc) {
                 PaymentInvoice::create([
+                    'company_id'       => $companyId,
                     'payment_id'       => $payment->id,
                     'invoice_id'       => $alloc['invoice_id'],
                     'allocated_amount' => $alloc['allocated_amount'],

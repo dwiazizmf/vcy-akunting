@@ -60,10 +60,7 @@ class JournalController extends Controller
         $companyId = session('company_id') ?: 1;
         
         // Only active accounts for dropdown
-        $accounts = Account::where('company_id', $companyId)
-                           ->where('enabled', true)
-                           ->orderBy('code')
-                           ->get();
+        $accounts = \App\Helpers\AccountHelper::getFormattedAccounts($companyId);
                            
         // Contacts for sub-ledgers
         $contacts = Customer::select('id', 'name')->get();

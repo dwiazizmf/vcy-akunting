@@ -113,10 +113,7 @@ class InvoiceController extends Controller
         $companyId = session('company_id') ?: 1;
         $activeTaxes = $this->taxService->getActiveTaxes();
         $customers   = Customer::select('id', 'name')->get();
-        $revenueAccounts = Account::whereHas('type', fn($q) => $q->where('category', 'Revenue'))
-            ->where('company_id', $companyId)
-            ->where('enabled', 1)
-            ->get(['id', 'code', 'name', 'parent_id']);
+        $revenueAccounts = \App\Helpers\AccountHelper::getFormattedAccounts($companyId, 'Revenue');
         
         return Inertia::render('Invoices/Create', [
             'activeTaxes'     => $activeTaxes,
@@ -165,45 +162,47 @@ class InvoiceController extends Controller
         $companyId = session('company_id') ?: 1;
         $invoiceData = InvoiceHelper::generateInvoiceData($validated['invoiced_at']);
 
-        $invoice = Invoice::create([
-            'company_id'          => $companyId,
-            'customer_id'         => $validated['customer_id'],
-            'customer_name'       => $validated['customer_name'],
-            'account_id'          => $validated['account_id'] ?? null,
-            'invoice_number'      => $invoiceData['invoice_number'], 
-            'invoice_text'        => $invoiceData['invoice_text'],
-            'order_number'        => $validated['order_number'] ?? null,
-            'nama_kapal'          => $validated['nama_kapal'] ?? null,
-            'departure_date'      => $validated['departure_date'] ?? null,
-            'pelabuhan_asal'      => $validated['pelabuhan_asal'] ?? null,
-            'pelabuhan_tujuan'    => $validated['pelabuhan_tujuan'] ?? null,
-            'voy'                 => $validated['voy'] ?? null,
-            'notes'               => $validated['notes'] ?? null,
-            'no_faktur_pajak'     => $validated['no_faktur_pajak'] ?? null,
-            'invoiced_at'         => $validated['invoiced_at'],
-            'due_at'              => $validated['due_at'],
-            'subtotal'            => $subtotal,
-            'amount'              => $grandTotal,
-            'total_item_subtotal' => $subtotal,
-            'total_item_tax'      => $totalTax,
-            'grand_total'         => $grandTotal,
-            'header_tax_details'  => $headerTaxes,
-            'invoice_status_code' => 'draft',
-            'payment_status'      => 'unpaid',
-        ]);
-
-        foreach ($validated['items'] as $item) {
-            InvoiceItem::create([
-                'company_id'   => $companyId,
-                'invoice_id'   => $invoice->id,
-                'name'         => $item['name'],
-                'quantity'     => $item['quantity'],
-                'price'        => $item['price'],
-                'total'        => ($item['quantity'] * $item['price']),
-                'tax_amount'   => 0,
-                'tax_details'  => [],
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $companyId, $invoiceData, $subtotal, $grandTotal, $totalTax, $headerTaxes) {
+            $invoice = Invoice::create([
+                'company_id'          => $companyId,
+                'customer_id'         => $validated['customer_id'],
+                'customer_name'       => $validated['customer_name'],
+                'account_id'          => $validated['account_id'] ?? null,
+                'invoice_number'      => $invoiceData['invoice_number'], 
+                'invoice_text'        => $invoiceData['invoice_text'],
+                'order_number'        => $validated['order_number'] ?? null,
+                'nama_kapal'          => $validated['nama_kapal'] ?? null,
+                'departure_date'      => $validated['departure_date'] ?? null,
+                'pelabuhan_asal'      => $validated['pelabuhan_asal'] ?? null,
+                'pelabuhan_tujuan'    => $validated['pelabuhan_tujuan'] ?? null,
+                'voy'                 => $validated['voy'] ?? null,
+                'notes'               => $validated['notes'] ?? null,
+                'no_faktur_pajak'     => $validated['no_faktur_pajak'] ?? null,
+                'invoiced_at'         => $validated['invoiced_at'],
+                'due_at'              => $validated['due_at'],
+                'subtotal'            => $subtotal,
+                'amount'              => $grandTotal,
+                'total_item_subtotal' => $subtotal,
+                'total_item_tax'      => $totalTax,
+                'grand_total'         => $grandTotal,
+                'header_tax_details'  => $headerTaxes,
+                'invoice_status_code' => 'draft',
+                'payment_status'      => 'unpaid',
             ]);
-        }
+
+            foreach ($validated['items'] as $item) {
+                InvoiceItem::create([
+                    'company_id'   => $companyId,
+                    'invoice_id'   => $invoice->id,
+                    'name'         => $item['name'],
+                    'quantity'     => $item['quantity'],
+                    'price'        => $item['price'],
+                    'total'        => ($item['quantity'] * $item['price']),
+                    'tax_amount'   => 0,
+                    'tax_details'  => [],
+                ]);
+            }
+        });
 
         return redirect()->route('invoices.index')->with('success', 'Invoice created successfully.');
     }
@@ -227,6 +226,47 @@ class InvoiceController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal posting: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Bulk post invoices.
+     */
+    public function bulkPost(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada invoice yang dipilih.');
+        }
+
+        $invoices = Invoice::whereIn('id', $ids)->get();
+        $successCount = 0;
+        $errorMessages = [];
+
+        foreach ($invoices as $invoice) {
+            if ($invoice->isPosted) {
+                $errorMessages[] = "Invoice {$invoice->invoice_number} sudah diposting sebelumnya.";
+                continue;
+            }
+
+            if (!$invoice->account_id) {
+                $errorMessages[] = "Invoice {$invoice->invoice_number} tidak memiliki Akun Pendapatan.";
+                continue;
+            }
+
+            try {
+                $this->journalService->createInvoiceJournal($invoice);
+                $successCount++;
+            } catch (\Exception $e) {
+                $errorMessages[] = "Invoice {$invoice->invoice_number} gagal diposting: " . $e->getMessage();
+            }
+        }
+
+        $message = "Berhasil memposting {$successCount} invoice.";
+        if (count($errorMessages) > 0) {
+            return back()->with('warning', $message . ' Terdapat beberapa error: ' . implode(' ', $errorMessages));
+        }
+
+        return back()->with('success', $message);
     }
 
     public function edit(Invoice $invoice)

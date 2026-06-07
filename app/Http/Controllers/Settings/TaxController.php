@@ -50,6 +50,9 @@ class TaxController extends Controller
             'enabled'   => 'boolean',
         ]);
 
+        $companyId = session('company_id') ?: (\App\Models\Settings\Company::where('enabled', 1)->first()?->id ?? 0);
+        $validated['company_id'] = $companyId;
+
         $tax = Tax::create($validated);
 
         return response()->json(['success' => true, 'tax' => $tax]);

@@ -96,7 +96,7 @@
           </div>
         {:else}
           {#each filteredOptions as option}
-            {@const isParent = !option.parent_id}
+            {@const isParent = option.is_parent !== undefined ? option.is_parent : !option.parent_id}
             <button
               type="button"
               class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pr-2 text-sm outline-none transition-colors hover:bg-slate-100 hover:text-slate-900

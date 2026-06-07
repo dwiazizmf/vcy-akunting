@@ -27,11 +27,13 @@ class BankAccountController extends Controller
             'enabled'        => $b->enabled,
         ]);
 
-        $accounts = Account::where('company_id', $companyId)
+        $accountsQuery = Account::where('company_id', $companyId)
             ->whereHas('type', fn($q) => $q->where('category', 'Asset'))
             ->where('code', 'not like', '12%')
             ->where('enabled', 1)
             ->get(['id', 'code', 'name', 'parent_id']);
+        
+        $accounts = \App\Helpers\AccountHelper::formatAccountsList($accountsQuery);
 
         return Inertia::render('Settings/BankAccounts/Index', [
             'banks'    => $banks,
