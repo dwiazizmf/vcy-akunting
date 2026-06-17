@@ -102,6 +102,7 @@
                 <tr class="border-t border-slate-100">
                   <td class="px-4 py-2.5">
                     <p class="font-medium text-slate-800">{alloc.invoice_text}</p>
+                    {#if alloc.customer_name}<p class="text-xs text-teal-600 mt-0.5 font-medium">{alloc.customer_name}</p>{/if}
                     {#if alloc.invoiced_at}<p class="text-xs text-slate-400">Tgl: {alloc.invoiced_at}</p>{/if}
                   </td>
                   <td class="px-4 py-2.5 text-right font-semibold text-slate-800">{fmt(alloc.allocated_amount)}</td>

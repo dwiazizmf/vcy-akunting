@@ -23,28 +23,28 @@ class DashboardController extends Controller
         $endOfPreviousMonth = $now->copy()->subMonth()->endOfMonth();
 
         // 1. Total Revenues (Current Month vs Previous Month)
-        $currentMonthRevenue = DB::table('vcy_revenues')
+        $currentMonthRevenue = DB::table('payments')
             ->where('company_id', $companyId)
             ->whereBetween('paid_at', [$startOfCurrentMonth, $endOfCurrentMonth])
-            ->sum('amount');
+            ->sum('total_amount');
 
-        $previousMonthRevenue = DB::table('vcy_revenues')
+        $previousMonthRevenue = DB::table('payments')
             ->where('company_id', $companyId)
             ->whereBetween('paid_at', [$startOfPreviousMonth, $endOfPreviousMonth])
-            ->sum('amount');
+            ->sum('total_amount');
 
         $revenueGrowth = $this->calculateGrowth($currentMonthRevenue, $previousMonthRevenue);
 
         // 2. Total Expenses (Current Month vs Previous Month)
-        $currentMonthExpense = DB::table('vcy_bills')
+        $currentMonthExpense = DB::table('expenses')
             ->where('company_id', $companyId)
-            ->whereBetween('billed_at', [$startOfCurrentMonth, $endOfCurrentMonth])
-            ->sum('amount');
+            ->whereBetween('expense_date', [$startOfCurrentMonth, $endOfCurrentMonth])
+            ->sum('grand_total');
 
-        $previousMonthExpense = DB::table('vcy_bills')
+        $previousMonthExpense = DB::table('expenses')
             ->where('company_id', $companyId)
-            ->whereBetween('billed_at', [$startOfPreviousMonth, $endOfPreviousMonth])
-            ->sum('amount');
+            ->whereBetween('expense_date', [$startOfPreviousMonth, $endOfPreviousMonth])
+            ->sum('grand_total');
 
         $expenseGrowth = $this->calculateGrowth($currentMonthExpense, $previousMonthExpense);
 
@@ -54,12 +54,12 @@ class DashboardController extends Controller
         $profitGrowth = $this->calculateGrowth($currentNetProfit, $previousNetProfit);
 
         // 4. Outstanding Invoices (Piutang)
-        $outstandingInvoicesTotal = DB::table('vcy_invoices')
+        $outstandingInvoicesTotal = DB::table('invoices')
             ->where('company_id', $companyId)
             ->where('invoice_status_code', '!=', 'paid')
-            ->sum('amount');
+            ->sum('grand_total');
 
-        $outstandingInvoicesCount = DB::table('vcy_invoices')
+        $outstandingInvoicesCount = DB::table('invoices')
             ->where('company_id', $companyId)
             ->where('invoice_status_code', '!=', 'paid')
             ->count();
@@ -71,15 +71,15 @@ class DashboardController extends Controller
             $monthStart = $monthDate->copy()->startOfMonth();
             $monthEnd = $monthDate->copy()->endOfMonth();
 
-            $revSum = DB::table('vcy_revenues')
+            $revSum = DB::table('payments')
                 ->where('company_id', $companyId)
                 ->whereBetween('paid_at', [$monthStart, $monthEnd])
-                ->sum('amount');
+                ->sum('total_amount');
 
-            $expSum = DB::table('vcy_bills')
+            $expSum = DB::table('expenses')
                 ->where('company_id', $companyId)
-                ->whereBetween('billed_at', [$monthStart, $monthEnd])
-                ->sum('amount');
+                ->whereBetween('expense_date', [$monthStart, $monthEnd])
+                ->sum('grand_total');
 
             $cashFlowData[] = [
                 'label' => $monthDate->format('M Y'),
@@ -90,12 +90,13 @@ class DashboardController extends Controller
         }
 
         // 6. Expenses by Category (Current Month)
-        $expensesByCategory = DB::table('vcy_bills')
-            ->leftJoin('vcy_categories', 'vcy_bills.category_id', '=', 'vcy_categories.id')
-            ->select('vcy_categories.name as category_name', DB::raw('SUM(vcy_bills.amount) as total'))
-            ->where('vcy_bills.company_id', $companyId)
-            ->whereBetween('vcy_bills.billed_at', [$startOfCurrentMonth, $endOfCurrentMonth])
-            ->groupBy('vcy_bills.category_id', 'vcy_categories.name')
+        $expensesByCategory = DB::table('expense_items')
+            ->join('expenses', 'expense_items.expense_id', '=', 'expenses.id')
+            ->leftJoin('accounts', 'expense_items.account_id', '=', 'accounts.id')
+            ->select('accounts.name as category_name', DB::raw('SUM(expense_items.total) as total'))
+            ->where('expenses.company_id', $companyId)
+            ->whereBetween('expenses.expense_date', [$startOfCurrentMonth, $endOfCurrentMonth])
+            ->groupBy('expense_items.account_id', 'accounts.name')
             ->orderBy('total', 'desc')
             ->limit(5)
             ->get();
@@ -113,7 +114,7 @@ class DashboardController extends Controller
                 'id' => $inv->id,
                 'invoice_number' => $inv->invoice_number,
                 'customer_name' => $inv->customer_name,
-                'amount' => (float)$inv->amount,
+                'amount' => (float)$inv->grand_total,
                 'invoiced_at' => $inv->invoiced_at ? date('d M Y', strtotime($inv->invoiced_at)) : '-',
                 'status' => $inv->invoice_status_code
             ];

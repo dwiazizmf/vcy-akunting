@@ -114,11 +114,13 @@ class InvoiceController extends Controller
         $activeTaxes = $this->taxService->getActiveTaxes();
         $customers   = Customer::select('id', 'name')->get();
         $revenueAccounts = \App\Helpers\AccountHelper::getFormattedAccounts($companyId, 'Revenue');
+        $invoiceTypes = \App\Models\Incomes\InvoiceType::all();
         
         return Inertia::render('Invoices/Create', [
             'activeTaxes'     => $activeTaxes,
             'customers'       => $customers,
             'revenueAccounts' => $revenueAccounts,
+            'invoiceTypes'    => $invoiceTypes,
         ]);
     }
 
@@ -128,6 +130,7 @@ class InvoiceController extends Controller
             'customer_id'         => 'required|integer',
             'customer_name'       => 'required|string',
             'account_id'          => 'nullable|integer|exists:accounts,id',
+            'invoice_type_id'     => 'nullable|integer|exists:invoice_type,id',
             'invoiced_at'         => 'required|date',
             'due_at'              => 'required|date|after_or_equal:invoiced_at',
             'order_number'        => 'nullable|string',
@@ -168,6 +171,7 @@ class InvoiceController extends Controller
                 'customer_id'         => $validated['customer_id'],
                 'customer_name'       => $validated['customer_name'],
                 'account_id'          => $validated['account_id'] ?? null,
+                'invoice_type_id'     => $validated['invoice_type_id'] ?? null,
                 'invoice_number'      => $invoiceData['invoice_number'], 
                 'invoice_text'        => $invoiceData['invoice_text'],
                 'order_number'        => $validated['order_number'] ?? null,
@@ -274,11 +278,13 @@ class InvoiceController extends Controller
         $invoice->load('items');
         $activeTaxes = $this->taxService->getActiveTaxes();
         $customers = Customer::select('id', 'name')->get();
+        $invoiceTypes = \App\Models\Incomes\InvoiceType::all();
         
         return Inertia::render('Invoices/Edit', [
             'invoice' => $invoice,
             'activeTaxes' => $activeTaxes,
-            'customers' => $customers
+            'customers' => $customers,
+            'invoiceTypes' => $invoiceTypes,
         ]);
     }
 
@@ -291,6 +297,7 @@ class InvoiceController extends Controller
         $validated = $request->validate([
             'customer_id'         => 'required|integer',
             'customer_name'       => 'required|string',
+            'invoice_type_id'     => 'nullable|integer|exists:invoice_type,id',
             'invoiced_at'         => 'required|date',
             'due_at'              => 'required|date|after_or_equal:invoiced_at',
             'order_number'        => 'nullable|string',
@@ -321,6 +328,7 @@ class InvoiceController extends Controller
         $invoice->update([
             'customer_id'         => $validated['customer_id'],
             'customer_name'       => $validated['customer_name'],
+            'invoice_type_id'     => $validated['invoice_type_id'] ?? null,
             'order_number'        => $validated['order_number'] ?? null,
             'nama_kapal'          => $validated['nama_kapal'] ?? null,
             'departure_date'      => $validated['departure_date'] ?? null,

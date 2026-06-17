@@ -276,4 +276,198 @@ class JournalService
 
         $invoice->update(['payment_status' => $status]);
     }
+
+    /**
+     * Post an expense to the ledger (Vendor Bill or Direct Expense)
+     */
+    public function postExpense(\App\Models\Expenses\Expense $expense): ?Journal
+    {
+        return DB::transaction(function () use ($expense) {
+            $companyId = session('company_id') ?: $expense->company_id;
+            
+            // Create Journal Header
+            $journal = Journal::create([
+                'company_id'     => $companyId,
+                'journal_number' => $this->generateJournalNumber('JRN'),
+                'date'           => $expense->expense_date,
+                'reference'      => $expense->expense_number,
+                'description'    => "Posting Expense: " . $expense->expense_number,
+                'total_debit'    => $expense->grand_total,
+                'total_credit'   => $expense->grand_total,
+                'status'         => 'posted',
+            ]);
+
+            // DEBIT Expense Accounts (from items)
+            foreach ($expense->items as $item) {
+                Ledger::create([
+                    'company_id'  => $companyId,
+                    'journal_id'  => $journal->id,
+                    'account_id'  => $item->account_id,
+                    'contact_id'  => $expense->vendor_id, // can be null
+                    'ledgerable_type' => \App\Models\Expenses\Expense::class,
+                    'ledgerable_id'   => $expense->id,
+                    'debit'       => $item->total,
+                    'credit'      => 0,
+                    'description' => $item->description,
+                ]);
+            }
+
+            // CREDIT
+            if ($expense->is_direct_expense) {
+                // CREDIT Bank Account
+                $bankAccount = \App\Models\BankAccount::find($expense->bank_account_id);
+                if ($bankAccount) {
+                    Ledger::create([
+                        'company_id'  => $companyId,
+                        'journal_id'  => $journal->id,
+                        'account_id'  => $bankAccount->account_id,
+                        'contact_id'  => $expense->vendor_id,
+                        'ledgerable_type' => \App\Models\Expenses\Expense::class,
+                        'ledgerable_id'   => $expense->id,
+                        'debit'       => 0,
+                        'credit'      => $expense->grand_total,
+                        'description' => "Pengeluaran Kas/Bank untuk " . $expense->expense_number,
+                    ]);
+                }
+            } else {
+                // CREDIT Vendor AP Account
+                $vendor = \App\Models\Vendor::find($expense->vendor_id);
+                // Default to Accounts Payable if vendor doesn't have a specific account
+                $apAccountId = $vendor?->account_id;
+                
+                if (!$apAccountId) {
+                    // Fallback to finding an AP account
+                    $apAccount = Account::where('company_id', $companyId)
+                        ->where('name', 'like', '%Hutang%')
+                        ->first();
+                    $apAccountId = $apAccount?->id;
+                }
+
+                if ($apAccountId) {
+                    Ledger::create([
+                        'company_id'  => $companyId,
+                        'journal_id'  => $journal->id,
+                        'account_id'  => $apAccountId,
+                        'contact_id'  => $expense->vendor_id,
+                        'ledgerable_type' => \App\Models\Expenses\Expense::class,
+                        'ledgerable_id'   => $expense->id,
+                        'debit'       => 0,
+                        'credit'      => $expense->grand_total,
+                        'description' => "Hutang Vendor untuk " . $expense->expense_number,
+                    ]);
+                }
+            }
+
+            // Update expense
+            $expense->update([
+                'journal_id' => $journal->id,
+                'expense_status_code' => 'posted'
+            ]);
+
+            return $journal;
+        });
+    }
+
+    public function postExpensePayment(\App\Models\Expenses\ExpensePayment $payment): ?Journal
+    {
+        return DB::transaction(function () use ($payment) {
+            $companyId = session('company_id') ?: $payment->company_id;
+            
+            $journal = Journal::create([
+                'company_id'     => $companyId,
+                'journal_number' => $this->generateJournalNumber('PAY'),
+                'date'           => $payment->payment_date,
+                'reference'      => $payment->payment_number,
+                'description'    => "Pembayaran Bill: " . $payment->payment_number,
+                'status'         => 'posted',
+            ]);
+
+            $vendor = \App\Models\Vendor::find($payment->vendor_id);
+            $apAccountId = $vendor?->account_id;
+            if (!$apAccountId) {
+                $apAccount = Account::where('company_id', $companyId)
+                    ->where('name', 'like', '%Hutang%')
+                    ->first();
+                $apAccountId = $apAccount?->id;
+            }
+
+            // Debit AP (Total Payment + Total Tax)
+            $grossAmount = $payment->total_amount + $payment->total_tax;
+            if ($apAccountId && $grossAmount > 0) {
+                Ledger::create([
+                    'company_id'  => $companyId,
+                    'journal_id'  => $journal->id,
+                    'account_id'  => $apAccountId,
+                    'contact_id'  => $payment->vendor_id,
+                    'ledgerable_type' => \App\Models\Expenses\ExpensePayment::class,
+                    'ledgerable_id'   => $payment->id,
+                    'debit'       => $grossAmount,
+                    'credit'      => 0,
+                    'description' => "Pelunasan Hutang - " . $payment->payment_number,
+                ]);
+            }
+
+            // Credit Bank
+            if ($payment->total_amount > 0) {
+                Ledger::create([
+                    'company_id'  => $companyId,
+                    'journal_id'  => $journal->id,
+                    'account_id'  => $payment->account_id,
+                    'contact_id'  => $payment->vendor_id,
+                    'ledgerable_type' => \App\Models\Expenses\ExpensePayment::class,
+                    'ledgerable_id'   => $payment->id,
+                    'debit'       => 0,
+                    'credit'      => $payment->total_amount,
+                    'description' => "Pengeluaran Kas/Bank - " . $payment->payment_number,
+                ]);
+            }
+
+            // Credit Taxes
+            if (is_array($payment->tax_details)) {
+                foreach ($payment->tax_details as $taxDetail) {
+                    $taxRecord = \DB::table('taxes')->where('id', $taxDetail['id'])->first();
+                    $taxAccountId = $taxRecord?->account_id;
+                    if ($taxAccountId && $taxDetail['amount'] > 0) {
+                        Ledger::create([
+                            'company_id'  => $companyId,
+                            'journal_id'  => $journal->id,
+                            'account_id'  => $taxAccountId,
+                            'contact_id'  => $payment->vendor_id,
+                            'ledgerable_type' => \App\Models\Expenses\ExpensePayment::class,
+                            'ledgerable_id'   => $payment->id,
+                            'debit'       => 0,
+                            'credit'      => $taxDetail['amount'],
+                            'description' => "Hutang Pajak (" . $taxDetail['name'] . ")",
+                        ]);
+                    }
+                }
+            }
+
+            $payment->update(['journal_id' => $journal->id]);
+
+            // Update Expense Payment Statuses
+            foreach ($payment->lines as $line) {
+                $this->updateExpensePaymentStatus($line->expense_id);
+            }
+
+            return $journal;
+        });
+    }
+
+    public function updateExpensePaymentStatus(int $expenseId): void
+    {
+        $expense = \App\Models\Expenses\Expense::find($expenseId);
+        if (!$expense) return;
+
+        $totalPaid = \App\Models\Expenses\ExpensePaymentLine::where('expense_id', $expenseId)->sum('amount_paid');
+        $amount    = (float) $expense->grand_total;
+
+        $status = match(true) {
+            $totalPaid <= 0             => 'unpaid',
+            $totalPaid < $amount        => 'partial',
+            default                     => 'paid',
+        };
+
+        $expense->update(['payment_status' => $status]);
+    }
 }

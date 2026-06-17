@@ -39,14 +39,14 @@
   <div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
 
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <CreditCard class="h-6 w-6 text-teal-600" /> Pembayaran
         </h1>
         <p class="text-sm text-slate-500 mt-1">{pagination.total} bukti penerimaan kas</p>
       </div>
-      <Button class="bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-2" on:click={() => router.visit('/payments/create')}>
+      <Button class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-2" on:click={() => router.visit('/payments/create')}>
         <Plus class="h-4 w-4" /> Catat Pembayaran
       </Button>
     </div>

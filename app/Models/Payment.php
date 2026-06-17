@@ -12,8 +12,8 @@ class Payment extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'company_id', 'payment_number', 'customer_id', 'customer_name',
-        'paid_at', 'total_amount', 'payment_method', 'bank_account_id',
+        'company_id', 'payment_number',
+        'paid_at', 'total_amount', 'tax_id', 'tax_amount', 'payment_method', 'bank_account_id',
         'reference', 'notes', 'overpayment_amount', 'journal_id',
         'status', 'created_by',
     ];
@@ -45,11 +45,6 @@ class Payment extends Model
     public function journal()
     {
         return $this->belongsTo(Journal::class);
-    }
-
-    public function customer()
-    {
-        return $this->belongsTo(Customer::class);
     }
 
     public function createdBy()

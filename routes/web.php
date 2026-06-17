@@ -6,13 +6,18 @@ use App\Http\Controllers\Settings\SettingsController;
 use App\Http\Controllers\Settings\CompanyController;
 use App\Http\Controllers\Settings\TaxController;
 use App\Http\Controllers\Settings\UserController;
+use App\Http\Controllers\Settings\InvoiceTypeController;
 use App\Http\Controllers\Settings\RoleController;
 use App\Http\Controllers\Settings\InvoiceSettingController;
+use App\Http\Controllers\Settings\PaymentLimitController;
 use App\Http\Controllers\Settings\BankAccountController;
 use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\JournalController;
 use App\Http\Controllers\Accounting\LedgerController;
 use App\Http\Controllers\Payments\PaymentController;
+use App\Http\Controllers\Expenses\VendorController;
+use App\Http\Controllers\Expenses\ExpenseController;
+use App\Http\Controllers\Expenses\ExpensePaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,7 +66,7 @@ Route::post('invoices/{invoice}/post', [InvoiceController::class, 'post'])->name
 
 // Payment routes
 Route::resource('payments', PaymentController::class)->except(['edit', 'update']);
-Route::get('/api/payments/outstanding/{customer}', [PaymentController::class, 'outstandingInvoices']);
+Route::get('/api/payments/outstanding', [PaymentController::class, 'outstandingInvoices']);
 
 // Bank Accounts (Settings)
 Route::resource('settings/bank-accounts', BankAccountController::class)->names('bank-accounts');
@@ -74,65 +79,86 @@ Route::resource('journals', JournalController::class)->except(['edit', 'update',
 
 Route::get('/ledger', [LedgerController::class, 'index'])->name('ledger.index');
 
+// Expenses Routes
+Route::resource('vendors', VendorController::class)->except(['show']);
+Route::post('expenses/bulk-post', [ExpenseController::class, 'bulkPost'])->name('expenses.bulk-post');
+Route::resource('expenses', ExpenseController::class);
+Route::post('expenses/{expense}/post', [ExpenseController::class, 'post'])->name('expenses.post');
+Route::post('expense-payments/bulk-post', [ExpensePaymentController::class, 'bulkPost'])->name('expense-payments.bulk-post');
+Route::post('expense-payments/{expense_payment}/post', [ExpensePaymentController::class, 'post'])->name('expense-payments.post');
+Route::resource('expense-payments', ExpensePaymentController::class)->only(['index', 'create', 'store']);
+
 Route::get('/customers', function (Illuminate\Http\Request $request) {
-    // Generate dummy customer data
     $search = $request->input('search', '');
     $status = $request->input('status', '');
     $perPage = (int) $request->input('per_page', 25);
-    $page = (int) $request->input('page', 1);
+    
+    $query = \App\Models\Customer::query();
 
-    $allCustomers = [
-        ['id' => 1, 'name' => 'SOOPLAI', 'email' => '', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 2, 'name' => 'PT. BARUNA', 'email' => 'N/A', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 3, 'name' => 'AB SHOP', 'email' => '', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 4, 'name' => 'Abadi Cargo / Kiki Express', 'email' => '', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 5, 'name' => 'ABC PRESIDENT INDONESIA', 'email' => 'N/A', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 6, 'name' => 'ACHAN FARM', 'email' => 'N/A', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 7, 'name' => 'ACHOI - SOSOK', 'email' => 'N/A', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 8, 'name' => 'achoi - sosok', 'email' => 'N/A', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 9, 'name' => 'ACI / BP.EVENTIUS', 'email' => '', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 10, 'name' => 'ACU.', 'email' => '', 'phone' => '', 'unpaid' => 0, 'is_active' => false],
-        ['id' => 11, 'name' => 'AGRO ABADI', 'email' => 'N/A', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 12, 'name' => 'AGRO ABADI / BP. ERWIN', 'email' => '', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 13, 'name' => 'AGRO PALEM', 'email' => 'N/A', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 14, 'name' => 'AHMAD SANUSI, BP.', 'email' => 'N/A', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 15, 'name' => 'AHUI / HOWE AUTO', 'email' => '', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-        ['id' => 16, 'name' => 'AKHO', 'email' => '', 'phone' => '', 'unpaid' => 0, 'is_active' => true],
-    ];
-
-    // Filter
     if ($search) {
-        $allCustomers = array_filter($allCustomers, function ($c) use ($search) {
-            return str_contains(strtolower($c['name']), strtolower($search));
-        });
-    }
-    if ($status) {
-        $isActiveVal = $status === 'active';
-        $allCustomers = array_filter($allCustomers, function ($c) use ($isActiveVal) {
-            return $c['is_active'] === $isActiveVal;
-        });
+        $query->where('name', 'ilike', '%' . $search . '%');
     }
 
-    $allCustomers = array_values($allCustomers);
-    $total = count($allCustomers);
-    $offset = ($page - 1) * $perPage;
-    $items = array_slice($allCustomers, $offset, $perPage);
+    if ($status === 'active') {
+        $query->where('enabled', true);
+    } elseif ($status === 'inactive') {
+        $query->where('enabled', false);
+    }
+
+    $paginator = $query->paginate($perPage);
+
+    // Calculate unpaid per customer for current page
+    $customerIds = $paginator->getCollection()->pluck('id');
+    $customerInvoices = \App\Models\Incomes\Invoice::whereIn('customer_id', $customerIds)
+        ->whereIn('payment_status', ['unpaid', 'partial'])
+        ->where('invoice_status_code', 'posted')
+        ->get(['id', 'customer_id', 'amount']);
+    $invoiceIds = $customerInvoices->pluck('id');
+    $payments = \App\Models\PaymentInvoice::whereIn('invoice_id', $invoiceIds)
+        ->selectRaw('invoice_id, SUM(allocated_amount) as total_paid')
+        ->groupBy('invoice_id')
+        ->pluck('total_paid', 'invoice_id');
+    $unpaidPerCustomer = [];
+    foreach ($customerInvoices as $inv) {
+        $paid = $payments->get($inv->id, 0);
+        $outstanding = $inv->amount - $paid;
+        $unpaidPerCustomer[$inv->customer_id] = ($unpaidPerCustomer[$inv->customer_id] ?? 0) + $outstanding;
+    }
+
+    $items = $paginator->getCollection()->map(function ($customer) use ($unpaidPerCustomer) {
+        return [
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'email' => 'N/A',
+            'phone' => 'N/A',
+            'unpaid' => $unpaidPerCustomer[$customer->id] ?? 0,
+            'is_active' => (bool)$customer->enabled,
+        ];
+    });
+
+    // Calculate global total unpaid
+    $globalInvoices = \App\Models\Incomes\Invoice::whereIn('payment_status', ['unpaid', 'partial'])
+        ->where('invoice_status_code', 'posted')
+        ->get(['id', 'amount']);
+    $globalPaid = \App\Models\PaymentInvoice::whereIn('invoice_id', $globalInvoices->pluck('id'))
+        ->sum('allocated_amount');
+    $globalUnpaid = $globalInvoices->sum('amount') - $globalPaid;
 
     return Inertia::render('Customers/Index', [
         'customers' => $items,
         'pagination' => [
-            'total' => $total,
-            'perPage' => $perPage,
-            'currentPage' => $page,
-            'lastPage' => (int) ceil($total / $perPage),
-            'from' => $total > 0 ? $offset + 1 : 0,
-            'to' => min($offset + $perPage, $total),
+            'total' => $paginator->total(),
+            'perPage' => $paginator->perPage(),
+            'currentPage' => $paginator->currentPage(),
+            'lastPage' => $paginator->lastPage(),
+            'from' => $paginator->firstItem() ?: 0,
+            'to' => $paginator->lastItem() ?: 0,
         ],
         'stats' => [
-            'total' => 16,
-            'active' => 15,
-            'inactive' => 1,
-            'totalUnpaid' => 0
+            'total' => \App\Models\Customer::count(),
+            'active' => \App\Models\Customer::where('enabled', true)->count(),
+            'inactive' => \App\Models\Customer::where('enabled', false)->count(),
+            'totalUnpaid' => $globalUnpaid
         ],
         'filters' => [
             'search' => $search,
@@ -146,13 +172,90 @@ Route::get('/customers/create', function () {
     return Inertia::render('Customers/Create');
 });
 
-Route::post('/customers', function () {
-    return redirect('/customers');
+Route::post('/customers', function (\Illuminate\Http\Request $request) {
+    $validated = $request->validate([
+        'name' => 'required|string|max:191',
+        'address' => 'nullable|string',
+        'tax_number' => 'nullable|string', // mapped to npwp
+        'is_active' => 'boolean',          // mapped to enabled
+        'reference' => 'nullable|string|max:191',
+    ]);
+    
+    $company_id = session('company_id') ?: \App\Models\Settings\Company::where('enabled', 1)->first()?->id;
+
+    \App\Models\Customer::create([
+        'name' => $validated['name'],
+        'address' => $validated['address'] ?? null,
+        'npwp' => $validated['tax_number'] ?? null,
+        'enabled' => $validated['is_active'] ?? true,
+        'reference' => $validated['reference'] ?? null,
+        'company_id' => $company_id,
+    ]);
+    
+    return redirect('/customers')->with('success', 'Customer created successfully.');
+});
+
+Route::get('/customers/{customer}', function (\App\Models\Customer $customer) {
+    // Calculate customer unpaid
+    $invoices = \App\Models\Incomes\Invoice::where('customer_id', $customer->id)
+        ->whereIn('payment_status', ['unpaid', 'partial'])
+        ->where('invoice_status_code', 'posted')
+        ->get(['id', 'amount']);
+    $paid = \App\Models\PaymentInvoice::whereIn('invoice_id', $invoices->pluck('id'))
+        ->sum('allocated_amount');
+    $customerUnpaid = $invoices->sum('amount') - $paid;
+
+    // For view page
+    return Inertia::render('Customers/Show', [
+        'customer' => [
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'address' => $customer->address,
+            'npwp' => $customer->npwp,
+            'enabled' => (bool)$customer->enabled,
+            'reference' => $customer->reference,
+            'unpaid' => $customerUnpaid,
+        ]
+    ]);
+});
+
+Route::get('/customers/{customer}/edit', function (\App\Models\Customer $customer) {
+    // For edit page
+    return Inertia::render('Customers/Edit', [
+        'customer' => [
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'address' => $customer->address,
+            'tax_number' => $customer->npwp,
+            'is_active' => (bool)$customer->enabled,
+            'reference' => $customer->reference,
+        ]
+    ]);
+});
+
+Route::put('/customers/{customer}', function (\Illuminate\Http\Request $request, \App\Models\Customer $customer) {
+    $validated = $request->validate([
+        'name' => 'required|string|max:191',
+        'address' => 'nullable|string',
+        'tax_number' => 'nullable|string',
+        'is_active' => 'boolean',
+        'reference' => 'nullable|string|max:191',
+    ]);
+
+    $customer->update([
+        'name' => $validated['name'],
+        'address' => $validated['address'] ?? null,
+        'npwp' => $validated['tax_number'] ?? null,
+        'enabled' => $validated['is_active'] ?? true,
+        'reference' => $validated['reference'] ?? null,
+    ]);
+
+    return redirect('/customers')->with('success', 'Customer updated successfully.');
 });
 
 Route::post('/api/customers', function (\Illuminate\Http\Request $request) {
     $validated = $request->validate([
-        'name' => 'required|string|max:255',
+        'name' => 'required|string|max:191',
         'address' => 'nullable|string',
         'npwp' => 'nullable|string',
     ]);
@@ -862,6 +965,16 @@ Route::get('/upload-no-faktur', function () {
 // Main Settings page (Inertia)
 Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
 
+// Payment Limits & Categories
+Route::get('/settings/payment-limits', [PaymentLimitController::class, 'index'])->name('payment-limits.index');
+Route::post('/settings/payment-categories', [PaymentLimitController::class, 'storeCategory']);
+Route::put('/settings/payment-categories/{category}', [PaymentLimitController::class, 'updateCategory']);
+Route::delete('/settings/payment-categories/{category}', [PaymentLimitController::class, 'destroyCategory']);
+
+Route::post('/settings/payment-limits', [PaymentLimitController::class, 'storeLimit']);
+Route::put('/settings/payment-limits/{limit}', [PaymentLimitController::class, 'updateLimit']);
+Route::delete('/settings/payment-limits/{limit}', [PaymentLimitController::class, 'destroyLimit']);
+
 // Companies API
 Route::prefix('api/settings')->group(function () {
     // Companies
@@ -894,4 +1007,10 @@ Route::prefix('api/settings')->group(function () {
     // Invoice Settings
     Route::get('/invoice-setting', [InvoiceSettingController::class, 'index']);
     Route::post('/invoice-setting', [InvoiceSettingController::class, 'save']);
+
+    // Invoice Types
+    Route::get('/invoice-types', [InvoiceTypeController::class, 'index']);
+    Route::post('/invoice-types', [InvoiceTypeController::class, 'store']);
+    Route::put('/invoice-types/{id}', [InvoiceTypeController::class, 'update']);
+    Route::delete('/invoice-types/{id}', [InvoiceTypeController::class, 'destroy']);
 });

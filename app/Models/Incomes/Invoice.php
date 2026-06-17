@@ -37,4 +37,19 @@ class Invoice extends Model
     {
         return $this->hasMany(InvoiceItem::class);
     }
+
+    public function invoiceType()
+    {
+        return $this->belongsTo(InvoiceType::class, 'invoice_type_id');
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(\App\Models\Customer::class, 'customer_id');
+    }
+    public function documents()
+    {
+        return $this->belongsToMany(\App\Models\Document::class, 'document_invoices')
+                    ->withTimestamps();
+    }
 }

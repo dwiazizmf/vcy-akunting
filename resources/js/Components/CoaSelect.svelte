@@ -11,8 +11,7 @@
 
   let isOpen = false;
   let searchQuery = '';
-  let dropdownRef;
-  let buttonRef;
+  let wrapperRef;
 
   // Search filter matching code or name
   $: filteredOptions = options.filter(opt => {
@@ -30,7 +29,7 @@
     if (isOpen) {
       searchQuery = '';
       setTimeout(() => {
-        const searchInput = dropdownRef?.querySelector('input');
+        const searchInput = wrapperRef?.querySelector('input[type="text"]');
         if (searchInput) searchInput.focus();
       }, 50);
     }
@@ -43,23 +42,17 @@
   }
 
   function handleClickOutside(event) {
-    if (isOpen && dropdownRef && !dropdownRef.contains(event.target) && buttonRef && !buttonRef.contains(event.target)) {
+    if (isOpen && wrapperRef && !wrapperRef.contains(event.target)) {
       isOpen = false;
     }
   }
-
-  onMount(() => {
-    document.addEventListener('click', handleClickOutside);
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  });
 </script>
 
-<div class="relative w-full">
+<svelte:window on:click={handleClickOutside} />
+
+<div class="relative w-full {isOpen ? 'z-[100]' : ''}" bind:this={wrapperRef}>
   <!-- Trigger Button -->
   <button
-    bind:this={buttonRef}
     type="button"
     {disabled}
     class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:cursor-not-allowed disabled:opacity-50 transition-all shadow-sm {isOpen ? 'ring-2 ring-teal-500 border-teal-500' : ''}"
@@ -74,7 +67,6 @@
   <!-- Dropdown Menu -->
   {#if isOpen}
     <div
-      bind:this={dropdownRef}
       class="absolute z-50 mt-1 max-h-60 w-full overflow-hidden rounded-md border bg-white text-slate-950 shadow-lg border-slate-200 focus:outline-none animate-in fade-in-50 slide-in-from-top-1 duration-100"
     >
       <!-- Search Input -->

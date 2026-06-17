@@ -9,7 +9,7 @@
     Building2, Users, FileText, Receipt, Settings, Search, Plus,
     Pencil, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Save, X, AlertCircle, CheckCircle, Shield, Key,
-    Upload, Image
+    Upload, Image, Tag
   } from 'lucide-svelte';
 
   // ============================================================
@@ -49,6 +49,15 @@
   let showTaxModal = false;
   let editingTax = null;
   let taxForm = { name: '', rate: '', type: 'percentage', account_id: '', description: '', enabled: true };
+
+  export let initialInvoiceTypes = { data: [], pagination: {} };
+  let invoiceTypes = initialInvoiceTypes.data;
+  let invoiceTypesPag = initialInvoiceTypes.pagination;
+  let invoiceTypeSearch = '';
+  let invoiceTypeLoading = false;
+  let showInvoiceTypeModal = false;
+  let editingInvoiceType = null;
+  let invoiceTypeForm = { name: '' };
 
   // Users
   let users = initialUsers.data;
@@ -213,6 +222,62 @@
       showToast('Pajak dihapus');
       await loadTaxes();
     } catch(e) { showToast('Gagal menghapus', 'error'); }
+  }
+
+  // ============================================================
+  // INVOICE TYPES CRUD
+  // ============================================================
+  async function loadInvoiceTypes(page = 1) {
+    invoiceTypeLoading = true;
+    try {
+      const data = await apiFetch(`/api/settings/invoice-types?search=${encodeURIComponent(invoiceTypeSearch)}&per_page=25&page=${page}`);
+      invoiceTypes = data.invoiceTypes;
+      invoiceTypesPag = data.pagination;
+    } catch(e) { showToast('Gagal memuat data tipe invoice', 'error'); }
+    invoiceTypeLoading = false;
+  }
+
+  function openInvoiceTypeModal(invoiceType = null) {
+    editingInvoiceType = invoiceType;
+    if (invoiceType) {
+      invoiceTypeForm = { name: invoiceType.name };
+    } else {
+      invoiceTypeForm = { name: '' };
+    }
+    showInvoiceTypeModal = true;
+  }
+
+  async function saveInvoiceType() {
+    try {
+      if (editingInvoiceType) {
+        await apiFetch(`/api/settings/invoice-types/${editingInvoiceType.id}`, { method: 'PUT', body: invoiceTypeForm });
+        showToast('Tipe invoice berhasil diperbarui');
+      } else {
+        await apiFetch(`/api/settings/invoice-types`, { method: 'POST', body: invoiceTypeForm });
+        showToast('Tipe invoice berhasil ditambahkan');
+      }
+      showInvoiceTypeModal = false;
+      await loadInvoiceTypes();
+    } catch(e) { showToast(e?.message || 'Gagal menyimpan tipe invoice', 'error'); }
+  }
+
+  async function deleteInvoiceType(id) {
+    if (!(await showConfirm('Hapus tipe invoice ini?'))) return;
+    try {
+      const res = await apiFetch(`/api/settings/invoice-types/${id}`, { method: 'DELETE' });
+      if (res.success) {
+        showToast('Tipe invoice dihapus');
+        await loadInvoiceTypes();
+      } else {
+        showToast(res.message || 'Gagal menghapus', 'error');
+      }
+    } catch(e) { showToast(e?.message || 'Gagal menghapus', 'error'); }
+  }
+
+  let invoiceTypeSearchTimer;
+  function onInvoiceTypeSearch() {
+    clearTimeout(invoiceTypeSearchTimer);
+    invoiceTypeSearchTimer = setTimeout(() => loadInvoiceTypes(1), 300);
   }
 
   // ============================================================
@@ -404,7 +469,8 @@
           { id: 'companies', label: 'Perusahaan', icon: Building2 },
           { id: 'users', label: 'User & Role', icon: Users },
           { id: 'invoice-setting', label: 'Setting Faktur', icon: FileText },
-          { id: 'taxes', label: 'Pajak', icon: Receipt }
+          { id: 'taxes', label: 'Pajak', icon: Receipt },
+          { id: 'invoice-types', label: 'Tipe Invoice', icon: Tag }
         ] as tab}
           <button
             id="tab-{tab.id}"
@@ -866,6 +932,84 @@
         </Card.Content>
       </Card.Root>
     {/if}
+
+    <!-- ============================================================ -->
+    <!-- TAB: INVOICE TYPES -->
+    <!-- ============================================================ -->
+    {#if currentTab === 'invoice-types'}
+      <Card.Root class="border border-slate-200 shadow-sm">
+        <Card.Header class="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <Tag class="h-4 w-4 text-teal-600" />
+            <span class="text-sm font-semibold text-slate-800">Daftar Tipe Invoice</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="relative">
+              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                bind:value={invoiceTypeSearch}
+                on:input={onInvoiceTypeSearch}
+                placeholder="Cari tipe invoice..."
+                class="pl-8 h-8 text-xs w-48 border-slate-200"
+              />
+            </div>
+            <Button class="h-8 text-xs gap-1.5 bg-teal-700 hover:bg-teal-800" on:click={() => openInvoiceTypeModal()}>
+              <Plus class="h-3.5 w-3.5" /> Tambah
+            </Button>
+          </div>
+        </Card.Header>
+        <Card.Content class="p-0">
+          <div class="overflow-x-auto">
+            <Table.Root>
+              <Table.Header>
+                <Table.Row class="bg-slate-50/80 border-b border-slate-100">
+                  <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500 w-10">#</Table.Head>
+                  <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Nama Tipe Invoice</Table.Head>
+                  <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500 text-right">Aksi</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {#if invoiceTypeLoading}
+                  <Table.Row><Table.Cell colspan="3" class="text-center py-8 text-xs text-slate-400">Memuat...</Table.Cell></Table.Row>
+                {:else if invoiceTypes.length === 0}
+                  <Table.Row><Table.Cell colspan="3" class="text-center py-8 text-xs text-slate-400">Belum ada data tipe invoice</Table.Cell></Table.Row>
+                {:else}
+                  {#each invoiceTypes as type, i}
+                    <Table.Row class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                      <Table.Cell class="py-1.5 px-3 text-xs text-slate-400">{(invoiceTypesPag.from ?? 0) + i}</Table.Cell>
+                      <Table.Cell class="py-1.5 px-3 text-xs font-medium text-slate-800">{type.name}</Table.Cell>
+                      <Table.Cell class="py-1.5 px-3">
+                        <div class="flex items-center gap-1 justify-end">
+                          <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-teal-50 text-slate-400 hover:text-teal-600 transition-colors" on:click={() => openInvoiceTypeModal(type)} title="Edit Tipe">
+                            <Pencil class="h-3.5 w-3.5" />
+                          </button>
+                          <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" on:click={() => deleteInvoiceType(type.id)} title="Hapus Tipe">
+                            <Trash2 class="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </Table.Cell>
+                    </Table.Row>
+                  {/each}
+                {/if}
+              </Table.Body>
+            </Table.Root>
+          </div>
+          <!-- Pagination -->
+          {#if invoiceTypesPag.lastPage > 1}
+            <div class="flex items-center justify-between px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+              <span class="text-[11px] text-slate-400">Showing {pagInfo(invoiceTypesPag)}</span>
+              <div class="flex items-center gap-1">
+                <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={invoiceTypesPag.currentPage <= 1} on:click={() => loadInvoiceTypes(1)}><ChevronsLeft class="h-3.5 w-3.5" /></button>
+                <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={invoiceTypesPag.currentPage <= 1} on:click={() => loadInvoiceTypes(invoiceTypesPag.currentPage - 1)}><ChevronLeft class="h-3.5 w-3.5" /></button>
+                <span class="text-xs px-2 text-slate-600">{invoiceTypesPag.currentPage}/{invoiceTypesPag.lastPage}</span>
+                <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={invoiceTypesPag.currentPage >= invoiceTypesPag.lastPage} on:click={() => loadInvoiceTypes(invoiceTypePag.currentPage + 1)}><ChevronRight class="h-3.5 w-3.5" /></button>
+                <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={invoiceTypesPag.currentPage >= invoiceTypesPag.lastPage} on:click={() => loadInvoiceTypes(invoiceTypesPag.lastPage)}><ChevronsRight class="h-3.5 w-3.5" /></button>
+              </div>
+            </div>
+          {/if}
+        </Card.Content>
+      </Card.Root>
+    {/if}
   </div>
 </AppLayout>
 
@@ -1101,6 +1245,30 @@
     <div class="modal-ftr">
       <Button variant="outline" class="h-8 text-xs border-slate-200" on:click={() => showRoleModal = false}>Batal</Button>
       <Button class="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 gap-1.5" on:click={saveRole}>
+        <Save class="h-3.5 w-3.5" /> Simpan
+      </Button>
+    </div>
+  </div>
+</div>
+{/if}
+
+<!-- Invoice Type Modal -->
+{#if showInvoiceTypeModal}
+<div class="modal-backdrop" on:click|self={() => showInvoiceTypeModal = false}>
+  <div class="modal-box modal-md">
+    <div class="modal-hdr">
+      <h3 class="text-sm font-semibold text-slate-800">{editingInvoiceType ? 'Edit Tipe Invoice' : 'Tambah Tipe Invoice'}</h3>
+      <button class="h-6 w-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400" on:click={() => showInvoiceTypeModal = false}><X class="h-4 w-4" /></button>
+    </div>
+    <div class="space-y-3">
+      <div class="space-y-1.5">
+        <label class="text-xs font-medium">Nama Tipe Invoice <span class="text-rose-500">*</span></label>
+        <Input bind:value={invoiceTypeForm.name} placeholder="Asuransi / Buruh / Trucking / dll." class="h-8 text-xs border-slate-200" />
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <Button variant="outline" class="h-8 text-xs border-slate-200" on:click={() => showInvoiceTypeModal = false}>Batal</Button>
+      <Button class="h-8 text-xs bg-teal-700 hover:bg-teal-800 gap-1.5" on:click={saveInvoiceType}>
         <Save class="h-3.5 w-3.5" /> Simpan
       </Button>
     </div>

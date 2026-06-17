@@ -7,6 +7,7 @@ use App\Models\Settings\Company;
 use App\Models\Settings\InvoiceSetting;
 use App\Models\Settings\Tax;
 use App\Models\User;
+use App\Models\Incomes\InvoiceType;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Settings\Permission;
@@ -47,6 +48,9 @@ class SettingsController extends Controller
 
         // Taxes tab initial data
         $taxes = Tax::orderBy('id', 'asc')->paginate(25);
+
+        // Invoice Types initial data
+        $invoiceTypes = InvoiceType::orderBy('id', 'asc')->paginate(25);
 
         // Invoice settings
         $invoiceSetting = InvoiceSetting::getSetting();
@@ -92,6 +96,17 @@ class SettingsController extends Controller
                 ],
             ],
             'invoiceSetting' => $invoiceSetting,
+            'initialInvoiceTypes' => [
+                'data'       => $invoiceTypes->items(),
+                'pagination' => [
+                    'total'       => $invoiceTypes->total(),
+                    'perPage'     => $invoiceTypes->perPage(),
+                    'currentPage' => $invoiceTypes->currentPage(),
+                    'lastPage'    => $invoiceTypes->lastPage(),
+                    'from'        => $invoiceTypes->firstItem() ?? 0,
+                    'to'          => $invoiceTypes->lastItem() ?? 0,
+                ],
+            ],
             'accounts' => \App\Helpers\AccountHelper::formatAccountsList(Account::where('company_id', $companyId)
                 ->where('code', 'not like', '12%')
                 ->where('enabled', 1)

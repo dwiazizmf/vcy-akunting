@@ -27,10 +27,12 @@
     export let activeTaxes = [];
     export let customers = [];
     export let invoice = null;
+    export let invoiceTypes = [];
 
     const form = useForm({
         customer_id: invoice?.customer_id || null,
         customer_name: invoice?.customer_name || "",
+        invoice_type_id: invoice?.invoice_type_id || null,
         invoiced_at: invoice?.invoiced_at
             ? invoice.invoiced_at.split(" ")[0]
             : new Date().toISOString().split("T")[0],
@@ -197,6 +199,33 @@
                         </div>
 
                         <!-- Optional Info -->
+                        <!-- Tipe Invoice -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                >Tipe Invoice</label
+                            >
+                            <div class="relative">
+                                <Ship
+                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                />
+                                <select
+                                    bind:value={$form.invoice_type_id}
+                                    class="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-9 pr-8 appearance-none focus:border-teal-500 cursor-pointer text-slate-700"
+                                >
+                                    <option value={null}>--Pilih Tipe--</option>
+                                    {#each invoiceTypes as type}
+                                        <option value={type.id}>{type.name}</option>
+                                    {/each}
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="space-y-1.5">
                             <label
                                 class="text-xs font-bold text-slate-700 uppercase tracking-wider"

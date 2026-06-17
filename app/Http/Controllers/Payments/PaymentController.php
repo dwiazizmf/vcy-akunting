@@ -29,9 +29,9 @@ class PaymentController extends Controller
         $perPage = (int) $request->input('per_page', 10);
         $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
 
-        $query = Payment::with('bankAccount')
+        $query = Payment::with(['bankAccount', 'invoices.invoice.customer'])
             ->when($search, fn($q) => $q->where('payment_number', 'like', "%{$search}%")
-                ->orWhere('customer_name', 'like', "%{$search}%")
+                ->orWhereHas('invoices.invoice.customer', fn($cq) => $cq->where('name', 'like', "%{$search}%"))
             )
             ->orderBy('id', 'desc');
 
@@ -40,7 +40,7 @@ class PaymentController extends Controller
         $items = $paginator->map(fn($p) => [
             'id'             => $p->id,
             'payment_number' => $p->payment_number,
-            'customer_name'  => $p->customer_name,
+            'customer_name'  => $p->invoices->map(fn($pi) => $pi->invoice?->customer?->name)->filter()->unique()->implode(', '),
             'paid_at'        => $p->paid_at?->format('d M Y'),
             'total_amount'   => $p->total_amount,
             'payment_method' => $p->payment_method,
@@ -63,65 +63,62 @@ class PaymentController extends Controller
 
     public function create(Request $request)
     {
-        $banks     = BankAccount::where('enabled', 1)->with('account')->get(['id', 'name', 'type', 'bank_name', 'account_id', 'is_default']);
-        $customers = Customer::select('id', 'name')->get();
-
-        // Pre-load invoices if customer_id is provided
-        $selectedCustomerId = $request->input('customer_id');
-        $outstandingInvoices = [];
-        if ($selectedCustomerId) {
-            $outstandingInvoices = $this->getOutstanding($selectedCustomerId);
-        }
+        $banks = BankAccount::where('enabled', 1)->with('account')->get(['id', 'name', 'type', 'bank_name', 'account_id', 'is_default']);
+        $customers = Customer::select('id', 'name')->orderBy('name')->get();
+        $taxes = \Illuminate\Support\Facades\DB::table('taxes')->where('enabled', true)->get();
 
         return Inertia::render('Payments/Create', [
-            'banks'              => $banks,
-            'customers'          => $customers,
-            'selectedCustomerId' => $selectedCustomerId ? (int) $selectedCustomerId : null,
-            'outstandingInvoices' => $outstandingInvoices,
+            'banks'     => $banks,
+            'customers' => $customers,
+            'taxes'     => $taxes,
         ]);
     }
 
     /**
-     * API endpoint: Get outstanding invoices for a customer.
+     * API endpoint: Get outstanding invoices (globally searchable).
      */
-    public function outstandingInvoices(Customer $customer)
+    public function outstandingInvoices(Request $request)
     {
-        return response()->json($this->getOutstanding($customer->id));
-    }
+        $customerId = $request->query('customer_id');
 
-    private function getOutstanding(int $customerId): array
-    {
-        return Invoice::where('customer_id', $customerId)
-            ->whereIn('payment_status', ['unpaid', 'partial'])
-            ->where('invoice_status_code', 'posted')
-            ->get()
-            ->map(function ($inv) {
-                $totalPaid = PaymentInvoice::where('invoice_id', $inv->id)->sum('allocated_amount');
-                $outstanding = (float) $inv->amount - $totalPaid;
-                return [
-                    'id'             => $inv->id,
-                    'invoice_text'   => $inv->invoice_text ?? $inv->invoice_number,
-                    'invoice_number' => $inv->invoice_number,
-                    'invoiced_at'    => $inv->invoiced_at,
-                    'due_at'         => $inv->due_at,
-                    'amount'         => (float) $inv->amount,
-                    'total_paid'     => $totalPaid,
-                    'outstanding'    => $outstanding,
-                    'payment_status' => $inv->payment_status,
-                ];
-            })
-            ->toArray();
+        $query = Invoice::with('customer')
+            ->whereIn('payment_status', ['unpaid', 'partial']);
+
+        if ($customerId) {
+            $query->where('customer_id', $customerId);
+        } else {
+            // Return empty if no customer selected
+            return response()->json([]);
+        }
+
+        $invoices = $query->get()->map(function ($inv) {
+            $totalPaid = PaymentInvoice::where('invoice_id', $inv->id)->sum('allocated_amount');
+            $outstanding = (float) $inv->amount - $totalPaid;
+            return [
+                'id'             => $inv->id,
+                'customer_name'  => $inv->customer?->name ?? 'Unknown',
+                'invoice_text'   => $inv->invoice_text ?? $inv->invoice_number,
+                'invoice_number' => $inv->invoice_number,
+                'invoiced_at'    => $inv->invoiced_at,
+                'due_at'         => $inv->due_at,
+                'amount'         => (float) $inv->amount,
+                'total_paid'     => $totalPaid,
+                'outstanding'    => $outstanding,
+                'payment_status' => $inv->payment_status,
+            ];
+        });
+
+        return response()->json($invoices->filter(fn($i) => $i['outstanding'] > 0)->values());
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'customer_id'     => 'required|integer|exists:customers,id',
             'paid_at'         => 'required|date',
-            'total_amount'    => 'required|numeric|min:0.01',
-            'payment_method'  => 'required|in:cash,transfer,giro,cheque',
-            'bank_account_id' => 'required|integer|exists:bank_accounts,id',
-            'reference'       => 'nullable|string|max:255',
+            'tax_id'          => 'nullable|exists:taxes,id',
+            'payment_method'  => 'required|string',
+            'bank_account_id' => 'required|exists:bank_accounts,id',
+            'reference'       => 'nullable|string',
             'notes'           => 'nullable|string',
             'allocations'     => 'required|array|min:1',
             'allocations.*.invoice_id'        => 'required|integer|exists:invoices,id',
@@ -129,21 +126,30 @@ class PaymentController extends Controller
         ]);
 
         $companyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
-        $customer  = Customer::find($validated['customer_id']);
 
         // Calculate total allocated
         $totalAllocated = collect($validated['allocations'])->sum('allocated_amount');
-        $overpayment    = max(0, (float) $validated['total_amount'] - $totalAllocated);
+        
+        $taxAmount = 0;
+        if (!empty($validated['tax_id'])) {
+            $tax = \Illuminate\Support\Facades\DB::table('taxes')->where('id', $validated['tax_id'])->first();
+            if ($tax) {
+                $taxAmount = $totalAllocated * ($tax->rate / 100);
+            }
+        }
+        
+        $totalAmount = $totalAllocated + $taxAmount;
+        $overpayment = 0;
 
-        return DB::transaction(function () use ($validated, $companyId, $customer, $overpayment) {
+        return DB::transaction(function () use ($validated, $companyId, $totalAmount, $taxAmount, $overpayment) {
             // 1. Create payment
             $payment = Payment::create([
                 'company_id'         => $companyId,
                 'payment_number'     => $this->journalService->generatePaymentNumber(),
-                'customer_id'        => $validated['customer_id'],
-                'customer_name'      => $customer->name,
                 'paid_at'            => $validated['paid_at'],
-                'total_amount'       => $validated['total_amount'],
+                'total_amount'       => $totalAmount,
+                'tax_id'             => $validated['tax_id'] ?? null,
+                'tax_amount'         => $taxAmount,
                 'payment_method'     => $validated['payment_method'],
                 'bank_account_id'    => $validated['bank_account_id'],
                 'reference'          => $validated['reference'] ?? null,
@@ -176,20 +182,23 @@ class PaymentController extends Controller
 
     public function show(Payment $payment)
     {
-        $payment->load(['bankAccount', 'customer', 'invoices.invoice', 'journal.ledgers.account']);
+        $payment->load(['bankAccount', 'invoices.invoice.customer', 'journal.ledgers.account']);
 
         $allocations = $payment->invoices->map(fn($pi) => [
             'invoice_id'       => $pi->invoice_id,
             'invoice_text'     => $pi->invoice?->invoice_text ?? $pi->invoice?->invoice_number,
+            'customer_name'    => $pi->invoice?->customer?->name,
             'invoiced_at'      => $pi->invoice?->invoiced_at,
             'allocated_amount' => (float) $pi->allocated_amount,
         ]);
+
+        $customerNames = $payment->invoices->map(fn($pi) => $pi->invoice?->customer?->name)->filter()->unique()->implode(', ');
 
         return Inertia::render('Payments/Show', [
             'payment'     => [
                 'id'             => $payment->id,
                 'payment_number' => $payment->payment_number,
-                'customer_name'  => $payment->customer_name,
+                'customer_name'  => $customerNames,
                 'paid_at'        => $payment->paid_at?->format('d M Y'),
                 'total_amount'   => (float) $payment->total_amount,
                 'payment_method' => $payment->payment_method,
