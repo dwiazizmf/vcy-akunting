@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Incomes\Invoice;
 use App\Models\Incomes\InvoiceItem;
-use App\Models\Customer;
-use App\Models\Account;
+use App\Models\Incomes\Customer;
+use App\Models\Accounting\Accounting\Account;
 use App\Models\Settings\Discount;
 use App\Helpers\InvoiceHelper;
 use Inertia\Inertia;
@@ -94,7 +94,7 @@ class InvoiceController extends Controller
             'totalAmount'   => Invoice::where('invoice_status_code', '!=', 'void')->sum('grand_total'),
         ];
 
-        return Inertia::render('Invoices/Index', [
+        return Inertia::render('Incomes/Invoices/Index', [
             'invoices'   => $items,
             'pagination' => $pagination,
             'stats'      => $stats,
@@ -118,7 +118,7 @@ class InvoiceController extends Controller
         $revenueAccounts = \App\Helpers\AccountHelper::getFormattedAccounts($companyId, 'Revenue');
         $invoiceTypes = \App\Models\Incomes\InvoiceType::all();
         
-        return Inertia::render('Invoices/Create', [
+        return Inertia::render('Incomes/Invoices/Create', [
             'activeTaxes'     => $activeTaxes,
             'activeDiscounts' => $activeDiscounts,
             'customers'       => $customers,
@@ -299,7 +299,7 @@ class InvoiceController extends Controller
         $customers = Customer::select('id', 'name')->get();
         $invoiceTypes = \App\Models\Incomes\InvoiceType::all();
         
-        return Inertia::render('Invoices/Edit', [
+        return Inertia::render('Incomes/Invoices/Edit', [
             'invoice' => $invoice,
             'activeTaxes' => $activeTaxes,
             'activeDiscounts' => $activeDiscounts,

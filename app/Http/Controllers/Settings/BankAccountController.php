@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Models\BankAccount;
-use App\Models\Account;
+use App\Models\Settings\BankAccount;
+use App\Models\Accounting\Accounting\Account;
 use App\Models\Settings\Company;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

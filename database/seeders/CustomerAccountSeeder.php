@@ -3,9 +3,9 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Customer;
-use App\Models\Account;
-use App\Models\AccountType;
+use App\Models\Incomes\Customer;
+use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Accounting\AccountType;
 use Illuminate\Support\Facades\DB;
 
 class CustomerAccountSeeder extends Seeder

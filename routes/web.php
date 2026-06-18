@@ -5,7 +5,7 @@ use App\Http\Controllers\Incomes\InvoiceController;
 use App\Http\Controllers\Settings\SettingsController;
 use App\Http\Controllers\Settings\CompanyController;
 use App\Http\Controllers\Settings\TaxController;
-use App\Http\Controllers\DiscountController;
+use App\Http\Controllers\Settings\DiscountController;
 use App\Http\Controllers\Settings\UserController;
 use App\Http\Controllers\Settings\InvoiceTypeController;
 use App\Http\Controllers\Settings\RoleController;
@@ -94,7 +94,7 @@ Route::get('/customers', function (Illuminate\Http\Request $request) {
     $status = $request->input('status', '');
     $perPage = (int) $request->input('per_page', 25);
     
-    $query = \App\Models\Customer::query();
+    $query = \App\Models\Incomes\Customer::query();
 
     if ($search) {
         $query->where('name', 'ilike', '%' . $search . '%');
@@ -113,16 +113,16 @@ Route::get('/customers', function (Illuminate\Http\Request $request) {
     $customerInvoices = \App\Models\Incomes\Invoice::whereIn('customer_id', $customerIds)
         ->whereIn('payment_status', ['unpaid', 'partial'])
         ->where('invoice_status_code', 'posted')
-        ->get(['id', 'customer_id', 'amount']);
+        ->get(['id', 'customer_id', 'grand_total']);
     $invoiceIds = $customerInvoices->pluck('id');
-    $payments = \App\Models\PaymentInvoice::whereIn('invoice_id', $invoiceIds)
+    $payments = \App\Models\Expenses\PaymentInvoice::whereIn('invoice_id', $invoiceIds)
         ->selectRaw('invoice_id, SUM(allocated_amount) as total_paid')
         ->groupBy('invoice_id')
         ->pluck('total_paid', 'invoice_id');
     $unpaidPerCustomer = [];
     foreach ($customerInvoices as $inv) {
         $paid = $payments->get($inv->id, 0);
-        $outstanding = $inv->amount - $paid;
+        $outstanding = $inv->grand_total - $paid;
         $unpaidPerCustomer[$inv->customer_id] = ($unpaidPerCustomer[$inv->customer_id] ?? 0) + $outstanding;
     }
 
@@ -140,10 +140,10 @@ Route::get('/customers', function (Illuminate\Http\Request $request) {
     // Calculate global total unpaid
     $globalInvoices = \App\Models\Incomes\Invoice::whereIn('payment_status', ['unpaid', 'partial'])
         ->where('invoice_status_code', 'posted')
-        ->get(['id', 'amount']);
-    $globalPaid = \App\Models\PaymentInvoice::whereIn('invoice_id', $globalInvoices->pluck('id'))
+        ->get(['id', 'grand_total']);
+    $globalPaid = \App\Models\Expenses\PaymentInvoice::whereIn('invoice_id', $globalInvoices->pluck('id'))
         ->sum('allocated_amount');
-    $globalUnpaid = $globalInvoices->sum('amount') - $globalPaid;
+    $globalUnpaid = $globalInvoices->sum('grand_total') - $globalPaid;
 
     return Inertia::render('Customers/Index', [
         'customers' => $items,
@@ -156,9 +156,9 @@ Route::get('/customers', function (Illuminate\Http\Request $request) {
             'to' => $paginator->lastItem() ?: 0,
         ],
         'stats' => [
-            'total' => \App\Models\Customer::count(),
-            'active' => \App\Models\Customer::where('enabled', true)->count(),
-            'inactive' => \App\Models\Customer::where('enabled', false)->count(),
+            'total' => \App\Models\Incomes\Customer::count(),
+            'active' => \App\Models\Incomes\Customer::where('enabled', true)->count(),
+            'inactive' => \App\Models\Incomes\Customer::where('enabled', false)->count(),
             'totalUnpaid' => $globalUnpaid
         ],
         'filters' => [
@@ -184,7 +184,7 @@ Route::post('/customers', function (\Illuminate\Http\Request $request) {
     
     $company_id = session('company_id') ?: \App\Models\Settings\Company::where('enabled', 1)->first()?->id;
 
-    \App\Models\Customer::create([
+    \App\Models\Incomes\Customer::create([
         'name' => $validated['name'],
         'address' => $validated['address'] ?? null,
         'npwp' => $validated['tax_number'] ?? null,
@@ -201,10 +201,10 @@ Route::get('/customers/{customer}', function (\App\Models\Customer $customer) {
     $invoices = \App\Models\Incomes\Invoice::where('customer_id', $customer->id)
         ->whereIn('payment_status', ['unpaid', 'partial'])
         ->where('invoice_status_code', 'posted')
-        ->get(['id', 'amount']);
-    $paid = \App\Models\PaymentInvoice::whereIn('invoice_id', $invoices->pluck('id'))
+        ->get(['id', 'grand_total']);
+    $paid = \App\Models\Expenses\PaymentInvoice::whereIn('invoice_id', $invoices->pluck('id'))
         ->sum('allocated_amount');
-    $customerUnpaid = $invoices->sum('amount') - $paid;
+    $customerUnpaid = $invoices->sum('grand_total') - $paid;
 
     // For view page
     return Inertia::render('Customers/Show', [
@@ -264,19 +264,19 @@ Route::post('/api/customers', function (\Illuminate\Http\Request $request) {
     $validated['enabled'] = 1;
     $validated['company_id'] = session('company_id') ?: \App\Models\Settings\Company::where('enabled', 1)->first()?->id;
 
-    $customer = \App\Models\Customer::create($validated);
+    $customer = \App\Models\Incomes\Customer::create($validated);
     
     return response()->json($customer);
 });
 
-Route::resource('documents', \App\Http\Controllers\DocumentController::class)->only(['create', 'store']);
+Route::resource('documents', \App\Http\Controllers\Incomes\DocumentController::class)->only(['create', 'store']);
 
 
 
 
-Route::get('/tanda-terima', [\App\Http\Controllers\DocumentController::class, 'tandaTerima']);
+Route::get('/tanda-terima', [\App\Http\Controllers\Incomes\DocumentController::class, 'tandaTerima']);
 
-Route::get('/tanda-terima/new', [\App\Http\Controllers\DocumentController::class, 'tandaTerimaNew']);
+Route::get('/tanda-terima/new', [\App\Http\Controllers\Incomes\DocumentController::class, 'tandaTerimaNew']);
 
 Route::get('/list-kirim-tagihan', function (Illuminate\Http\Request $request) {
     $noLT = $request->input('no_lt', '');
@@ -334,7 +334,7 @@ Route::get('/list-kirim-tagihan', function (Illuminate\Http\Request $request) {
     $offset = ($page - 1) * $perPage;
     $items = array_slice($allLts, $offset, $perPage);
 
-    return Inertia::render('ListKirimTagihan/Index', [
+    return Inertia::render('Incomes/ListKirimTagihan/Index', [
         'lts' => $items,
         'pagination' => [
             'total' => $total,
@@ -353,9 +353,9 @@ Route::get('/list-kirim-tagihan', function (Illuminate\Http\Request $request) {
     ]);
 });
 
-Route::get('/schedule-tukar-faktur', [\App\Http\Controllers\DocumentController::class, 'scheduleTukarFaktur']);
+Route::get('/schedule-tukar-faktur', [\App\Http\Controllers\Incomes\DocumentController::class, 'scheduleTukarFaktur']);
 
-Route::get('/surat-tagihan', [\App\Http\Controllers\DocumentController::class, 'suratTagihan']);
+Route::get('/surat-tagihan', [\App\Http\Controllers\Incomes\DocumentController::class, 'suratTagihan']);
 
 Route::get('/report-mayora', function (Illuminate\Http\Request $request) {
     $noKode = $request->input('no_kode', '');
@@ -399,7 +399,7 @@ Route::get('/report-mayora', function (Illuminate\Http\Request $request) {
     $offset = ($page - 1) * $perPage;
     $items = array_slice($allReports, $offset, $perPage);
 
-    return Inertia::render('ReportMayora/Index', [
+    return Inertia::render('Incomes/ReportMayora/Index', [
         'reports' => $items,
         'pagination' => [
             'total' => $total,
@@ -488,7 +488,7 @@ Route::get('/kwitansi', function (Illuminate\Http\Request $request) {
     $offset = ($page - 1) * $perPage;
     $items = array_slice($allKwitansis, $offset, $perPage);
 
-    return Inertia::render('Kwitansi/Index', [
+    return Inertia::render('Incomes/Kwitansi/Index', [
         'kwitansis' => $items,
         'pagination' => [
             'total' => $total,
@@ -506,10 +506,10 @@ Route::get('/kwitansi', function (Illuminate\Http\Request $request) {
     ]);
 });
 
-Route::get('/titip-internal', [\App\Http\Controllers\DocumentController::class, 'titipInternal']);
+Route::get('/titip-internal', [\App\Http\Controllers\Incomes\DocumentController::class, 'titipInternal']);
 
 Route::get('/upload-no-faktur', function () {
-    return Inertia::render('UploadNoFaktur/Index');
+    return Inertia::render('Incomes/UploadNoFaktur/Index');
 });
 
 // =============================================

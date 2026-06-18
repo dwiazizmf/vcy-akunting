@@ -7,15 +7,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Settings\Company;
 use App\Models\Settings\PaymentCategory;
-use App\Models\Vendor;
-use App\Models\BankAccount;
-use App\Models\Account;
-use App\Models\Journal;
-use App\Models\User;
+use App\Models\Expenses\Vendor;
+use App\Models\Settings\BankAccount;
+use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Accounting\Journal;
+use App\Models\Settings\User;
 
 class ExpensePayment extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, \App\Traits\BelongsToCompany;
 
     protected $fillable = [
         'company_id',
@@ -39,14 +39,6 @@ class ExpensePayment extends Model
         'total_tax' => 'decimal:2',
         'tax_details' => 'array',
     ];
-
-    protected static function booted(): void
-    {
-        static::addGlobalScope('company', function (Builder $builder) {
-            $companyId = session('company_id') ?: (Company::where('enabled', 1)->first()?->id ?? 0);
-            $builder->where('company_id', $companyId);
-        });
-    }
 
     public function vendor()
     {

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class Tax extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, \App\Traits\BelongsToCompany;
 
     protected $table = 'taxes';
 
@@ -28,17 +28,12 @@ class Tax extends Model
     ];
 
     /**
-     * Global scope: hanya tampilkan pajak yang aktif secara default & sesuai company.
+     * Global scope: hanya tampilkan pajak yang aktif secara default.
      */
     protected static function booted(): void
     {
         static::addGlobalScope('enabled', function (Builder $query) {
             $query->where('enabled', true);
-        });
-
-        static::addGlobalScope('company', function (Builder $builder) {
-            $companyId = session('company_id') ?: (\App\Models\Settings\Company::where('enabled', 1)->first()?->id ?? 0);
-            $builder->where('company_id', $companyId);
         });
     }
 }

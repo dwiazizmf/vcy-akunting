@@ -4,13 +4,13 @@ namespace App\Models\Settings;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Account;
+use App\Models\Accounting\Accounting\Account;
 use App\Models\Settings\Company;
 use Illuminate\Database\Eloquent\Builder;
 
 class PaymentLimit extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\BelongsToCompany;
 
     protected $fillable = [
         'company_id',
@@ -18,22 +18,6 @@ class PaymentLimit extends Model
         'payment_category_id',
         'limit_amount',
     ];
-
-    /**
-     * Apply Company Global Scope
-     */
-    protected static function booted()
-    {
-        static::addGlobalScope('company_id', function (Builder $builder) {
-            $companyId = session('company_id');
-            if (!$companyId) {
-                $companyId = Company::where('enabled', 1)->first()?->id;
-            }
-            if ($companyId) {
-                $builder->where('payment_limits.company_id', $companyId);
-            }
-        });
-    }
 
     public function account()
     {

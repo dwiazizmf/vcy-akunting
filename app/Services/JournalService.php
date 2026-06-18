@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Account;
-use App\Models\Journal;
-use App\Models\Ledger;
-use App\Models\Payment;
+use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Accounting\Journal;
+use App\Models\Accounting\Accounting\Ledger;
+use App\Models\Expenses\Payment;
 use App\Models\Settings\Company;
 use App\Models\Incomes\Invoice;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +43,7 @@ class JournalService
         $year = now()->year;
         $companyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
 
-        $last = \App\Models\Payment::withoutGlobalScopes()
+        $last = \App\Models\Expenses\Payment::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->where('payment_number', 'like', "RCP-{$year}-%")
             ->orderBy('payment_number', 'desc')
@@ -71,7 +71,7 @@ class JournalService
         $companyId = $invoice->company_id;
 
         // Load customer with account
-        $customer = \App\Models\Customer::withoutGlobalScopes()->find($invoice->customer_id);
+        $customer = \App\Models\Incomes\Customer::withoutGlobalScopes()->find($invoice->customer_id);
 
         if (!$customer?->account_id) {
             throw new \RuntimeException("Customer [{$invoice->customer_name}] belum memiliki COA. Jalankan CustomerAccountSeeder terlebih dahulu.");
@@ -265,7 +265,7 @@ class JournalService
         $invoice   = Invoice::withoutGlobalScopes()->find($invoiceId);
         if (!$invoice) return;
 
-        $totalPaid = \App\Models\PaymentInvoice::where('invoice_id', $invoiceId)->sum('allocated_amount');
+        $totalPaid = \App\Models\Expenses\PaymentInvoice::where('invoice_id', $invoiceId)->sum('allocated_amount');
         $amount    = (float) $invoice->grand_total;
 
         $status = match(true) {
@@ -315,7 +315,7 @@ class JournalService
             // CREDIT
             if ($expense->is_direct_expense) {
                 // CREDIT Bank Account
-                $bankAccount = \App\Models\BankAccount::find($expense->bank_account_id);
+                $bankAccount = \App\Models\Settings\BankAccount::find($expense->bank_account_id);
                 if ($bankAccount) {
                     Ledger::create([
                         'company_id'  => $companyId,
@@ -331,7 +331,7 @@ class JournalService
                 }
             } else {
                 // CREDIT Vendor AP Account
-                $vendor = \App\Models\Vendor::find($expense->vendor_id);
+                $vendor = \App\Models\Expenses\Vendor::find($expense->vendor_id);
                 // Default to Accounts Payable if vendor doesn't have a specific account
                 $apAccountId = $vendor?->account_id;
                 
@@ -382,7 +382,7 @@ class JournalService
                 'status'         => 'posted',
             ]);
 
-            $vendor = \App\Models\Vendor::find($payment->vendor_id);
+            $vendor = \App\Models\Expenses\Vendor::find($payment->vendor_id);
             $apAccountId = $vendor?->account_id;
             if (!$apAccountId) {
                 $apAccount = Account::where('company_id', $companyId)

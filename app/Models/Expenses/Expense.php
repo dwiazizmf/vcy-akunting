@@ -7,13 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Settings\Company;
-use App\Models\Vendor;
-use App\Models\BankAccount;
-use App\Models\Journal;
+use App\Models\Expenses\Vendor;
+use App\Models\Settings\BankAccount;
+use App\Models\Accounting\Accounting\Journal;
 
 class Expense extends Model
 {
-    use HasFactory, SoftDeletes, \App\Traits\HasHybridTaxes;
+    use HasFactory, SoftDeletes, \App\Traits\HasHybridTaxes, \App\Traits\BelongsToCompany;
 
     protected $guarded = ['id'];
 
@@ -23,14 +23,6 @@ class Expense extends Model
         'header_tax_details' => 'array',
         'is_direct_expense' => 'boolean',
     ];
-
-    protected static function booted()
-    {
-        static::addGlobalScope('company', function (Builder $builder) {
-            $companyId = session('company_id') ?: (Company::where('enabled', 1)->first()?->id ?? 0);
-            $builder->where('company_id', $companyId);
-        });
-    }
 
     public function vendor()
     {

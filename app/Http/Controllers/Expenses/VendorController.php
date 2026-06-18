@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Expenses;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\Vendor;
-use App\Models\Account;
+use App\Models\Expenses\Vendor;
+use App\Models\Accounting\Accounting\Account;
 
 class VendorController extends Controller
 {
@@ -34,7 +34,7 @@ class VendorController extends Controller
             'to'          => $paginator->lastItem() ?: 0,
         ];
 
-        return Inertia::render('Vendors/Index', [
+        return Inertia::render('Expenses/Vendors/Index', [
             'vendors' => $paginator->items(),
             'pagination' => $pagination,
             'filters' => [
@@ -47,7 +47,7 @@ class VendorController extends Controller
     public function create()
     {
         $accounts = Account::where('enabled', true)->get();
-        return Inertia::render('Vendors/Form', [
+        return Inertia::render('Expenses/Vendors/Form', [
             'vendor' => new Vendor(),
             'accounts' => $accounts,
             'isEdit' => false
@@ -77,7 +77,7 @@ class VendorController extends Controller
     public function edit(Vendor $vendor)
     {
         $accounts = Account::where('enabled', true)->get();
-        return Inertia::render('Vendors/Form', [
+        return Inertia::render('Expenses/Vendors/Form', [
             'vendor' => $vendor,
             'accounts' => $accounts,
             'isEdit' => true

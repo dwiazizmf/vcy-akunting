@@ -40,7 +40,7 @@ class Company extends Model
     public function users()
     {
         return $this->belongsToMany(
-            \App\Models\User::class,
+            \App\Models\Settings\User::class,
             'user_companies',
             'company_id',
             'user_id'

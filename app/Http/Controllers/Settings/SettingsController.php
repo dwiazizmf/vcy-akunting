@@ -7,13 +7,13 @@ use App\Models\Settings\Company;
 use App\Models\Settings\InvoiceSetting;
 use App\Models\Settings\Tax;
 use App\Models\Settings\Discount;
-use App\Models\User;
+use App\Models\Settings\User;
 use App\Models\Incomes\InvoiceType;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Settings\Permission;
 use App\Models\Settings\Role;
-use App\Models\Account;
+use App\Models\Accounting\Accounting\Account;
 
 class SettingsController extends Controller
 {

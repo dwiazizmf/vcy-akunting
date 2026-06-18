@@ -7,10 +7,10 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Expenses\Expense;
 use App\Models\Expenses\ExpenseItem;
-use App\Models\Vendor;
-use App\Models\Account;
+use App\Models\Expenses\Vendor;
+use App\Models\Accounting\Accounting\Account;
 use App\Models\Settings\Tax;
-use App\Models\BankAccount;
+use App\Models\Settings\BankAccount;
 use Illuminate\Support\Facades\DB;
 use App\Services\JournalService;
 
@@ -74,7 +74,7 @@ class ExpenseController extends Controller
             'totalAmount'   => Expense::where('expense_status_code', '!=', 'void')->sum('grand_total'),
         ];
 
-        return Inertia::render('Expenses/Index', [
+        return Inertia::render('Expenses/Bills/Index', [
             'expenses'   => $paginator->items(),
             'pagination' => $pagination,
             'stats'      => $stats,
@@ -95,7 +95,7 @@ class ExpenseController extends Controller
         $taxes = Tax::all();
         $bankAccounts = BankAccount::with('account')->get();
 
-        return Inertia::render('Expenses/Form', [
+        return Inertia::render('Expenses/Bills/Form', [
             'expense' => new Expense(),
             'vendors' => $vendors,
             'accounts' => $accounts,
@@ -135,7 +135,7 @@ class ExpenseController extends Controller
                 if (!empty($item['tax_id'])) {
                     $tax = \App\Models\Settings\Tax::find($item['tax_id']);
                     if ($tax) {
-                        $itemTax = $itemAmount * ($tax->rate / 100);
+                        $itemTax = $tax->type === 'fixed' ? floatval($tax->rate) : $itemAmount * ($tax->rate / 100);
                     }
                 }
                 $subtotal += $itemAmount;
@@ -170,7 +170,7 @@ class ExpenseController extends Controller
                 if (!empty($item['tax_id'])) {
                     $tax = \App\Models\Settings\Tax::find($item['tax_id']);
                     if ($tax) {
-                        $itemTax = $itemAmount * ($tax->rate / 100);
+                        $itemTax = $tax->type === 'fixed' ? floatval($tax->rate) : $itemAmount * ($tax->rate / 100);
                         $taxDetails = [
                             ['id' => $tax->id, 'name' => $tax->name, 'rate' => $tax->rate, 'amount' => $itemTax]
                         ];
@@ -205,7 +205,7 @@ class ExpenseController extends Controller
         $taxes = Tax::all();
         $bankAccounts = BankAccount::with('account')->get();
 
-        return Inertia::render('Expenses/Form', [
+        return Inertia::render('Expenses/Bills/Form', [
             'expense' => $expense,
             'vendors' => $vendors,
             'accounts' => $accounts,

@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Ledger;
-use App\Models\Account;
-use App\Models\Journal;
+use App\Models\Accounting\Accounting\Ledger;
+use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Accounting\Journal;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -101,7 +101,7 @@ class LedgerController extends Controller
             }
         }
 
-        return Inertia::render('Ledger/Index', [
+        return Inertia::render('Accounting/Ledger/Index', [
             'accounts' => $accounts,
             'selectedAccount' => $account,
             'openingBalance' => $openingBalance,

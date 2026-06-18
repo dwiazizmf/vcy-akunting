@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Payments;
 
 use App\Http\Controllers\Controller;
-use App\Models\Payment;
-use App\Models\PaymentInvoice;
-use App\Models\BankAccount;
-use App\Models\Customer;
+use App\Models\Expenses\Payment;
+use App\Models\Expenses\PaymentInvoice;
+use App\Models\Settings\BankAccount;
+use App\Models\Incomes\Customer;
 use App\Models\Incomes\Invoice;
 use App\Models\Settings\Company;
 use App\Services\JournalService;
@@ -49,7 +49,7 @@ class PaymentController extends Controller
             'status'         => $p->status,
         ]);
 
-        return Inertia::render('Payments/Index', [
+        return Inertia::render('Expenses/Payments/Index', [
             'payments'   => $items,
             'pagination' => [
                 'total'       => $paginator->total(),
@@ -67,7 +67,7 @@ class PaymentController extends Controller
         $customers = Customer::select('id', 'name')->orderBy('name')->get();
         $taxes = \Illuminate\Support\Facades\DB::table('taxes')->where('enabled', true)->get();
 
-        return Inertia::render('Payments/Create', [
+        return Inertia::render('Expenses/Payments/Create', [
             'banks'     => $banks,
             'customers' => $customers,
             'taxes'     => $taxes,
@@ -93,7 +93,7 @@ class PaymentController extends Controller
 
         $invoices = $query->get()->map(function ($inv) {
             $totalPaid = PaymentInvoice::where('invoice_id', $inv->id)->sum('allocated_amount');
-            $outstanding = (float) $inv->amount - $totalPaid;
+            $outstanding = (float) $inv->grand_total - $totalPaid;
             return [
                 'id'             => $inv->id,
                 'customer_name'  => $inv->customer?->name ?? 'Unknown',
@@ -101,7 +101,7 @@ class PaymentController extends Controller
                 'invoice_number' => $inv->invoice_number,
                 'invoiced_at'    => $inv->invoiced_at,
                 'due_at'         => $inv->due_at,
-                'amount'         => (float) $inv->amount,
+                'amount'         => (float) $inv->grand_total,
                 'total_paid'     => $totalPaid,
                 'outstanding'    => $outstanding,
                 'payment_status' => $inv->payment_status,
@@ -134,7 +134,7 @@ class PaymentController extends Controller
         if (!empty($validated['tax_id'])) {
             $tax = \Illuminate\Support\Facades\DB::table('taxes')->where('id', $validated['tax_id'])->first();
             if ($tax) {
-                $taxAmount = $totalAllocated * ($tax->rate / 100);
+                $taxAmount = $tax->type === 'fixed' ? floatval($tax->rate) : $totalAllocated * ($tax->rate / 100);
             }
         }
         
@@ -194,7 +194,7 @@ class PaymentController extends Controller
 
         $customerNames = $payment->invoices->map(fn($pi) => $pi->invoice?->customer?->name)->filter()->unique()->implode(', ');
 
-        return Inertia::render('Payments/Show', [
+        return Inertia::render('Expenses/Payments/Show', [
             'payment'     => [
                 'id'             => $payment->id,
                 'payment_number' => $payment->payment_number,

@@ -43,8 +43,8 @@ class TaxController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|max:100',
-            'rate'        => 'required|numeric|min:0|max:999.99',
             'type'        => 'required|in:percentage,fixed',
+            'rate'        => 'required|numeric|min:0|max:' . ($request->input('type') === 'percentage' ? '100' : '999999999999.99'),
             'account_id'  => 'nullable|integer|exists:accounts,id',
             'description' => 'nullable|string',
             'enabled'   => 'boolean',
@@ -64,8 +64,8 @@ class TaxController extends Controller
 
         $validated = $request->validate([
             'name'        => 'required|string|max:100',
-            'rate'        => 'required|numeric|min:0|max:999.99',
             'type'        => 'required|in:percentage,fixed',
+            'rate'        => 'required|numeric|min:0|max:' . ($request->input('type') === 'percentage' ? '100' : '999999999999.99'),
             'account_id'  => 'nullable|integer|exists:accounts,id',
             'description' => 'nullable|string',
             'enabled'   => 'boolean',

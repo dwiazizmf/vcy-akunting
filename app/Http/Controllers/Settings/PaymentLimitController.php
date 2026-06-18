@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Settings\PaymentCategory;
 use App\Models\Settings\PaymentLimit;
-use App\Models\Account;
+use App\Models\Accounting\Accounting\Account;
 use App\Models\Settings\Company;
 
 class PaymentLimitController extends Controller

@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Journal;
-use App\Models\Ledger;
-use App\Models\Account;
-use App\Models\Customer;
+use App\Models\Accounting\Accounting\Journal;
+use App\Models\Accounting\Accounting\Ledger;
+use App\Models\Accounting\Accounting\Account;
+use App\Models\Incomes\Customer;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -46,7 +46,7 @@ class JournalController extends Controller
             return $journal;
         });
 
-        return Inertia::render('Journals/Index', [
+        return Inertia::render('Accounting/Journals/Index', [
             'journals' => $journals,
             'filters' => [
                 'search' => $request->input('search', ''),
@@ -65,7 +65,7 @@ class JournalController extends Controller
         // Contacts for sub-ledgers
         $contacts = Customer::select('id', 'name')->get();
 
-        return Inertia::render('Journals/Create', [
+        return Inertia::render('Accounting/Journals/Create', [
             'accounts' => $accounts,
             'contacts' => $contacts,
             'currentDate' => Carbon::today()->format('Y-m-d')
@@ -163,7 +163,7 @@ class JournalController extends Controller
     {
         $journal->load(['ledgers.account', 'ledgers.contact', 'postedBy']);
         
-        return Inertia::render('Journals/Show', [
+        return Inertia::render('Accounting/Journals/Show', [
             'journal' => $journal
         ]);
     }

@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\AccountType;
-use App\Models\Account;
+use App\Models\Accounting\Accounting\AccountType;
+use App\Models\Accounting\Accounting\Account;
 use App\Models\Settings\Company;
 
 class ChartOfAccountsSeeder extends Seeder

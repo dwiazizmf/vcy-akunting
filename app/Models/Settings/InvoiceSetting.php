@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class InvoiceSetting extends Model
 {
+    use \App\Traits\BelongsToCompany;
+
     protected $table = 'faktur_periode';
 
     public $timestamps = true;
@@ -24,14 +26,6 @@ class InvoiceSetting extends Model
         'no_awal'  => 'integer',
         'no_akhir' => 'integer',
     ];
-
-    protected static function booted()
-    {
-        static::addGlobalScope('company', function (\Illuminate\Database\Eloquent\Builder $builder) {
-            $companyId = session('company_id') ?: (\App\Models\Settings\Company::where('enabled', 1)->first()?->id ?? 0);
-            $builder->where('company_id', $companyId);
-        });
-    }
 
     /**
      * Ambil setting aktif (baris pertama), buat jika belum ada.

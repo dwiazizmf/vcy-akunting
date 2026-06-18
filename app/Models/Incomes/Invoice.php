@@ -10,7 +10,7 @@ use App\Models\Settings\Company;
 
 class Invoice extends Model
 {
-    use HasFactory, Filterable, \App\Traits\HasHybridTaxes;
+    use HasFactory, Filterable, \App\Traits\HasHybridTaxes, \App\Traits\BelongsToCompany;
 
     protected $table = 'invoices';
 
@@ -19,14 +19,6 @@ class Invoice extends Model
     protected $casts = [
         'header_tax_details' => 'array',
     ];
-
-    protected static function booted()
-    {
-        static::addGlobalScope('company', function (Builder $builder) {
-            $companyId = session('company_id') ?: (Company::where('enabled', 1)->first()?->id ?? 0);
-            $builder->where('company_id', $companyId);
-        });
-    }
 
     public function modelFilter()
     {
@@ -45,11 +37,11 @@ class Invoice extends Model
 
     public function customer()
     {
-        return $this->belongsTo(\App\Models\Customer::class, 'customer_id');
+        return $this->belongsTo(\App\Models\Incomes\Customer::class, 'customer_id');
     }
     public function documents()
     {
-        return $this->belongsToMany(\App\Models\Document::class, 'document_invoices')
+        return $this->belongsToMany(\App\Models\Incomes\Document::class, 'document_invoices')
                     ->withTimestamps();
     }
 }

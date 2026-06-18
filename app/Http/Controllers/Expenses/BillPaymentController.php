@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Expenses\Expense;
-use App\Models\Payment;
-use App\Models\BankAccount;
+use App\Models\Expenses\Payment;
+use App\Models\Settings\BankAccount;
 use Illuminate\Support\Facades\DB;
 use App\Services\JournalService;
 

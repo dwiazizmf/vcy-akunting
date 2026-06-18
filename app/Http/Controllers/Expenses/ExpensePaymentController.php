@@ -7,11 +7,11 @@ use Illuminate\Http\Request;
 use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpensePaymentLine;
 use App\Models\Expenses\Expense;
-use App\Models\Vendor;
+use App\Models\Expenses\Vendor;
 use App\Models\Settings\PaymentCategory;
 use App\Models\Settings\PaymentLimit;
 use App\Models\Settings\Tax;
-use App\Models\Account;
+use App\Models\Accounting\Accounting\Account;
 use App\Services\JournalService;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +51,7 @@ class ExpensePaymentController extends Controller
             'to' => $paginator->lastItem() ?: 0,
         ];
 
-        return Inertia::render('ExpensePayments/Index', [
+        return Inertia::render('Expenses/BillsPayments/Index', [
             'payments' => $paginator->items(),
             'pagination' => $pagination,
             'filters' => ['search' => $search, 'per_page' => $perPage]
@@ -75,7 +75,7 @@ class ExpensePaymentController extends Controller
                 ->get();
         }
 
-        return Inertia::render('ExpensePayments/Create', [
+        return Inertia::render('Expenses/BillsPayments/Create', [
             'vendors' => $vendors,
             'categories' => $categories,
             'accounts' => $accounts,
@@ -125,7 +125,7 @@ class ExpensePaymentController extends Controller
             foreach ($request->taxes as $taxReq) {
                 $tax = Tax::find($taxReq['tax_id']);
                 if ($tax) {
-                    $taxVal = $grossAmount * ($tax->rate / 100);
+                    $taxVal = $tax->type === 'fixed' ? floatval($tax->rate) : $grossAmount * ($tax->rate / 100);
                     $totalTax += $taxVal;
                     $taxDetails[] = [
                         'id' => $tax->id,

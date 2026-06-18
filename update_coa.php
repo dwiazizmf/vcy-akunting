@@ -5,7 +5,7 @@ $app = require_once __DIR__ . '/bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-use App\Models\Account;
+use App\Models\Accounting\Accounting\Account;
 use Illuminate\Support\Facades\DB;
 
 DB::transaction(function() {

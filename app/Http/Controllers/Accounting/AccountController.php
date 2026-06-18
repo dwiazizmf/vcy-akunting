@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Account;
-use App\Models\AccountType;
+use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Accounting\AccountType;
 use Inertia\Inertia;
 
 class AccountController extends Controller
@@ -34,7 +34,7 @@ class AccountController extends Controller
         $types = AccountType::all();
         $parentAccounts = Account::where('company_id', $companyId)->orderBy('code')->get();
 
-        return Inertia::render('Accounts/Index', [
+        return Inertia::render('Accounting/Accounts/Index', [
             'accounts' => $accounts,
             'types' => $types,
             'parentAccounts' => $parentAccounts,
