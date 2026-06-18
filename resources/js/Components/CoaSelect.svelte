@@ -81,7 +81,7 @@
       </div>
       
       <!-- Options List -->
-      <div class="overflow-y-auto max-h-[190px] p-1 space-y-0.5 scrollbar-thin scrollbar-thumb-slate-200">
+      <div class="overflow-y-auto overflow-x-auto max-h-[190px] p-1 space-y-0.5 scrollbar-thin scrollbar-thumb-slate-200">
         {#if filteredOptions.length === 0}
           <div class="py-6 text-center text-sm text-slate-500">
             Akun tidak ditemukan.
@@ -91,7 +91,7 @@
             {@const isParent = option.is_parent !== undefined ? option.is_parent : !option.parent_id}
             <button
               type="button"
-              class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pr-2 text-sm outline-none transition-colors hover:bg-slate-100 hover:text-slate-900
+              class="relative flex w-full min-w-max cursor-default select-none items-center rounded-sm py-1.5 pr-4 text-sm outline-none transition-colors hover:bg-slate-100 hover:text-slate-900
                      {isParent ? 'font-bold text-slate-900 bg-slate-50/30 pl-8' : 'pl-14 text-slate-600'}
                      {value === option.id ? 'bg-teal-50 font-medium text-teal-700' : ''}"
               on:click={() => selectOption(option.id)}
@@ -101,7 +101,7 @@
                   <Check class="h-4 w-4 text-teal-600" />
                 </span>
               {/if}
-              <span class="truncate flex items-center gap-1.5">
+              <span class="flex items-center gap-1.5 whitespace-nowrap">
                 {#if !isParent}
                   <span class="text-slate-300 font-normal select-none">└─</span>
                 {/if}

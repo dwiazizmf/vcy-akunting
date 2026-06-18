@@ -74,7 +74,15 @@ class PaymentLimitController extends Controller
             'categories' => $categories,
             'limits' => $limits,
             'allCategories' => PaymentCategory::all(),
-            'accounts' => Account::where('enabled', true)->get(),
+            'accounts' => Account::where('enabled', true)
+                ->where(function($q) {
+                    $q->where('name', 'like', '%Kas%')
+                      ->orWhere('name', 'like', '%Bank%')
+                      ->orWhereHas('parent', function($pq) {
+                          $pq->where('name', 'like', '%Kas%')
+                             ->orWhere('name', 'like', '%Bank%');
+                      });
+                })->get(),
             'filters' => [
                 'search' => $search ?? '',
                 'per_page' => $perPage
