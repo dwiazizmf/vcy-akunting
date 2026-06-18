@@ -8,6 +8,7 @@ use App\Models\Incomes\Invoice;
 use App\Models\Incomes\InvoiceItem;
 use App\Models\Customer;
 use App\Models\Account;
+use App\Models\Settings\Discount;
 use App\Helpers\InvoiceHelper;
 use Inertia\Inertia;
 use App\Services\TaxService;
@@ -54,8 +55,8 @@ class InvoiceController extends Controller
                 'orderNumber'     => $inv->order_number,
                 'coa'             => '-',
                 'customer'        => $inv->customer_name,
-                'amount_raw'      => (float) $inv->amount,
-                'amount'          => 'Rp ' . number_format((float) $inv->amount, 0, ',', '.'),
+                'amount_raw'      => (float) $inv->grand_total,
+                'amount'          => 'Rp ' . number_format((float) $inv->grand_total, 0, ',', '.'),
                 'namaKapal'       => $inv->nama_kapal,
                 'tglKapBerangkat' => $inv->departure_date ? date('Y-m-d', strtotime($inv->departure_date)) : '-',
                 'invoiceDate'     => $inv->invoiced_at ? date('d M Y', strtotime($inv->invoiced_at)) : '-',
@@ -90,7 +91,7 @@ class InvoiceController extends Controller
             'draft'         => Invoice::where('invoice_status_code', 'draft')->count(),
             'sent'          => Invoice::where('invoice_status_code', 'sent')->count(),
             'paid'          => Invoice::where('invoice_status_code', 'paid')->count(),
-            'totalAmount'   => Invoice::where('invoice_status_code', '!=', 'void')->sum('amount'),
+            'totalAmount'   => Invoice::where('invoice_status_code', '!=', 'void')->sum('grand_total'),
         ];
 
         return Inertia::render('Invoices/Index', [
@@ -112,12 +113,14 @@ class InvoiceController extends Controller
     {
         $companyId = session('company_id') ?: 1;
         $activeTaxes = $this->taxService->getActiveTaxes();
+        $activeDiscounts = Discount::all(['id', 'name', 'rate', 'type']);
         $customers   = Customer::select('id', 'name')->get();
         $revenueAccounts = \App\Helpers\AccountHelper::getFormattedAccounts($companyId, 'Revenue');
         $invoiceTypes = \App\Models\Incomes\InvoiceType::all();
         
         return Inertia::render('Invoices/Create', [
             'activeTaxes'     => $activeTaxes,
+            'activeDiscounts' => $activeDiscounts,
             'customers'       => $customers,
             'revenueAccounts' => $revenueAccounts,
             'invoiceTypes'    => $invoiceTypes,
@@ -142,6 +145,7 @@ class InvoiceController extends Controller
             'notes'               => 'nullable|string',
             'no_faktur_pajak'     => 'nullable|string',
             'header_tax_details'  => 'nullable|array',
+            'header_discount_details' => 'nullable|array',
             'items'               => 'required|array|min:1',
             'items.*.name'        => 'required|string',
             'items.*.quantity'    => 'required|numeric',
@@ -157,15 +161,27 @@ class InvoiceController extends Controller
         $headerTaxes = $this->taxService->parseHeaderTaxes($validated['header_tax_details'] ?? []);
         $totalTax = 0;
         foreach ($headerTaxes as $tax) {
-            $totalTax += ($subtotal * ($tax['rate'] / 100)); 
+            $totalTax += $tax['amount']; // Use the amount sent from frontend (handles both fixed and percentage correctly)
         }
 
-        $grandTotal = $subtotal + $totalTax;
+        $headerDiscounts = collect($validated['header_discount_details'] ?? [])->map(function ($discount) {
+            return [
+                'name' => $discount['name'] ?? 'Unknown Discount',
+                'rate' => (float) ($discount['rate'] ?? 0),
+                'amount' => (float) ($discount['amount'] ?? 0),
+            ];
+        })->toArray();
+        $totalDiscount = 0;
+        foreach ($headerDiscounts as $discount) {
+            $totalDiscount += $discount['amount'];
+        }
+
+        $grandTotal = $subtotal - $totalDiscount + $totalTax;
         
         $companyId = session('company_id') ?: 1;
         $invoiceData = InvoiceHelper::generateInvoiceData($validated['invoiced_at']);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $companyId, $invoiceData, $subtotal, $grandTotal, $totalTax, $headerTaxes) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $companyId, $invoiceData, $subtotal, $grandTotal, $totalTax, $headerTaxes, $totalDiscount, $headerDiscounts) {
             $invoice = Invoice::create([
                 'company_id'          => $companyId,
                 'customer_id'         => $validated['customer_id'],
@@ -185,11 +201,13 @@ class InvoiceController extends Controller
                 'invoiced_at'         => $validated['invoiced_at'],
                 'due_at'              => $validated['due_at'],
                 'subtotal'            => $subtotal,
-                'amount'              => $grandTotal,
-                'total_item_subtotal' => $subtotal,
-                'total_item_tax'      => $totalTax,
-                'grand_total'         => $grandTotal,
+                'tax_amount'          => $totalTax,
                 'header_tax_details'  => $headerTaxes,
+                'discount_amount'     => $totalDiscount,
+                'header_discount_details' => $headerDiscounts,
+                'is_tax'              => $totalTax > 0,
+                'is_discount'         => $totalDiscount > 0,
+                'grand_total'         => $grandTotal,
                 'invoice_status_code' => 'draft',
                 'payment_status'      => 'unpaid',
             ]);
@@ -277,12 +295,14 @@ class InvoiceController extends Controller
     {
         $invoice->load('items');
         $activeTaxes = $this->taxService->getActiveTaxes();
+        $activeDiscounts = Discount::all(['id', 'name', 'rate', 'type']);
         $customers = Customer::select('id', 'name')->get();
         $invoiceTypes = \App\Models\Incomes\InvoiceType::all();
         
         return Inertia::render('Invoices/Edit', [
             'invoice' => $invoice,
             'activeTaxes' => $activeTaxes,
+            'activeDiscounts' => $activeDiscounts,
             'customers' => $customers,
             'invoiceTypes' => $invoiceTypes,
         ]);
@@ -306,6 +326,7 @@ class InvoiceController extends Controller
             'notes'               => 'nullable|string',
             'no_faktur_pajak'     => 'nullable|string',
             'header_tax_details'  => 'nullable|array',
+            'header_discount_details' => 'nullable|array',
             'items'               => 'required|array|min:1',
             'items.*.name'        => 'required|string',
             'items.*.quantity'    => 'required|numeric',
@@ -320,10 +341,22 @@ class InvoiceController extends Controller
         $headerTaxes = $this->taxService->parseHeaderTaxes($validated['header_tax_details'] ?? []);
         $totalTax = 0;
         foreach ($headerTaxes as $tax) {
-            $totalTax += ($subtotal * ($tax['rate'] / 100)); 
+            $totalTax += $tax['amount']; // Use the amount sent from frontend
         }
 
-        $grandTotal = $subtotal + $totalTax;
+        $headerDiscounts = collect($validated['header_discount_details'] ?? [])->map(function ($discount) {
+            return [
+                'name' => $discount['name'] ?? 'Unknown Discount',
+                'rate' => (float) ($discount['rate'] ?? 0),
+                'amount' => (float) ($discount['amount'] ?? 0),
+            ];
+        })->toArray();
+        $totalDiscount = 0;
+        foreach ($headerDiscounts as $discount) {
+            $totalDiscount += $discount['amount'];
+        }
+
+        $grandTotal = $subtotal - $totalDiscount + $totalTax;
 
         $invoice->update([
             'customer_id'         => $validated['customer_id'],
@@ -337,11 +370,13 @@ class InvoiceController extends Controller
             'invoiced_at'         => $validated['invoiced_at'],
             'due_at'              => $validated['due_at'],
             'subtotal'            => $subtotal,
-            'amount'              => $grandTotal,
-            'total_item_subtotal' => $subtotal,
-            'total_item_tax'      => $totalTax,
-            'grand_total'         => $grandTotal,
+            'tax_amount'          => $totalTax,
             'header_tax_details'  => $headerTaxes,
+            'discount_amount'     => $totalDiscount,
+            'header_discount_details' => $headerDiscounts,
+            'is_tax'              => $totalTax > 0,
+            'is_discount'         => $totalDiscount > 0,
+            'grand_total'         => $grandTotal,
         ]);
 
         // Sync Items

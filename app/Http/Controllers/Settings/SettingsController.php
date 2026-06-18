@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Settings\Company;
 use App\Models\Settings\InvoiceSetting;
 use App\Models\Settings\Tax;
+use App\Models\Settings\Discount;
 use App\Models\User;
 use App\Models\Incomes\InvoiceType;
 use Illuminate\Http\Request;
@@ -48,6 +49,9 @@ class SettingsController extends Controller
 
         // Taxes tab initial data
         $taxes = Tax::orderBy('id', 'asc')->paginate(25);
+
+        // Discounts tab initial data
+        $discounts = Discount::orderBy('id', 'asc')->paginate(25);
 
         // Invoice Types initial data
         $invoiceTypes = InvoiceType::orderBy('id', 'asc')->paginate(25);
@@ -93,6 +97,17 @@ class SettingsController extends Controller
                     'lastPage'    => $taxes->lastPage(),
                     'from'        => $taxes->firstItem() ?? 0,
                     'to'          => $taxes->lastItem() ?? 0,
+                ],
+            ],
+            'initialDiscounts' => [
+                'data'       => $discounts->items(),
+                'pagination' => [
+                    'total'       => $discounts->total(),
+                    'perPage'     => $discounts->perPage(),
+                    'currentPage' => $discounts->currentPage(),
+                    'lastPage'    => $discounts->lastPage(),
+                    'from'        => $discounts->firstItem() ?? 0,
+                    'to'          => $discounts->lastItem() ?? 0,
                 ],
             ],
             'invoiceSetting' => $invoiceSetting,

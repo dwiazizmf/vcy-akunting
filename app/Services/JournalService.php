@@ -95,7 +95,7 @@ class JournalService
                 'posted_by'      => auth()->id(),
             ]);
 
-            $grandTotal = (float) $invoice->amount; // grand total (subtotal + tax)
+            $grandTotal = (float) $invoice->grand_total; // grand total (subtotal + tax)
             $subtotal   = (float) $invoice->subtotal;
 
             // 2. DEBIT Customer COA (full grand total)
@@ -266,7 +266,7 @@ class JournalService
         if (!$invoice) return;
 
         $totalPaid = \App\Models\PaymentInvoice::where('invoice_id', $invoiceId)->sum('allocated_amount');
-        $amount    = (float) $invoice->amount;
+        $amount    = (float) $invoice->grand_total;
 
         $status = match(true) {
             $totalPaid <= 0             => 'unpaid',

@@ -5,6 +5,7 @@ use App\Http\Controllers\Incomes\InvoiceController;
 use App\Http\Controllers\Settings\SettingsController;
 use App\Http\Controllers\Settings\CompanyController;
 use App\Http\Controllers\Settings\TaxController;
+use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\Settings\UserController;
 use App\Http\Controllers\Settings\InvoiceTypeController;
 use App\Http\Controllers\Settings\RoleController;
@@ -541,6 +542,11 @@ Route::prefix('api/settings')->group(function () {
     Route::post('/taxes', [TaxController::class, 'store']);
     Route::put('/taxes/{id}', [TaxController::class, 'update']);
     Route::delete('/taxes/{id}', [TaxController::class, 'destroy']);
+
+    Route::get('/discounts', [DiscountController::class, 'index']);
+    Route::post('/discounts', [DiscountController::class, 'store']);
+    Route::put('/discounts/{id}', [DiscountController::class, 'update']);
+    Route::delete('/discounts/{id}', [DiscountController::class, 'destroy']);
 
     // Users
     Route::get('/users', [UserController::class, 'index']);

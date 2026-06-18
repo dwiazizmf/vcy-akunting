@@ -206,7 +206,7 @@ class DocumentController extends Controller
                     'customer_name' => $inv->customer ? $inv->customer->name : 'Unknown',
                     'order_number' => $inv->order_number,
                     'orders' => $inv->order_number ? array_map('trim', explode(',', $inv->order_number)) : [],
-                    'amount' => $inv->amount,
+                    'amount' => $inv->grand_total,
                 ];
             })->toArray();
 

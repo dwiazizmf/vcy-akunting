@@ -25,6 +25,7 @@
     import SearchableSelect from "../../Components/SearchableSelect.svelte";
 
     export let activeTaxes = [];
+    export let activeDiscounts = [];
     export let customers = [];
     export let invoice = null;
     export let invoiceTypes = [];
@@ -56,16 +57,39 @@
               }))
             : [{ name: "", quantity: 1, price: 0 }],
         header_tax_details: invoice?.header_tax_details || [],
+        header_discount_details: invoice?.header_discount_details || [],
     });
 
     let isTax = $form.header_tax_details.length > 0;
-
     let selectedTaxIds = [];
+    let customTaxAmounts = {};
+
     if (isTax) {
-        const existingTaxNames = $form.header_tax_details.map((t) => t.name);
-        selectedTaxIds = activeTaxes
-            .filter((t) => existingTaxNames.includes(t.name))
-            .map((t) => t.id);
+        $form.header_tax_details.forEach(ht => {
+            const masterTax = activeTaxes.find(t => t.name === ht.name);
+            if (masterTax) {
+                selectedTaxIds.push(masterTax.id);
+                if (masterTax.type === 'fixed') {
+                    customTaxAmounts[masterTax.id] = ht.amount;
+                }
+            }
+        });
+    }
+
+    let isDiscount = $form.header_discount_details.length > 0;
+    let selectedDiscountIds = [];
+    let customDiscountAmounts = {};
+
+    if (isDiscount) {
+        $form.header_discount_details.forEach(hd => {
+            const masterDiscount = activeDiscounts.find(d => d.name === hd.name);
+            if (masterDiscount) {
+                selectedDiscountIds.push(masterDiscount.id);
+                if (masterDiscount.type === 'fixed') {
+                    customDiscountAmounts[masterDiscount.id] = hd.amount;
+                }
+            }
+        });
     }
 
     $: subtotal = $form.items.reduce(
@@ -77,15 +101,43 @@
         ? []
         : selectedTaxIds.map((id) => {
               const tax = activeTaxes.find((t) => t.id === id);
+              let amount = 0;
+              if (tax.type === 'percentage') {
+                  amount = subtotal * (tax.rate / 100);
+              } else {
+                  amount = customTaxAmounts[id] !== undefined ? customTaxAmounts[id] : tax.rate;
+              }
               return {
+                  id: tax.id,
                   name: tax.name,
                   rate: tax.rate,
-                  amount: subtotal * (tax.rate / 100),
+                  type: tax.type,
+                  amount: Number(amount) || 0,
+              };
+          });
+
+    $: computedDiscountDetails = !isDiscount
+        ? []
+        : selectedDiscountIds.map((id) => {
+              const discount = activeDiscounts.find((d) => d.id === id);
+              let amount = 0;
+              if (discount.type === 'percentage') {
+                  amount = subtotal * (discount.rate / 100);
+              } else {
+                  amount = customDiscountAmounts[id] !== undefined ? customDiscountAmounts[id] : discount.rate;
+              }
+              return {
+                  id: discount.id,
+                  name: discount.name,
+                  rate: discount.rate,
+                  type: discount.type,
+                  amount: Number(amount) || 0,
               };
           });
 
     $: totalTax = computedTaxDetails.reduce((sum, t) => sum + t.amount, 0);
-    $: grandTotal = subtotal + totalTax;
+    $: totalDiscount = computedDiscountDetails.reduce((sum, t) => sum + t.amount, 0);
+    $: grandTotal = subtotal - totalDiscount + totalTax;
 
     function addItem() {
         $form.items = [...$form.items, { name: "", quantity: 1, price: 0 }];
@@ -100,8 +152,30 @@
     function toggleTax(taxId) {
         if (selectedTaxIds.includes(taxId)) {
             selectedTaxIds = selectedTaxIds.filter((id) => id !== taxId);
+            delete customTaxAmounts[taxId];
+            customTaxAmounts = customTaxAmounts;
         } else {
             selectedTaxIds = [...selectedTaxIds, taxId];
+            const tax = activeTaxes.find(t => t.id === taxId);
+            if (tax && tax.type === 'fixed') {
+                customTaxAmounts[taxId] = tax.rate;
+                customTaxAmounts = customTaxAmounts;
+            }
+        }
+    }
+
+    function toggleDiscount(discountId) {
+        if (selectedDiscountIds.includes(discountId)) {
+            selectedDiscountIds = selectedDiscountIds.filter((id) => id !== discountId);
+            delete customDiscountAmounts[discountId];
+            customDiscountAmounts = customDiscountAmounts;
+        } else {
+            selectedDiscountIds = [...selectedDiscountIds, discountId];
+            const discount = activeDiscounts.find(d => d.id === discountId);
+            if (discount && discount.type === 'fixed') {
+                customDiscountAmounts[discountId] = discount.rate;
+                customDiscountAmounts = customDiscountAmounts;
+            }
         }
     }
 
@@ -118,6 +192,7 @@
         if (isProcessing) return;
         isProcessing = true;
         $form.header_tax_details = computedTaxDetails;
+        $form.header_discount_details = computedDiscountDetails;
         $form.put(`/invoices/${invoice.id}`, {
             onSuccess: () => {
                 showToast("Invoice updated successfully!", "success");
@@ -428,56 +503,97 @@
                 <div
                     class="flex justify-between items-start pt-6 border-t border-slate-100"
                 >
-                    <!-- Tax Controls -->
-                    <div
-                        class="w-1/2 bg-slate-50 p-4 rounded-md border border-slate-200"
-                    >
-                        <label
-                            class="flex items-center gap-2 cursor-pointer w-fit mb-3"
-                        >
-                            <input
-                                type="checkbox"
-                                class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
-                                bind:checked={isTax}
-                            />
-                            <span class="text-sm font-bold text-slate-800"
-                                >Apply Header Tax</span
-                            >
-                        </label>
+                    <!-- Tax and Discount Controls -->
+                    <div class="w-1/2 space-y-4">
+                        <!-- Discounts Section -->
+                        <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
+                            <label class="flex items-center gap-2 cursor-pointer w-fit mb-3">
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
+                                    bind:checked={isDiscount}
+                                />
+                                <span class="text-sm font-bold text-slate-800">Apply Header Discount</span>
+                            </label>
 
-                        {#if isTax}
-                            <div
-                                class="space-y-2 mt-2 pt-2 border-t border-slate-200"
-                            >
-                                <span
-                                    class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block"
-                                    >Available Taxes</span
-                                >
-                                {#each activeTaxes as tax}
-                                    <label
-                                        class="flex items-center gap-2 cursor-pointer text-sm text-slate-700 hover:bg-slate-100 p-1.5 rounded transition-colors"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5"
-                                            checked={selectedTaxIds.includes(
-                                                tax.id,
-                                            )}
-                                            on:change={() => toggleTax(tax.id)}
-                                        />
-                                        {tax.name}
-                                        <span class="text-xs text-slate-400"
-                                            >({tax.rate}%)</span
-                                        >
-                                    </label>
-                                {/each}
-                                {#if activeTaxes.length === 0}
-                                    <div class="text-xs text-slate-500 italic">
-                                        No active taxes found in system.
-                                    </div>
-                                {/if}
-                            </div>
-                        {/if}
+                            {#if isDiscount}
+                                <div class="space-y-2 mt-2 pt-2 border-t border-slate-200">
+                                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Available Discounts</span>
+                                    {#each activeDiscounts as discount}
+                                        <div class="flex items-center gap-2">
+                                            <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-700 hover:bg-slate-100 p-1.5 rounded transition-colors flex-1">
+                                                <input
+                                                    type="checkbox"
+                                                    class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5"
+                                                    checked={selectedDiscountIds.includes(discount.id)}
+                                                    on:change={() => toggleDiscount(discount.id)}
+                                                />
+                                                {discount.name}
+                                                <span class="text-xs text-slate-400">({discount.type === 'percentage' ? discount.rate + '%' : 'Fixed Nominal'})</span>
+                                            </label>
+                                            {#if selectedDiscountIds.includes(discount.id) && discount.type === 'fixed'}
+                                                <div class="w-32">
+                                                    <Input
+                                                        type="number"
+                                                        class="h-7 text-xs text-right bg-white"
+                                                        placeholder="Nominal"
+                                                        bind:value={customDiscountAmounts[discount.id]}
+                                                    />
+                                                </div>
+                                            {/if}
+                                        </div>
+                                    {/each}
+                                    {#if activeDiscounts.length === 0}
+                                        <div class="text-xs text-slate-500 italic">No active discounts found in system.</div>
+                                    {/if}
+                                </div>
+                            {/if}
+                        </div>
+
+                        <!-- Taxes Section -->
+                        <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
+                            <label class="flex items-center gap-2 cursor-pointer w-fit mb-3">
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
+                                    bind:checked={isTax}
+                                />
+                                <span class="text-sm font-bold text-slate-800">Apply Header Tax</span>
+                            </label>
+
+                            {#if isTax}
+                                <div class="space-y-2 mt-2 pt-2 border-t border-slate-200">
+                                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Available Taxes</span>
+                                    {#each activeTaxes as tax}
+                                        <div class="flex items-center gap-2">
+                                            <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-700 hover:bg-slate-100 p-1.5 rounded transition-colors flex-1">
+                                                <input
+                                                    type="checkbox"
+                                                    class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5"
+                                                    checked={selectedTaxIds.includes(tax.id)}
+                                                    on:change={() => toggleTax(tax.id)}
+                                                />
+                                                {tax.name}
+                                                <span class="text-xs text-slate-400">({tax.type === 'percentage' ? tax.rate + '%' : 'Fixed Nominal'})</span>
+                                            </label>
+                                            {#if selectedTaxIds.includes(tax.id) && tax.type === 'fixed'}
+                                                <div class="w-32">
+                                                    <Input
+                                                        type="number"
+                                                        class="h-7 text-xs text-right bg-white"
+                                                        placeholder="Nominal"
+                                                        bind:value={customTaxAmounts[tax.id]}
+                                                    />
+                                                </div>
+                                            {/if}
+                                        </div>
+                                    {/each}
+                                    {#if activeTaxes.length === 0}
+                                        <div class="text-xs text-slate-500 italic">No active taxes found in system.</div>
+                                    {/if}
+                                </div>
+                            {/if}
+                        </div>
                     </div>
 
                     <!-- Totals -->
@@ -491,30 +607,33 @@
                             >
                         </div>
 
-                        {#if isTax && $form.header_tax_details.length > 0}
-                            <div class="space-y-1">
-                                {#each $form.header_tax_details as tax}
-                                    <div
-                                        class="flex justify-between items-center text-xs text-slate-500"
-                                    >
-                                        <span>{tax.name} ({tax.rate}%)</span>
-                                        <span
-                                            >Rp {tax.amount.toLocaleString(
-                                                "id-ID",
-                                            )}</span
-                                        >
+                        {#if isDiscount && $form.header_discount_details.length > 0}
+                            <div class="space-y-1 text-red-600">
+                                {#each $form.header_discount_details as discount}
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span>{discount.name} ({discount.type === 'percentage' ? discount.rate + '%' : 'Fixed'})</span>
+                                        <span>- Rp {discount.amount.toLocaleString("id-ID")}</span>
                                     </div>
                                 {/each}
                             </div>
-                            <div
-                                class="flex justify-between items-center text-sm border-t border-slate-100 pt-2"
-                            >
-                                <span class="text-slate-500 font-medium"
-                                    >Total Tax</span
-                                >
-                                <span class="font-semibold text-slate-700"
-                                    >Rp {totalTax.toLocaleString("id-ID")}</span
-                                >
+                            <div class="flex justify-between items-center text-sm border-t border-slate-100 pt-2 text-red-600">
+                                <span class="font-medium">Total Discount</span>
+                                <span class="font-semibold">- Rp {totalDiscount.toLocaleString("id-ID")}</span>
+                            </div>
+                        {/if}
+
+                        {#if isTax && $form.header_tax_details.length > 0}
+                            <div class="space-y-1">
+                                {#each $form.header_tax_details as tax}
+                                    <div class="flex justify-between items-center text-xs text-slate-500">
+                                        <span>{tax.name} ({tax.type === 'percentage' ? tax.rate + '%' : 'Fixed'})</span>
+                                        <span>Rp {tax.amount.toLocaleString("id-ID")}</span>
+                                    </div>
+                                {/each}
+                            </div>
+                            <div class="flex justify-between items-center text-sm border-t border-slate-100 pt-2">
+                                <span class="text-slate-500 font-medium">Total Tax</span>
+                                <span class="font-semibold text-slate-700">Rp {totalTax.toLocaleString("id-ID")}</span>
                             </div>
                         {/if}
 

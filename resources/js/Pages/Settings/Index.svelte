@@ -9,7 +9,7 @@
     Building2, Users, FileText, Receipt, Settings, Search, Plus,
     Pencil, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Save, X, AlertCircle, CheckCircle, Shield, Key,
-    Upload, Image, Tag
+    Upload, Image, Tag, Percent
   } from 'lucide-svelte';
 
   // ============================================================
@@ -22,6 +22,7 @@
   export let allPermissions    = [];
   export let allCompaniesForForm = [];
   export let initialTaxes      = { data: [], pagination: {} };
+  export let initialDiscounts  = { data: [], pagination: {} };
   export let invoiceSetting    = {};
   export let accounts          = [];
 
@@ -49,6 +50,15 @@
   let showTaxModal = false;
   let editingTax = null;
   let taxForm = { name: '', rate: '', type: 'percentage', account_id: '', description: '', enabled: true };
+
+  // Discounts
+  let discounts = initialDiscounts.data;
+  let discountsPag = initialDiscounts.pagination;
+  let discountSearch = '';
+  let discountLoading = false;
+  let showDiscountModal = false;
+  let editingDiscount = null;
+  let discountForm = { name: '', rate: '', type: 'percentage', description: '', enabled: true };
 
   export let initialInvoiceTypes = { data: [], pagination: {} };
   let invoiceTypes = initialInvoiceTypes.data;
@@ -222,6 +232,58 @@
       showToast('Pajak dihapus');
       await loadTaxes();
     } catch(e) { showToast('Gagal menghapus', 'error'); }
+  }
+
+  // ============================================================
+  // DISCOUNTS CRUD
+  // ============================================================
+  async function loadDiscounts(page = 1) {
+    discountLoading = true;
+    try {
+      const data = await apiFetch(`/api/settings/discounts?search=${encodeURIComponent(discountSearch)}&per_page=25&page=${page}`);
+      discounts = data.discounts;
+      discountsPag = data.pagination;
+    } catch(e) { showToast('Gagal memuat data diskon', 'error'); }
+    discountLoading = false;
+  }
+
+  function openDiscountModal(discount = null) {
+    editingDiscount = discount;
+    if (discount) {
+      discountForm = { name: discount.name, rate: discount.rate, type: discount.type, description: discount.description || '', enabled: discount.enabled };
+    } else {
+      discountForm = { name: '', rate: '', type: 'percentage', description: '', enabled: true };
+    }
+    showDiscountModal = true;
+  }
+
+  async function saveDiscount() {
+    try {
+      if (editingDiscount) {
+        await apiFetch(`/api/settings/discounts/${editingDiscount.id}`, { method: 'PUT', body: discountForm });
+        showToast('Diskon berhasil diperbarui');
+      } else {
+        await apiFetch(`/api/settings/discounts`, { method: 'POST', body: discountForm });
+        showToast('Diskon berhasil ditambahkan');
+      }
+      showDiscountModal = false;
+      await loadDiscounts();
+    } catch(e) { showToast(e?.message || 'Gagal menyimpan diskon', 'error'); }
+  }
+
+  async function deleteDiscount(id) {
+    if (!(await showConfirm('Hapus diskon ini?'))) return;
+    try {
+      await apiFetch(`/api/settings/discounts/${id}`, { method: 'DELETE' });
+      showToast('Diskon dihapus');
+      await loadDiscounts();
+    } catch(e) { showToast('Gagal menghapus', 'error'); }
+  }
+
+  let discountSearchTimer;
+  function onDiscountSearch() {
+    clearTimeout(discountSearchTimer);
+    discountSearchTimer = setTimeout(() => loadDiscounts(1), 300);
   }
 
   // ============================================================
@@ -470,6 +532,7 @@
           { id: 'users', label: 'User & Role', icon: Users },
           { id: 'invoice-setting', label: 'Setting Faktur', icon: FileText },
           { id: 'taxes', label: 'Pajak', icon: Receipt },
+          { id: 'discounts', label: 'Diskon', icon: Percent },
           { id: 'invoice-types', label: 'Tipe Invoice', icon: Tag }
         ] as tab}
           <button
@@ -934,6 +997,91 @@
     {/if}
 
     <!-- ============================================================ -->
+    <!-- TAB: DISCOUNTS -->
+    <!-- ============================================================ -->
+    {#if currentTab === 'discounts'}
+      <Card.Root class="border border-slate-200 shadow-sm">
+        <Card.Header class="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <Percent class="h-4 w-4 text-teal-600" />
+            <span class="text-sm font-semibold text-slate-800">Daftar Diskon</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="relative">
+              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Input bind:value={discountSearch} on:input={onDiscountSearch} placeholder="Cari diskon..." class="pl-8 h-8 text-xs w-40 border-slate-200" />
+            </div>
+            <Button class="h-8 text-xs gap-1.5 bg-teal-700 hover:bg-teal-800" on:click={() => openDiscountModal()}>
+              <Plus class="h-3.5 w-3.5" /> Tambah
+            </Button>
+          </div>
+        </Card.Header>
+        <Card.Content class="p-0">
+          <Table.Root>
+            <Table.Header>
+              <Table.Row class="bg-slate-50/80 border-b border-slate-100">
+                <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500 w-10">#</Table.Head>
+                <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Nama Diskon</Table.Head>
+                <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Rate</Table.Head>
+                <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Tipe</Table.Head>
+                <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Keterangan</Table.Head>
+                <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Status</Table.Head>
+                <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500 text-right">Aksi</Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {#if discountLoading}
+                <Table.Row><Table.Cell colspan="7" class="text-center py-8 text-xs text-slate-400">Memuat...</Table.Cell></Table.Row>
+              {:else if discounts.length === 0}
+                <Table.Row><Table.Cell colspan="7" class="text-center py-8 text-xs text-slate-400">Belum ada data diskon</Table.Cell></Table.Row>
+              {:else}
+                {#each discounts as discount, i}
+                  <Table.Row class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                    <Table.Cell class="py-1.5 px-3 text-xs text-slate-400">{(discountsPag.from ?? 0) + i}</Table.Cell>
+                    <Table.Cell class="py-1.5 px-3 text-xs font-medium text-slate-800">{discount.name}</Table.Cell>
+                    <Table.Cell class="py-1.5 px-3 text-xs font-mono text-slate-700">
+                      {discount.rate}{discount.type === 'percentage' ? '%' : ''}
+                    </Table.Cell>
+                    <Table.Cell class="py-1.5 px-3">
+                      <span class="px-1.5 py-0.5 rounded text-[10px] font-medium {discount.type === 'percentage' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">
+                        {discount.type === 'percentage' ? 'Persentase' : 'Tetap'}
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell class="py-1.5 px-3 text-xs text-slate-500">{discount.description || '-'}</Table.Cell>
+                    <Table.Cell class="py-1.5 px-3">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold
+                        {discount.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+                        {discount.enabled ? 'Aktif' : 'Nonaktif'}
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell class="py-1.5 px-3">
+                      <div class="flex items-center gap-1 justify-end">
+                        <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-teal-50 text-slate-400 hover:text-teal-600" on:click={() => openDiscountModal(discount)}><Pencil class="h-3.5 w-3.5" /></button>
+                        <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-rose-50 text-slate-400 hover:text-rose-500" on:click={() => deleteDiscount(discount.id)}><Trash2 class="h-3.5 w-3.5" /></button>
+                      </div>
+                    </Table.Cell>
+                  </Table.Row>
+                {/each}
+              {/if}
+            </Table.Body>
+          </Table.Root>
+          {#if discountsPag.lastPage > 1}
+            <div class="flex items-center justify-between px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+              <span class="text-[11px] text-slate-400">Showing {pagInfo(discountsPag)}</span>
+              <div class="flex items-center gap-1">
+                <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={discountsPag.currentPage <= 1} on:click={() => loadDiscounts(1)}><ChevronsLeft class="h-3.5 w-3.5" /></button>
+                <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={discountsPag.currentPage <= 1} on:click={() => loadDiscounts(discountsPag.currentPage - 1)}><ChevronLeft class="h-3.5 w-3.5" /></button>
+                <span class="text-xs px-2 text-slate-600">{discountsPag.currentPage}/{discountsPag.lastPage}</span>
+                <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={discountsPag.currentPage >= discountsPag.lastPage} on:click={() => loadDiscounts(discountsPag.currentPage + 1)}><ChevronRight class="h-3.5 w-3.5" /></button>
+                <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={discountsPag.currentPage >= discountsPag.lastPage} on:click={() => loadDiscounts(discountsPag.lastPage)}><ChevronsRight class="h-3.5 w-3.5" /></button>
+              </div>
+            </div>
+          {/if}
+        </Card.Content>
+      </Card.Root>
+    {/if}
+
+    <!-- ============================================================ -->
     <!-- TAB: INVOICE TYPES -->
     <!-- ============================================================ -->
     {#if currentTab === 'invoice-types'}
@@ -1139,6 +1287,51 @@
     <div class="modal-ftr">
       <Button variant="outline" class="h-8 text-xs border-slate-200" on:click={() => showTaxModal = false}>Batal</Button>
       <Button class="h-8 text-xs bg-teal-700 hover:bg-teal-800 gap-1.5" on:click={saveTax}>
+        <Save class="h-3.5 w-3.5" /> Simpan
+      </Button>
+    </div>
+  </div>
+</div>
+{/if}
+
+<!-- Discount Modal -->
+{#if showDiscountModal}
+<div class="modal-backdrop" on:click|self={() => showDiscountModal = false}>
+  <div class="modal-box modal-md">
+    <div class="modal-hdr">
+      <h3 class="text-sm font-semibold text-slate-800">{editingDiscount ? 'Edit Diskon' : 'Tambah Diskon'}</h3>
+      <button class="h-6 w-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400" on:click={() => showDiscountModal = false}><X class="h-4 w-4" /></button>
+    </div>
+    <div class="space-y-3">
+      <div class="space-y-1.5">
+        <label class="text-xs font-medium">Nama Diskon <span class="text-rose-500">*</span></label>
+        <Input bind:value={discountForm.name} placeholder="Diskon Lebaran" class="h-8 text-xs border-slate-200" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label class="text-xs font-medium">Rate <span class="text-rose-500">*</span></label>
+          <Input bind:value={discountForm.rate} type="number" step="0.01" placeholder="10.00" class="h-8 text-xs border-slate-200" />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-medium">Tipe</label>
+          <select bind:value={discountForm.type} class="w-full h-8 text-xs border border-slate-200 rounded-md px-2 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white">
+            <option value="percentage">Persentase (%)</option>
+            <option value="fixed">Nominal Tetap</option>
+          </select>
+        </div>
+      </div>
+      <div class="space-y-1.5">
+        <label class="text-xs font-medium">Keterangan</label>
+        <Input bind:value={discountForm.description} placeholder="Keterangan opsional" class="h-8 text-xs border-slate-200" />
+      </div>
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="discount-active" bind:checked={discountForm.enabled} class="rounded border-slate-300" />
+        <label for="discount-active" class="text-xs">Aktif</label>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <Button variant="outline" class="h-8 text-xs border-slate-200" on:click={() => showDiscountModal = false}>Batal</Button>
+      <Button class="h-8 text-xs bg-teal-700 hover:bg-teal-800 gap-1.5" on:click={saveDiscount}>
         <Save class="h-3.5 w-3.5" /> Simpan
       </Button>
     </div>
