@@ -91,59 +91,64 @@
         }
     }
 
-    let isTax = false;
     let selectedTaxIds = [];
     let customTaxAmounts = {};
+    let taxToAdd = "";
 
-    let isDiscount = false;
     let selectedDiscountIds = [];
     let customDiscountAmounts = {};
+    let discountToAdd = "";
 
     $: subtotal = $form.items.reduce(
         (sum, item) => sum + (item.quantity || 0) * (item.price || 0),
         0,
     );
 
-    $: computedTaxDetails = !isTax
-        ? []
-        : selectedTaxIds.map((id) => {
-              const tax = activeTaxes.find((t) => t.id === id);
-              let amount = 0;
-              if (tax.type === 'percentage') {
-                  amount = subtotal * (tax.rate / 100);
-              } else {
-                  amount = customTaxAmounts[id] !== undefined ? customTaxAmounts[id] : tax.rate;
-              }
-              return {
-                  id: tax.id,
-                  name: tax.name,
-                  rate: tax.rate,
-                  type: tax.type,
-                  amount: Number(amount) || 0,
-              };
-          });
+    $: computedTaxDetails = selectedTaxIds.map((id) => {
+        const tax = activeTaxes.find((t) => t.id === id);
+        let amount = 0;
+        if (tax.type === "percentage") {
+            amount = subtotal * (tax.rate / 100);
+        } else {
+            amount =
+                customTaxAmounts[id] !== undefined
+                    ? customTaxAmounts[id]
+                    : tax.rate;
+        }
+        return {
+            id: tax.id,
+            name: tax.name,
+            rate: tax.rate,
+            type: tax.type,
+            amount: Number(amount) || 0,
+        };
+    });
 
-    $: computedDiscountDetails = !isDiscount
-        ? []
-        : selectedDiscountIds.map((id) => {
-              const discount = activeDiscounts.find((d) => d.id === id);
-              let amount = 0;
-              if (discount.type === 'percentage') {
-                  amount = subtotal * (discount.rate / 100);
-              } else {
-                  amount = customDiscountAmounts[id] !== undefined ? customDiscountAmounts[id] : discount.rate;
-              }
-              return {
-                  id: discount.id,
-                  name: discount.name,
-                  rate: discount.rate,
-                  type: discount.type,
-                  amount: Number(amount) || 0,
-              };
-          });
+    $: computedDiscountDetails = selectedDiscountIds.map((id) => {
+        const discount = activeDiscounts.find((d) => d.id === id);
+        let amount = 0;
+        if (discount.type === "percentage") {
+            amount = subtotal * (discount.rate / 100);
+        } else {
+            amount =
+                customDiscountAmounts[id] !== undefined
+                    ? customDiscountAmounts[id]
+                    : discount.rate;
+        }
+        return {
+            id: discount.id,
+            name: discount.name,
+            rate: discount.rate,
+            type: discount.type,
+            amount: Number(amount) || 0,
+        };
+    });
 
     $: totalTax = computedTaxDetails.reduce((sum, t) => sum + t.amount, 0);
-    $: totalDiscount = computedDiscountDetails.reduce((sum, t) => sum + t.amount, 0);
+    $: totalDiscount = computedDiscountDetails.reduce(
+        (sum, t) => sum + t.amount,
+        0,
+    );
     $: grandTotal = subtotal - totalDiscount + totalTax;
 
     function addItem() {
@@ -163,8 +168,8 @@
             customTaxAmounts = customTaxAmounts;
         } else {
             selectedTaxIds = [...selectedTaxIds, taxId];
-            const tax = activeTaxes.find(t => t.id === taxId);
-            if (tax && tax.type === 'fixed') {
+            const tax = activeTaxes.find((t) => t.id === taxId);
+            if (tax && tax.type === "fixed") {
                 customTaxAmounts[taxId] = tax.rate;
                 customTaxAmounts = customTaxAmounts;
             }
@@ -173,13 +178,15 @@
 
     function toggleDiscount(discountId) {
         if (selectedDiscountIds.includes(discountId)) {
-            selectedDiscountIds = selectedDiscountIds.filter((id) => id !== discountId);
+            selectedDiscountIds = selectedDiscountIds.filter(
+                (id) => id !== discountId,
+            );
             delete customDiscountAmounts[discountId];
             customDiscountAmounts = customDiscountAmounts;
         } else {
             selectedDiscountIds = [...selectedDiscountIds, discountId];
-            const discount = activeDiscounts.find(d => d.id === discountId);
-            if (discount && discount.type === 'fixed') {
+            const discount = activeDiscounts.find((d) => d.id === discountId);
+            if (discount && discount.type === "fixed") {
                 customDiscountAmounts[discountId] = discount.rate;
                 customDiscountAmounts = customDiscountAmounts;
             }
@@ -227,13 +234,18 @@
             </h1>
         </div>
 
-        <Card.Root class="bg-white border-slate-200 shadow-sm">
-            <Card.Content class="p-6">
-                <!-- HEADER FORM -->
-                <div class="border-b border-slate-100 pb-6 mb-6">
-                    <div
-                        class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- General Information Card -->
+            <Card.Root class="bg-white border-slate-200 shadow-sm">
+                <Card.Header class="pb-3 border-b border-slate-100 mb-4">
+                    <Card.Title
+                        class="text-base font-bold text-slate-800 flex items-center gap-2"
                     >
+                        <FileText class="h-4 w-4 text-teal-600" /> Informasi Umum
+                    </Card.Title>
+                </Card.Header>
+                <Card.Content class="space-y-4">
+                    <div class="space-y-4">
                         <!-- Customer -->
                         <div class="space-y-1.5">
                             <label
@@ -251,7 +263,7 @@
                                 </div>
                                 <button
                                     type="button"
-                                    class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border bg-background hover:bg-accent hover:text-accent-foreground shrink-0 h-10 w-10 p-0 text-teal-600 border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+                                    class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border bg-white text-teal-600 border-teal-200 hover:bg-teal-50 hover:text-teal-700 h-10 w-10 shrink-0"
                                     title="Tambah Customer Baru"
                                     on:click={() => (showCustomerModal = true)}
                                 >
@@ -276,38 +288,41 @@
                         </div>
 
                         <!-- Dates -->
-                        <div class="space-y-1.5">
-                            <label
-                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
-                                >Invoice Date <span class="text-red-500">*</span
-                                ></label
-                            >
-                            <div class="relative">
-                                <Calendar
-                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
-                                />
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                    >Invoice Date <span class="text-red-500"
+                                        >*</span
+                                    ></label
+                                >
+                                <div class="relative">
+                                    <Calendar
+                                        class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                    />
+                                    <Input
+                                        type="date"
+                                        bind:value={$form.invoiced_at}
+                                        class="pl-9 h-9 text-sm bg-white"
+                                    />
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                    for="due_date">Due Date</label
+                                >
                                 <Input
+                                    id="due_date"
                                     type="date"
-                                    bind:value={$form.invoiced_at}
-                                    class="pl-9 h-9 text-sm bg-white"
+                                    bind:value={$form.due_at}
+                                    min={$form.invoiced_at}
+                                    class="h-9 text-sm bg-white"
+                                    required
                                 />
                             </div>
                         </div>
-                        <div class="space-y-2">
-                            <label
-                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
-                                for="due_date">Due Date</label
-                            >
-                            <Input
-                                id="due_date"
-                                type="date"
-                                bind:value={$form.due_at}
-                                min={$form.invoiced_at}
-                                required
-                            />
-                        </div>
 
-                        <!-- Optional Info -->
                         <!-- Tipe Invoice -->
                         <div class="space-y-1.5">
                             <label
@@ -315,76 +330,127 @@
                                 >Tipe Invoice</label
                             >
                             <div class="relative">
-                                <Ship
+                                <FileText
                                     class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
                                 />
                                 <select
                                     bind:value={$form.invoice_type_id}
-                                    class="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-9 pr-8 appearance-none focus:border-teal-500 cursor-pointer text-slate-700"
+                                    class="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors pl-9 pr-8 appearance-none focus:border-teal-500 cursor-pointer text-slate-700"
                                 >
                                     <option value={null}>--Pilih Tipe--</option>
                                     {#each invoiceTypes as type}
-                                        <option value={type.id}>{type.name}</option>
+                                        <option value={type.id}
+                                            >{type.name}</option
+                                        >
                                     {/each}
                                 </select>
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
+                                <div
+                                    class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400"
+                                >
+                                    <svg
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        ><path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M19 9l-7 7-7-7"
+                                        /></svg
+                                    >
                                 </div>
                             </div>
                         </div>
 
-                        <div class="space-y-1.5">
-                            <label
-                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
-                                >Order Number</label
-                            >
-                            <div class="relative">
-                                <ShoppingCart
-                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
-                                />
-                                <Input
-                                    type="text"
-                                    bind:value={$form.order_number}
-                                    placeholder="Order No"
-                                    class="pl-9 h-9 text-sm bg-white"
-                                />
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Order Number -->
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                    >Order Number</label
+                                >
+                                <div class="relative">
+                                    <ShoppingCart
+                                        class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                    />
+                                    <Input
+                                        type="text"
+                                        bind:value={$form.order_number}
+                                        placeholder="Order No"
+                                        class="pl-9 h-9 text-sm bg-white"
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        <div class="space-y-1.5">
-                            <label
-                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
-                                >Nama Kapal</label
-                            >
-                            <div class="relative">
-                                <Ship
-                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
-                                />
-                                <Input
-                                    type="text"
-                                    bind:value={$form.nama_kapal}
-                                    placeholder="Kapal"
-                                    class="pl-9 h-9 text-sm bg-white"
-                                />
-                            </div>
-                        </div>
 
-                        <div class="space-y-1.5">
-                            <label
-                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
-                                >Voy</label
-                            >
-                            <div class="relative">
-                                <Anchor
-                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
-                                />
-                                <Input
-                                    type="text"
-                                    bind:value={$form.voy}
-                                    placeholder="Voyage"
-                                    class="pl-9 h-9 text-sm bg-white"
-                                />
+                            <!-- No Faktur Pajak -->
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                    >No Faktur Pajak</label
+                                >
+                                <div class="relative">
+                                    <FileText
+                                        class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                    />
+                                    <Input
+                                        type="text"
+                                        bind:value={$form.no_faktur_pajak}
+                                        placeholder="No Faktur"
+                                        class="pl-9 h-9 text-sm bg-white"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Card.Content>
+            </Card.Root>
+
+            <!-- Shipping Information Card -->
+            <Card.Root class="bg-white border-slate-200 shadow-sm h-fit">
+                <Card.Header class="pb-3 border-b border-slate-100 mb-4">
+                    <Card.Title
+                        class="text-base font-bold text-slate-800 flex items-center gap-2"
+                    >
+                        <Ship class="h-4 w-4 text-teal-600" /> Informasi Pengiriman
+                    </Card.Title>
+                </Card.Header>
+                <Card.Content class="space-y-4">
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                    >Nama Kapal</label
+                                >
+                                <div class="relative">
+                                    <Ship
+                                        class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                    />
+                                    <Input
+                                        type="text"
+                                        bind:value={$form.nama_kapal}
+                                        placeholder="Kapal"
+                                        class="pl-9 h-9 text-sm bg-white"
+                                    />
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                    >Voy</label
+                                >
+                                <div class="relative">
+                                    <Anchor
+                                        class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                    />
+                                    <Input
+                                        type="text"
+                                        bind:value={$form.voy}
+                                        placeholder="Voyage"
+                                        class="pl-9 h-9 text-sm bg-white"
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -443,37 +509,27 @@
                         <div class="space-y-1.5">
                             <label
                                 class="text-xs font-bold text-slate-700 uppercase tracking-wider"
-                                >No Faktur Pajak</label
+                                >Notes / Keterangan</label
                             >
                             <div class="relative">
                                 <FileText
                                     class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
                                 />
                                 <Input
-                                    type="text"
-                                    bind:value={$form.no_faktur_pajak}
-                                    placeholder="No Faktur"
+                                    id="notes"
+                                    bind:value={$form.notes}
+                                    placeholder="Keterangan"
                                     class="pl-9 h-9 text-sm bg-white"
                                 />
                             </div>
                         </div>
-                        <!-- Notes -->
-                        <div class="space-y-2 md:col-span-2 mt-2">
-                            <label
-                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
-                                for="notes">Notes / Keterangan</label
-                            >
-                            <textarea
-                                id="notes"
-                                bind:value={$form.notes}
-                                class="w-full min-h-[100px] p-3 rounded-md border border-slate-200 bg-white text-sm outline-none focus:border-teal-500 shadow-sm resize-none"
-                                placeholder="Additional notes for the invoice..."
-                                rows="3"
-                            ></textarea>
-                        </div>
                     </div>
-                </div>
+                </Card.Content>
+            </Card.Root>
+        </div>
 
+        <Card.Root class="bg-white border-slate-200 shadow-sm">
+            <Card.Content class="p-6">
                 <!-- ITEMS TABLE -->
                 <div class="space-y-4 mb-8">
                     <div class="flex items-center justify-between">
@@ -587,146 +643,252 @@
                     </div>
                 </div>
 
-                <!-- SUMMARY PANEL -->
+                <!-- SUMMARY -->
                 <div
-                    class="flex justify-between items-start pt-6 border-t border-slate-100"
+                    class="flex flex-col lg:flex-row gap-8 pt-8 border-t border-slate-100 mt-6"
                 >
-                    <!-- Tax and Discount Controls -->
-                    <div class="w-1/2 space-y-4">
-                        <!-- Discounts Section -->
-                        <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
-                            <label class="flex items-center gap-2 cursor-pointer w-fit mb-3">
-                                <input
-                                    type="checkbox"
-                                    class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
-                                    bind:checked={isDiscount}
-                                />
-                                <span class="text-sm font-bold text-slate-800">Apply Header Discount</span>
-                            </label>
-
-                            {#if isDiscount}
-                                <div class="space-y-2 mt-2 pt-2 border-t border-slate-200">
-                                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Available Discounts</span>
-                                    {#each activeDiscounts as discount}
-                                        <div class="flex items-center gap-2">
-                                            <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-700 hover:bg-slate-100 p-1.5 rounded transition-colors flex-1">
-                                                <input
-                                                    type="checkbox"
-                                                    class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5"
-                                                    checked={selectedDiscountIds.includes(discount.id)}
-                                                    on:change={() => toggleDiscount(discount.id)}
-                                                />
-                                                {discount.name}
-                                                <span class="text-xs text-slate-400">({discount.type === 'percentage' ? discount.rate + '%' : 'Fixed Nominal'})</span>
-                                            </label>
-                                            {#if selectedDiscountIds.includes(discount.id) && discount.type === 'fixed'}
-                                                <div class="w-32">
-                                                    <Input
-                                                        type="number"
-                                                        class="h-7 text-xs text-right bg-white"
-                                                        placeholder="Nominal"
-                                                        bind:value={customDiscountAmounts[discount.id]}
-                                                    />
-                                                </div>
-                                            {/if}
-                                        </div>
-                                    {/each}
-                                    {#if activeDiscounts.length === 0}
-                                        <div class="text-xs text-slate-500 italic">No active discounts found in system.</div>
-                                    {/if}
-                                </div>
-                            {/if}
-                        </div>
-
-                        <!-- Taxes Section -->
-                        <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
-                            <label class="flex items-center gap-2 cursor-pointer w-fit mb-3">
-                                <input
-                                    type="checkbox"
-                                    class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
-                                    bind:checked={isTax}
-                                />
-                                <span class="text-sm font-bold text-slate-800">Apply Header Tax</span>
-                            </label>
-
-                            {#if isTax}
-                                <div class="space-y-2 mt-2 pt-2 border-t border-slate-200">
-                                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Available Taxes</span>
-                                    {#each activeTaxes as tax}
-                                        <div class="flex items-center gap-2">
-                                            <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-700 hover:bg-slate-100 p-1.5 rounded transition-colors flex-1">
-                                                <input
-                                                    type="checkbox"
-                                                    class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5"
-                                                    checked={selectedTaxIds.includes(tax.id)}
-                                                    on:change={() => toggleTax(tax.id)}
-                                                />
-                                                {tax.name}
-                                                <span class="text-xs text-slate-400">({tax.type === 'percentage' ? tax.rate + '%' : 'Fixed Nominal'})</span>
-                                            </label>
-                                            {#if selectedTaxIds.includes(tax.id) && tax.type === 'fixed'}
-                                                <div class="w-32">
-                                                    <Input
-                                                        type="number"
-                                                        class="h-7 text-xs text-right bg-white"
-                                                        placeholder="Nominal"
-                                                        bind:value={customTaxAmounts[tax.id]}
-                                                    />
-                                                </div>
-                                            {/if}
-                                        </div>
-                                    {/each}
-                                    {#if activeTaxes.length === 0}
-                                        <div class="text-xs text-slate-500 italic">No active taxes found in system.</div>
-                                    {/if}
-                                </div>
-                            {/if}
-                        </div>
-                    </div>
-
-                    <!-- Totals -->
-                    <div class="w-1/3 space-y-3">
-                        <div class="flex justify-between items-center text-sm">
-                            <span class="text-slate-500 font-medium"
+                    <div
+                        class="w-full lg:w-1/2 xl:w-5/12 space-y-4 bg-slate-50 p-6 rounded-xl border border-slate-200 ml-auto shadow-sm"
+                    >
+                        <!-- Subtotal -->
+                        <div
+                            class="flex justify-between items-center text-sm mb-4"
+                        >
+                            <span class="text-slate-600 font-bold"
                                 >Subtotal</span
                             >
-                            <span class="font-semibold text-slate-700"
+                            <span class="font-bold text-slate-800"
                                 >Rp {subtotal.toLocaleString("id-ID")}</span
                             >
                         </div>
 
-                        {#if isDiscount && $form.header_discount_details.length > 0}
-                            <div class="space-y-1 text-red-600">
-                                {#each $form.header_discount_details as discount}
-                                    <div class="flex justify-between items-center text-xs">
-                                        <span>{discount.name} ({discount.type === 'percentage' ? discount.rate + '%' : 'Fixed'})</span>
-                                        <span>- Rp {discount.amount.toLocaleString("id-ID")}</span>
-                                    </div>
-                                {/each}
+                        <!-- Taxes Table -->
+                        <div class="space-y-2 border-t border-slate-200 pt-3">
+                            <div
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2"
+                            >
+                                Taxes
                             </div>
-                            <div class="flex justify-between items-center text-sm border-t border-slate-100 pt-2 text-red-600">
-                                <span class="font-medium">Total Discount</span>
-                                <span class="font-semibold">- Rp {totalDiscount.toLocaleString("id-ID")}</span>
-                            </div>
-                        {/if}
 
-                        {#if isTax && $form.header_tax_details.length > 0}
-                            <div class="space-y-1">
-                                {#each $form.header_tax_details as tax}
-                                    <div class="flex justify-between items-center text-xs text-slate-500">
-                                        <span>{tax.name} ({tax.type === 'percentage' ? tax.rate + '%' : 'Fixed'})</span>
-                                        <span>Rp {tax.amount.toLocaleString("id-ID")}</span>
-                                    </div>
-                                {/each}
+                            <div class="flex items-center gap-2 mb-3">
+                                <select
+                                    bind:value={taxToAdd}
+                                    class="flex h-8 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                >
+                                    <option value="">-- Pilih Tax --</option>
+                                    {#each activeTaxes.filter((t) => !selectedTaxIds.includes(t.id)) as tax}
+                                        <option value={tax.id}
+                                            >{tax.name} ({tax.type ===
+                                            "percentage"
+                                                ? tax.rate + "%"
+                                                : "Fixed"})</option
+                                        >
+                                    {/each}
+                                </select>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="h-8 text-xs border-teal-200 text-teal-700 hover:bg-teal-50"
+                                    on:click={() => {
+                                        if (taxToAdd) {
+                                            toggleTax(Number(taxToAdd));
+                                            taxToAdd = "";
+                                        }
+                                    }}
+                                >
+                                    Tambah
+                                </Button>
                             </div>
-                            <div class="flex justify-between items-center text-sm border-t border-slate-100 pt-2">
-                                <span class="text-slate-500 font-medium">Total Tax</span>
-                                <span class="font-semibold text-slate-700">Rp {totalTax.toLocaleString("id-ID")}</span>
-                            </div>
-                        {/if}
 
+                            {#each activeTaxes.filter( (t) => selectedTaxIds.includes(t.id), ) as tax}
+                                <div
+                                    class="flex justify-between items-center text-sm group"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="h-6 w-6 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                            on:click={() => toggleTax(tax.id)}
+                                        >
+                                            <Trash2 class="h-3 w-3" />
+                                        </Button>
+                                        <span class="text-slate-700"
+                                            >{tax.name}
+                                            <span class="text-slate-400 text-xs"
+                                                >({tax.type === "percentage"
+                                                    ? tax.rate + "%"
+                                                    : "Fixed"})</span
+                                            ></span
+                                        >
+                                    </div>
+                                    <div class="flex justify-end min-w-[100px]">
+                                        {#if tax.type === "fixed"}
+                                            <Input
+                                                type="number"
+                                                class="h-7 text-xs text-right bg-white w-28"
+                                                placeholder="Nominal"
+                                                bind:value={
+                                                    customTaxAmounts[tax.id]
+                                                }
+                                            />
+                                        {:else}
+                                            <span
+                                                class="font-medium text-slate-700"
+                                                >Rp {computedTaxDetails
+                                                    .find(
+                                                        (t) => t.id === tax.id,
+                                                    )
+                                                    ?.amount.toLocaleString(
+                                                        "id-ID",
+                                                    ) || 0}</span
+                                            >
+                                        {/if}
+                                    </div>
+                                </div>
+                            {/each}
+                            {#if selectedTaxIds.length === 0}
+                                <div class="text-xs text-slate-500 italic">
+                                    Belum ada tax yang ditambahkan.
+                                </div>
+                            {/if}
+                            {#if totalTax > 0}
+                                <div
+                                    class="flex justify-between items-center text-sm pt-2 mt-2 border-t border-slate-200 border-dashed"
+                                >
+                                    <span class="text-slate-600 font-semibold"
+                                        >Total Tax</span
+                                    >
+                                    <span class="font-semibold text-slate-800"
+                                        >Rp {totalTax.toLocaleString(
+                                            "id-ID",
+                                        )}</span
+                                    >
+                                </div>
+                            {/if}
+                        </div>
+
+                        <!-- Discounts Table -->
                         <div
-                            class="flex justify-between items-center text-lg border-t-2 border-slate-800 pt-3 mt-3"
+                            class="space-y-2 border-t border-slate-200 pt-3 mt-3"
+                        >
+                            <div
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2"
+                            >
+                                Discounts
+                            </div>
+
+                            <div class="flex items-center gap-2 mb-3">
+                                <select
+                                    bind:value={discountToAdd}
+                                    class="flex h-8 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                >
+                                    <option value=""
+                                        >-- Pilih Discount --</option
+                                    >
+                                    {#each activeDiscounts.filter((d) => !selectedDiscountIds.includes(d.id)) as discount}
+                                        <option value={discount.id}
+                                            >{discount.name} ({discount.type ===
+                                            "percentage"
+                                                ? discount.rate + "%"
+                                                : "Fixed"})</option
+                                        >
+                                    {/each}
+                                </select>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="h-8 text-xs border-teal-200 text-teal-700 hover:bg-teal-50"
+                                    on:click={() => {
+                                        if (discountToAdd) {
+                                            toggleDiscount(
+                                                Number(discountToAdd),
+                                            );
+                                            discountToAdd = "";
+                                        }
+                                    }}
+                                >
+                                    Tambah
+                                </Button>
+                            </div>
+
+                            {#each activeDiscounts.filter( (d) => selectedDiscountIds.includes(d.id), ) as discount}
+                                <div
+                                    class="flex justify-between items-center text-sm group"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="h-6 w-6 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                            on:click={() =>
+                                                toggleDiscount(discount.id)}
+                                        >
+                                            <Trash2 class="h-3 w-3" />
+                                        </Button>
+                                        <span class="text-slate-700"
+                                            >{discount.name}
+                                            <span class="text-slate-400 text-xs"
+                                                >({discount.type ===
+                                                "percentage"
+                                                    ? discount.rate + "%"
+                                                    : "Fixed"})</span
+                                            ></span
+                                        >
+                                    </div>
+                                    <div class="flex justify-end min-w-[100px]">
+                                        {#if discount.type === "fixed"}
+                                            <Input
+                                                type="number"
+                                                class="h-7 text-xs text-right bg-white w-28 border-red-200 focus-visible:ring-red-500"
+                                                placeholder="Nominal"
+                                                bind:value={
+                                                    customDiscountAmounts[
+                                                        discount.id
+                                                    ]
+                                                }
+                                            />
+                                        {:else}
+                                            <span
+                                                class="font-medium text-red-600"
+                                                >- Rp {computedDiscountDetails
+                                                    .find(
+                                                        (d) =>
+                                                            d.id ===
+                                                            discount.id,
+                                                    )
+                                                    ?.amount.toLocaleString(
+                                                        "id-ID",
+                                                    ) || 0}</span
+                                            >
+                                        {/if}
+                                    </div>
+                                </div>
+                            {/each}
+                            {#if selectedDiscountIds.length === 0}
+                                <div class="text-xs text-slate-500 italic">
+                                    Belum ada discount yang ditambahkan.
+                                </div>
+                            {/if}
+                            {#if totalDiscount > 0}
+                                <div
+                                    class="flex justify-between items-center text-sm pt-2 mt-2 border-t border-slate-200 border-dashed text-red-600"
+                                >
+                                    <span class="font-semibold"
+                                        >Total Discount</span
+                                    >
+                                    <span class="font-semibold"
+                                        >- Rp {totalDiscount.toLocaleString(
+                                            "id-ID",
+                                        )}</span
+                                    >
+                                </div>
+                            {/if}
+                        </div>
+
+                        <!-- Grand Total -->
+                        <div
+                            class="flex justify-between items-center text-lg border-t-2 border-slate-800 pt-4 mt-4"
                         >
                             <span class="font-extrabold text-slate-900"
                                 >Grand Total</span
@@ -738,15 +900,15 @@
 
                         <div class="pt-6">
                             <Button
-                                class="w-full bg-teal-700 hover:bg-teal-800 text-white shadow-sm font-semibold flex items-center justify-center gap-2"
+                                class="w-full bg-teal-700 hover:bg-teal-800 text-white shadow-sm font-semibold flex items-center justify-center gap-2 h-12 text-base rounded-md"
                                 on:click={submit}
                                 disabled={isProcessing}
                             >
                                 {#if isProcessing}
-                                    <Loader2 class="h-4 w-4 animate-spin" />
+                                    <Loader2 class="h-5 w-5 animate-spin" />
                                     Processing...
                                 {:else}
-                                    <Save class="h-4 w-4" />
+                                    <Save class="h-5 w-5" />
                                     Save Invoice
                                 {/if}
                             </Button>

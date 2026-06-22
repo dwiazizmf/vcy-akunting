@@ -3,7 +3,7 @@
 namespace App\Helpers;
 
 use Illuminate\Support\Collection;
-use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Account;
 
 class AccountHelper
 {
