@@ -68,6 +68,9 @@ Route::post('invoices/{invoice}/post', [InvoiceController::class, 'post'])->name
 // Payment routes
 Route::resource('payments', PaymentController::class)->except(['edit', 'update']);
 Route::get('/api/payments/outstanding', [PaymentController::class, 'outstandingInvoices']);
+Route::get('/api/invoices/{invoice}', function (\App\Models\Incomes\Invoice $invoice) {
+    return response()->json($invoice->load('items'));
+});
 
 // Bank Accounts (Settings)
 Route::resource('settings/bank-accounts', BankAccountController::class)->names('bank-accounts');

@@ -114,9 +114,20 @@ class InvoiceController extends Controller
         $companyId = session('company_id') ?: 1;
         $activeTaxes = $this->taxService->getActiveTaxes();
         $activeDiscounts = Discount::all(['id', 'name', 'rate', 'type']);
-        $customers   = Customer::select('id', 'name')->get();
+        $customers   = Customer::select('id', 'name', 'address', 'npwp')->get();
         $revenueAccounts = \App\Helpers\AccountHelper::getFormattedAccounts($companyId, 'Revenue');
         $invoiceTypes = \App\Models\Incomes\InvoiceType::all();
+        $invoices = Invoice::where('company_id', $companyId)
+            ->where('invoice_status_code', '!=', 'void')
+            ->select('id', 'invoice_text', 'invoice_number')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->map(function ($inv) {
+                return [
+                    'id' => $inv->id,
+                    'name' => $inv->invoice_text ?: $inv->invoice_number,
+                ];
+            });
         
         return Inertia::render('Incomes/Invoices/Create', [
             'activeTaxes'     => $activeTaxes,
@@ -124,6 +135,7 @@ class InvoiceController extends Controller
             'customers'       => $customers,
             'revenueAccounts' => $revenueAccounts,
             'invoiceTypes'    => $invoiceTypes,
+            'invoices'        => $invoices,
         ]);
     }
 
@@ -132,6 +144,8 @@ class InvoiceController extends Controller
         $validated = $request->validate([
             'customer_id'         => 'required|integer',
             'customer_name'       => 'required|string',
+            'customer_address'    => 'nullable|string',
+            'customer_npwp'       => 'nullable|string',
             'account_id'          => 'nullable|integer|exists:accounts,id',
             'invoice_type_id'     => 'nullable|integer|exists:invoice_type,id',
             'invoiced_at'         => 'required|date',
@@ -144,12 +158,16 @@ class InvoiceController extends Controller
             'voy'                 => 'nullable|string',
             'notes'               => 'nullable|string',
             'no_faktur_pajak'     => 'nullable|string',
+            'isFCL'               => 'nullable|boolean',
+            'no_container'        => 'nullable|string|max:50',
+            'isFaktur'            => 'nullable|boolean',
             'header_tax_details'  => 'nullable|array',
             'header_discount_details' => 'nullable|array',
             'items'               => 'required|array|min:1',
             'items.*.name'        => 'required|string',
             'items.*.quantity'    => 'required|numeric',
             'items.*.price'       => 'required|numeric',
+            'revised_invoice_id'  => 'nullable|integer|exists:invoices,id',
         ]);
 
         // Server-side calculation
@@ -179,17 +197,98 @@ class InvoiceController extends Controller
         $grandTotal = $subtotal - $totalDiscount + $totalTax;
         
         $companyId = session('company_id') ?: 1;
-        $invoiceData = InvoiceHelper::generateInvoiceData($validated['invoiced_at']);
+        $revisedInvoiceId = $validated['revised_invoice_id'] ?? null;
+        $invoiceData = null;
+        $rInvoiceText = null;
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $companyId, $invoiceData, $subtotal, $grandTotal, $totalTax, $headerTaxes, $totalDiscount, $headerDiscounts) {
+        if ($revisedInvoiceId) {
+            $oldInvoice = Invoice::findOrFail($revisedInvoiceId);
+            $revData = InvoiceHelper::generateRevisionInvoiceData($oldInvoice->invoice_text, $oldInvoice->invoice_number);
+            $invoiceData = [
+                'invoice_number' => $revData['invoice_number'],
+                'invoice_text' => $revData['invoice_text'],
+            ];
+            $rInvoiceText = $oldInvoice->invoice_text;
+        } else {
+            $invoiceData = InvoiceHelper::generateInvoiceData($validated['invoiced_at']);
+        }
+
+        $isFaktur = (bool)($validated['isFaktur'] ?? false);
+        $noFakturInt = null;
+        $noFakturPajak = $validated['no_faktur_pajak'] ?? null;
+
+        if ($isFaktur) {
+            $setting = \App\Models\Settings\InvoiceSetting::getSetting();
+            
+            $lastInvoice = Invoice::where('company_id', $companyId)
+                ->where('isFaktur', true)
+                ->whereNotNull('no_faktur_int')
+                ->where('no_faktur_int', '!=', '')
+                ->orderByRaw('CAST(no_faktur_int AS INTEGER) DESC')
+                ->first();
+
+            if ($lastInvoice) {
+                $nextVal = intval($lastInvoice->no_faktur_int) + 1;
+            } else {
+                $nextVal = intval($setting->no_awal);
+            }
+
+            if ($nextVal < $setting->no_awal || $nextVal > $setting->no_akhir) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['no_faktur_pajak' => "Nomor urut faktur pajak otomatis ({$nextVal}) di luar rentang periode yang tersedia ({$setting->no_awal} - {$setting->no_akhir})."]);
+            }
+
+            $noFakturInt = (string)$nextVal;
+
+            $first = $setting->first_faktur ?? '';
+            $second = $setting->second_faktur ?? '';
+            $third = $setting->third_faktur ?? '';
+            $fourth = $setting->fourth_faktur ?? '';
+            $paddedVal = str_pad($nextVal, 8, '0', STR_PAD_LEFT);
+
+            if ($first !== '' && $second !== '' && $third !== '' && $fourth !== '') {
+                $noFakturPajak = "{$first}{$second}.{$third}-{$fourth}.{$paddedVal}";
+            } else {
+                $prefix = collect([$first, $second, $third, $fourth])->filter(fn($v) => !is_null($v) && $v !== '')->implode('.');
+                $noFakturPajak = $prefix ? "{$prefix}.{$paddedVal}" : $paddedVal;
+            }
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $companyId, $invoiceData, $rInvoiceText, $revisedInvoiceId, $subtotal, $grandTotal, $totalTax, $headerTaxes, $totalDiscount, $headerDiscounts, $isFaktur, $noFakturInt, $noFakturPajak) {
+            if ($revisedInvoiceId) {
+                $oldInvoice = Invoice::findOrFail($revisedInvoiceId);
+                
+                // If it was posted, delete its journal entries
+                if ($oldInvoice->isPosted) {
+                    $journalIds = \App\Models\Accounting\Accounting\Ledger::where('ledgerable_id', $oldInvoice->id)
+                        ->where('ledgerable_type', Invoice::class)
+                        ->pluck('journal_id')
+                        ->unique();
+                        
+                    \App\Models\Accounting\Accounting\Ledger::where('ledgerable_id', $oldInvoice->id)
+                        ->where('ledgerable_type', Invoice::class)
+                        ->delete();
+                        
+                    \App\Models\Accounting\Accounting\Journal::whereIn('id', $journalIds)->delete();
+                    
+                    $oldInvoice->update(['isPosted' => false]);
+                }
+                
+                $oldInvoice->update(['invoice_status_code' => 'void']);
+            }
+
             $invoice = Invoice::create([
                 'company_id'          => $companyId,
                 'customer_id'         => $validated['customer_id'],
                 'customer_name'       => $validated['customer_name'],
+                'customer_address'    => $validated['customer_address'] ?? null,
+                'customer_npwp'       => $validated['customer_npwp'] ?? null,
                 'account_id'          => $validated['account_id'] ?? null,
                 'invoice_type_id'     => $validated['invoice_type_id'] ?? null,
                 'invoice_number'      => $invoiceData['invoice_number'], 
                 'invoice_text'        => $invoiceData['invoice_text'],
+                'r_invoice_text'      => $rInvoiceText,
                 'order_number'        => $validated['order_number'] ?? null,
                 'nama_kapal'          => $validated['nama_kapal'] ?? null,
                 'departure_date'      => $validated['departure_date'] ?? null,
@@ -197,7 +296,11 @@ class InvoiceController extends Controller
                 'pelabuhan_tujuan'    => $validated['pelabuhan_tujuan'] ?? null,
                 'voy'                 => $validated['voy'] ?? null,
                 'notes'               => $validated['notes'] ?? null,
-                'no_faktur_pajak'     => $validated['no_faktur_pajak'] ?? null,
+                'isFCL'               => $validated['isFCL'] ?? false,
+                'no_container'        => $validated['no_container'] ?? null,
+                'isFaktur'            => $isFaktur,
+                'no_faktur_int'       => $noFakturInt,
+                'no_faktur_pajak'     => $noFakturPajak,
                 'invoiced_at'         => $validated['invoiced_at'],
                 'due_at'              => $validated['due_at'],
                 'subtotal'            => $subtotal,
@@ -296,15 +399,37 @@ class InvoiceController extends Controller
         $invoice->load('items');
         $activeTaxes = $this->taxService->getActiveTaxes();
         $activeDiscounts = Discount::all(['id', 'name', 'rate', 'type']);
-        $customers = Customer::select('id', 'name')->get();
+        $customers = Customer::select('id', 'name', 'address', 'npwp')->get();
         $invoiceTypes = \App\Models\Incomes\InvoiceType::all();
         
+        $invoices = Invoice::where('company_id', $invoice->company_id)
+            ->where('id', '!=', $invoice->id)
+            ->where('invoice_status_code', '!=', 'void')
+            ->select('id', 'invoice_text', 'invoice_number')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->map(function ($inv) {
+                return [
+                    'id' => $inv->id,
+                    'name' => $inv->invoice_text ?: $inv->invoice_number,
+                ];
+            });
+
+        $revisedInvoice = null;
+        if ($invoice->r_invoice_text) {
+            $revisedInvoice = Invoice::where('invoice_text', $invoice->r_invoice_text)
+                ->where('company_id', $invoice->company_id)
+                ->first();
+        }
+        $invoice->revised_invoice_id = $revisedInvoice?->id;
+
         return Inertia::render('Incomes/Invoices/Edit', [
             'invoice' => $invoice,
             'activeTaxes' => $activeTaxes,
             'activeDiscounts' => $activeDiscounts,
             'customers' => $customers,
             'invoiceTypes' => $invoiceTypes,
+            'invoices' => $invoices,
         ]);
     }
 
@@ -317,20 +442,29 @@ class InvoiceController extends Controller
         $validated = $request->validate([
             'customer_id'         => 'required|integer',
             'customer_name'       => 'required|string',
+            'customer_address'    => 'nullable|string',
+            'customer_npwp'       => 'nullable|string',
             'invoice_type_id'     => 'nullable|integer|exists:invoice_type,id',
             'invoiced_at'         => 'required|date',
             'due_at'              => 'required|date|after_or_equal:invoiced_at',
             'order_number'        => 'nullable|string',
             'nama_kapal'          => 'nullable|string',
             'departure_date'      => 'nullable|date',
+            'pelabuhan_asal'      => 'nullable|string',
+            'pelabuhan_tujuan'    => 'nullable|string',
+            'voy'                 => 'nullable|string',
             'notes'               => 'nullable|string',
             'no_faktur_pajak'     => 'nullable|string',
+            'isFCL'               => 'nullable|boolean',
+            'no_container'        => 'nullable|string|max:50',
+            'isFaktur'            => 'nullable|boolean',
             'header_tax_details'  => 'nullable|array',
             'header_discount_details' => 'nullable|array',
             'items'               => 'required|array|min:1',
             'items.*.name'        => 'required|string',
             'items.*.quantity'    => 'required|numeric',
             'items.*.price'       => 'required|numeric',
+            'revised_invoice_id'  => 'nullable|integer|exists:invoices,id',
         ]);
 
         $subtotal = 0;
@@ -358,42 +492,155 @@ class InvoiceController extends Controller
 
         $grandTotal = $subtotal - $totalDiscount + $totalTax;
 
-        $invoice->update([
-            'customer_id'         => $validated['customer_id'],
-            'customer_name'       => $validated['customer_name'],
-            'invoice_type_id'     => $validated['invoice_type_id'] ?? null,
-            'order_number'        => $validated['order_number'] ?? null,
-            'nama_kapal'          => $validated['nama_kapal'] ?? null,
-            'departure_date'      => $validated['departure_date'] ?? null,
-            'notes'               => $validated['notes'] ?? null,
-            'no_faktur_pajak'     => $validated['no_faktur_pajak'] ?? null,
-            'invoiced_at'         => $validated['invoiced_at'],
-            'due_at'              => $validated['due_at'],
-            'subtotal'            => $subtotal,
-            'tax_amount'          => $totalTax,
-            'header_tax_details'  => $headerTaxes,
-            'discount_amount'     => $totalDiscount,
-            'header_discount_details' => $headerDiscounts,
-            'is_tax'              => $totalTax > 0,
-            'is_discount'         => $totalDiscount > 0,
-            'grand_total'         => $grandTotal,
-        ]);
+        $isFaktur = (bool)($validated['isFaktur'] ?? false);
+        $noFakturInt = $invoice->no_faktur_int;
+        $noFakturPajak = $validated['no_faktur_pajak'] ?? null;
 
-        // Sync Items
-        $invoice->items()->delete();
-        
-        foreach ($validated['items'] as $item) {
-            InvoiceItem::create([
-                'company_id'   => $invoice->company_id,
-                'invoice_id'   => $invoice->id,
-                'name'         => $item['name'],
-                'quantity'     => $item['quantity'],
-                'price'        => $item['price'],
-                'total'        => ($item['quantity'] * $item['price']),
-                'tax_amount'   => 0, 
-                'tax_details'  => [],
-            ]);
+        if ($isFaktur) {
+            if (!$noFakturInt) {
+                $setting = \App\Models\Settings\InvoiceSetting::getSetting();
+                
+                $lastInvoice = Invoice::where('company_id', $invoice->company_id)
+                    ->where('isFaktur', true)
+                    ->whereNotNull('no_faktur_int')
+                    ->where('no_faktur_int', '!=', '')
+                    ->orderByRaw('CAST(no_faktur_int AS INTEGER) DESC')
+                    ->first();
+
+                if ($lastInvoice) {
+                    $nextVal = intval($lastInvoice->no_faktur_int) + 1;
+                } else {
+                    $nextVal = intval($setting->no_awal);
+                }
+
+                if ($nextVal < $setting->no_awal || $nextVal > $setting->no_akhir) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->withErrors(['no_faktur_pajak' => "Nomor urut faktur pajak otomatis ({$nextVal}) di luar rentang periode yang tersedia ({$setting->no_awal} - {$setting->no_akhir})."]);
+                }
+
+                $noFakturInt = (string)$nextVal;
+
+                $first = $setting->first_faktur ?? '';
+                $second = $setting->second_faktur ?? '';
+                $third = $setting->third_faktur ?? '';
+                $fourth = $setting->fourth_faktur ?? '';
+                $paddedVal = str_pad($nextVal, 8, '0', STR_PAD_LEFT);
+
+                if ($first !== '' && $second !== '' && $third !== '' && $fourth !== '') {
+                    $noFakturPajak = "{$first}{$second}.{$third}-{$fourth}.{$paddedVal}";
+                } else {
+                    $prefix = collect([$first, $second, $third, $fourth])->filter(fn($v) => !is_null($v) && $v !== '')->implode('.');
+                    $noFakturPajak = $prefix ? "{$prefix}.{$paddedVal}" : $paddedVal;
+                }
+            }
+        } else {
+            $noFakturInt = null;
         }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $invoice, $subtotal, $grandTotal, $totalTax, $headerTaxes, $totalDiscount, $headerDiscounts, $isFaktur, $noFakturInt, $noFakturPajak) {
+            $newRevisedInvoiceId = $validated['revised_invoice_id'] ?? null;
+            $oldRInvoiceText = $invoice->r_invoice_text;
+
+            $newRevisedInvoice = $newRevisedInvoiceId ? Invoice::find($newRevisedInvoiceId) : null;
+            $newRInvoiceText = $newRevisedInvoice?->invoice_text;
+
+            $invoiceNumber = $invoice->invoice_number;
+            $invoiceText = $invoice->invoice_text;
+            $rInvoiceText = $invoice->r_invoice_text;
+
+            if ($oldRInvoiceText !== $newRInvoiceText) {
+                // Restore old revised invoice if it was different and existed
+                if ($oldRInvoiceText) {
+                    $prevInvoice = Invoice::where('invoice_text', $oldRInvoiceText)
+                        ->where('company_id', $invoice->company_id)
+                        ->first();
+                    if ($prevInvoice) {
+                        $prevInvoice->update(['invoice_status_code' => 'draft']);
+                    }
+                }
+
+                // Void new revised invoice
+                if ($newRevisedInvoice) {
+                    if ($newRevisedInvoice->isPosted) {
+                        $journalIds = \App\Models\Accounting\Accounting\Ledger::where('ledgerable_id', $newRevisedInvoice->id)
+                            ->where('ledgerable_type', Invoice::class)
+                            ->pluck('journal_id')
+                            ->unique();
+                            
+                        \App\Models\Accounting\Accounting\Ledger::where('ledgerable_id', $newRevisedInvoice->id)
+                            ->where('ledgerable_type', Invoice::class)
+                            ->delete();
+                            
+                        \App\Models\Accounting\Accounting\Journal::whereIn('id', $journalIds)->delete();
+                        
+                        $newRevisedInvoice->update(['isPosted' => false]);
+                    }
+                    $newRevisedInvoice->update(['invoice_status_code' => 'void']);
+
+                    // Generate new invoice number & text for current invoice
+                    $revData = InvoiceHelper::generateRevisionInvoiceData($newRevisedInvoice->invoice_text, $newRevisedInvoice->invoice_number);
+                    $invoiceNumber = $revData['invoice_number'];
+                    $invoiceText = $revData['invoice_text'];
+                    $rInvoiceText = $newRevisedInvoice->invoice_text;
+                } else {
+                    // Revert to normal invoice number
+                    $invoiceData = InvoiceHelper::generateInvoiceData($validated['invoiced_at']);
+                    $invoiceNumber = $invoiceData['invoice_number'];
+                    $invoiceText = $invoiceData['invoice_text'];
+                    $rInvoiceText = null;
+                }
+            }
+
+            $invoice->update([
+                'customer_id'         => $validated['customer_id'],
+                'customer_name'       => $validated['customer_name'],
+                'customer_address'    => $validated['customer_address'] ?? null,
+                'customer_npwp'       => $validated['customer_npwp'] ?? null,
+                'invoice_type_id'     => $validated['invoice_type_id'] ?? null,
+                'invoice_number'      => $invoiceNumber,
+                'invoice_text'        => $invoiceText,
+                'r_invoice_text'      => $rInvoiceText,
+                'order_number'        => $validated['order_number'] ?? null,
+                'nama_kapal'          => $validated['nama_kapal'] ?? null,
+                'departure_date'      => $validated['departure_date'] ?? null,
+                'pelabuhan_asal'      => $validated['pelabuhan_asal'] ?? null,
+                'pelabuhan_tujuan'    => $validated['pelabuhan_tujuan'] ?? null,
+                'voy'                 => $validated['voy'] ?? null,
+                'notes'               => $validated['notes'] ?? null,
+                'isFCL'               => $validated['isFCL'] ?? false,
+                'no_container'        => $validated['no_container'] ?? null,
+                'isFaktur'            => $isFaktur,
+                'no_faktur_int'       => $noFakturInt,
+                'no_faktur_pajak'     => $noFakturPajak,
+                'invoiced_at'         => $validated['invoiced_at'],
+                'due_at'              => $validated['due_at'],
+                'subtotal'            => $subtotal,
+                'tax_amount'          => $totalTax,
+                'header_tax_details'  => $headerTaxes,
+                'discount_amount'     => $totalDiscount,
+                'header_discount_details' => $headerDiscounts,
+                'is_tax'              => $totalTax > 0,
+                'is_discount'         => $totalDiscount > 0,
+                'grand_total'         => $grandTotal,
+            ]);
+
+            // Sync Items
+            $invoice->items()->delete();
+            
+            foreach ($validated['items'] as $item) {
+                InvoiceItem::create([
+                    'company_id'   => $invoice->company_id,
+                    'invoice_id'   => $invoice->id,
+                    'name'         => $item['name'],
+                    'quantity'     => $item['quantity'],
+                    'price'        => $item['price'],
+                    'total'        => ($item['quantity'] * $item['price']),
+                    'tax_amount'   => 0, 
+                    'tax_details'  => [],
+                ]);
+            }
+        });
 
         return redirect()->route('invoices.index')->with('success', 'Invoice updated successfully.');
     }

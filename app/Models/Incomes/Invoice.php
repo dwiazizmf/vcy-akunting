@@ -18,6 +18,9 @@ class Invoice extends Model
 
     protected $casts = [
         'header_tax_details' => 'array',
+        'header_discount_details' => 'array',
+        'isFCL' => 'boolean',
+        'isFaktur' => 'boolean',
     ];
 
     public function modelFilter()

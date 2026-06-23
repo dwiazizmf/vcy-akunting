@@ -44,4 +44,40 @@ class InvoiceHelper
             'invoice_text' => $invoiceText
         ];
     }
+
+    /**
+     * Generate next revision invoice number and text based on parent invoice
+     * Returns array: ['invoice_number' => '00001.R1', 'invoice_text' => '00001/VI/2026.R1']
+     */
+    public static function generateRevisionInvoiceData($oldInvoiceText, $oldInvoiceNumber)
+    {
+        // Strip any existing revision suffix like .R1, .R2 from the end of the number or text
+        $baseInvoiceNumber = preg_replace('/\.R\d+$/', '', $oldInvoiceNumber);
+        $baseInvoiceText = preg_replace('/\.R\d+$/', '', $oldInvoiceText);
+
+        // Find the highest revision tag in the database for this base invoice
+        $maxRevision = 0;
+        $existingInvoices = Invoice::where(function($q) use ($baseInvoiceNumber, $baseInvoiceText) {
+            $q->where('invoice_number', 'like', $baseInvoiceNumber . '.R%')
+              ->orWhere('invoice_text', 'like', $baseInvoiceText . '.R%')
+              ->orWhere('invoice_number', $baseInvoiceNumber)
+              ->orWhere('invoice_text', $baseInvoiceText);
+        })->get();
+
+        foreach ($existingInvoices as $inv) {
+            if (preg_match('/\.R(\d+)$/', $inv->invoice_number, $matches)) {
+                $maxRevision = max($maxRevision, intval($matches[1]));
+            }
+            if (preg_match('/\.R(\d+)$/', $inv->invoice_text, $matches)) {
+                $maxRevision = max($maxRevision, intval($matches[1]));
+            }
+        }
+
+        $nextRevision = $maxRevision + 1;
+
+        return [
+            'invoice_number' => $baseInvoiceNumber . '.R' . $nextRevision,
+            'invoice_text' => $baseInvoiceText . '.R' . $nextRevision,
+        ];
+    }
 }

@@ -34,10 +34,14 @@
     export let errors = {}; // Supplied by Inertia validation
     export let companies = []; // Global Inertia prop
     export let active_company_id = null; // Global Inertia prop
+    export let invoices = []; // Supplied by controller
 
     let form = useForm({
+        revised_invoice_id: null,
         customer_id: null,
         customer_name: "",
+        customer_address: "",
+        customer_npwp: "",
         invoice_type_id: null,
         invoiced_at: new Date().toISOString().split("T")[0],
         due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -51,6 +55,9 @@
         departure_date: "",
         notes: "",
         no_faktur_pajak: "",
+        isFCL: false,
+        no_container: "",
+        isFaktur: false,
         account_id: null, // Revenue account COA
         items: [{ name: "", quantity: 1, price: 0 }],
         header_tax_details: [], // e.g. [{name: 'PPN', rate: 11, amount: 0}]
@@ -199,6 +206,83 @@
         const selected = customers.find((c) => c.id === $form.customer_id);
         if (selected) {
             $form.customer_name = selected.name;
+            $form.customer_address = selected.address || "";
+            $form.customer_npwp = selected.npwp || "";
+        }
+    }
+
+    async function handleRevisionInvoiceChange(event) {
+        const id = event.detail.value;
+        if (!id) return;
+
+        try {
+            const response = await axios.get(`/api/invoices/${id}`);
+            const data = response.data;
+            if (data) {
+                $form.customer_id = data.customer_id;
+                $form.customer_name = data.customer_name;
+                $form.customer_address = data.customer_address || "";
+                $form.customer_npwp = data.customer_npwp || "";
+                $form.invoice_type_id = data.invoice_type_id;
+                $form.account_id = data.account_id;
+                $form.order_number = data.order_number || "";
+                $form.nama_kapal = data.nama_kapal || "";
+                $form.voy = data.voy || "";
+                $form.pelabuhan_asal = data.pelabuhan_asal || "";
+                $form.pelabuhan_tujuan = data.pelabuhan_tujuan || "";
+                $form.departure_date = data.departure_date ? data.departure_date.split(" ")[0] : "";
+                $form.notes = data.notes || "";
+                $form.no_faktur_pajak = data.no_faktur_pajak || "";
+                $form.isFCL = data.isFCL === 1 || data.isFCL === true;
+                $form.no_container = data.no_container || "";
+                $form.isFaktur = data.isFaktur === 1 || data.isFaktur === true;
+                
+                // Map items
+                $form.items = data.items.map(item => ({
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price
+                }));
+
+                // Map taxes
+                selectedTaxIds = [];
+                customTaxAmounts = {};
+                if (data.header_tax_details) {
+                    data.header_tax_details.forEach(ht => {
+                        const masterTax = activeTaxes.find(t => t.name === ht.name);
+                        if (masterTax) {
+                            selectedTaxIds.push(masterTax.id);
+                            if (masterTax.type === 'fixed') {
+                                customTaxAmounts[masterTax.id] = ht.amount;
+                            }
+                        }
+                    });
+                    selectedTaxIds = selectedTaxIds;
+                    customTaxAmounts = customTaxAmounts;
+                }
+
+                // Map discounts
+                selectedDiscountIds = [];
+                customDiscountAmounts = {};
+                if (data.header_discount_details) {
+                    data.header_discount_details.forEach(hd => {
+                        const masterDiscount = activeDiscounts.find(d => d.name === hd.name);
+                        if (masterDiscount) {
+                            selectedDiscountIds.push(masterDiscount.id);
+                            if (masterDiscount.type === 'fixed') {
+                                customDiscountAmounts[masterDiscount.id] = hd.amount;
+                            }
+                        }
+                    });
+                    selectedDiscountIds = selectedDiscountIds;
+                    customDiscountAmounts = customDiscountAmounts;
+                }
+                
+                showToast("Data invoice lama berhasil dimuat!", "success");
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("Gagal mengambil data invoice lama.", "error");
         }
     }
 
@@ -246,6 +330,20 @@
                 </Card.Header>
                 <Card.Content class="space-y-4">
                     <div class="space-y-4">
+                        <!-- Revisi Dari Invoice -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                >Revisi Dari Invoice (Invoice Number)</label
+                            >
+                            <SearchableSelect
+                                options={invoices}
+                                bind:value={$form.revised_invoice_id}
+                                on:change={handleRevisionInvoiceChange}
+                                placeholder="Pilih invoice untuk direvisi..."
+                            />
+                        </div>
+
                         <!-- Customer -->
                         <div class="space-y-1.5">
                             <label
@@ -270,6 +368,35 @@
                                     <Plus class="h-5 w-5" />
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- Alamat Invoice -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                for="customer_address">Alamat Invoice</label
+                            >
+                            <textarea
+                                id="customer_address"
+                                bind:value={$form.customer_address}
+                                placeholder="Masukkan Alamat Invoice..."
+                                class="flex min-h-[80px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            ></textarea>
+                        </div>
+
+                        <!-- NPWP -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                for="customer_npwp">NPWP</label
+                            >
+                            <Input
+                                id="customer_npwp"
+                                type="text"
+                                bind:value={$form.customer_npwp}
+                                placeholder="Masukkan NPWP..."
+                                class="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                            />
                         </div>
 
                         <!-- Akun Pendapatan -->
@@ -323,47 +450,48 @@
                             </div>
                         </div>
 
-                        <!-- Tipe Invoice -->
-                        <div class="space-y-1.5">
-                            <label
-                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
-                                >Tipe Invoice</label
-                            >
-                            <div class="relative">
-                                <FileText
-                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
-                                />
-                                <select
-                                    bind:value={$form.invoice_type_id}
-                                    class="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors pl-9 pr-8 appearance-none focus:border-teal-500 cursor-pointer text-slate-700"
+                        <!-- Tipe Invoice & Order Number -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Tipe Invoice -->
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                    >Tipe Invoice</label
                                 >
-                                    <option value={null}>--Pilih Tipe--</option>
-                                    {#each invoiceTypes as type}
-                                        <option value={type.id}
-                                            >{type.name}</option
-                                        >
-                                    {/each}
-                                </select>
-                                <div
-                                    class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400"
-                                >
-                                    <svg
-                                        class="h-4 w-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                        ><path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M19 9l-7 7-7-7"
-                                        /></svg
+                                <div class="relative">
+                                    <FileText
+                                        class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                    />
+                                    <select
+                                        bind:value={$form.invoice_type_id}
+                                        class="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors pl-9 pr-8 appearance-none focus:border-teal-500 cursor-pointer text-slate-700"
                                     >
+                                        <option value={null}>--Pilih Tipe--</option>
+                                        {#each invoiceTypes as type}
+                                            <option value={type.id}
+                                                >{type.name}</option
+                                            >
+                                        {/each}
+                                    </select>
+                                    <div
+                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400"
+                                    >
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                            ><path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M19 9l-7 7-7-7"
+                                            /></svg
+                                        >
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="grid grid-cols-2 gap-4">
                             <!-- Order Number -->
                             <div class="space-y-1.5">
                                 <label
@@ -382,24 +510,35 @@
                                     />
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- No Faktur Pajak -->
-                            <div class="space-y-1.5">
+                        <!-- No Faktur Pajak -->
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between">
                                 <label
                                     class="text-xs font-bold text-slate-700 uppercase tracking-wider"
                                     >No Faktur Pajak</label
                                 >
-                                <div class="relative">
-                                    <FileText
-                                        class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                <label class="flex items-center gap-1.5 text-xs text-slate-600 font-medium cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={$form.isFaktur}
+                                        class="rounded text-teal-600 focus:ring-teal-500 border-slate-300 h-3.5 w-3.5"
                                     />
-                                    <Input
-                                        type="text"
-                                        bind:value={$form.no_faktur_pajak}
-                                        placeholder="No Faktur"
-                                        class="pl-9 h-9 text-sm bg-white"
-                                    />
-                                </div>
+                                    is faktur otomatis?
+                                </label>
+                            </div>
+                            <div class="relative">
+                                <FileText
+                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                />
+                                <Input
+                                    type="text"
+                                    bind:value={$form.no_faktur_pajak}
+                                    disabled={$form.isFaktur}
+                                    placeholder={$form.isFaktur ? "Nomor Faktur Pajak (Otomatis)" : "No Faktur"}
+                                    class="pl-9 h-9 text-sm bg-white disabled:bg-slate-50 disabled:text-slate-500"
+                                />
                             </div>
                         </div>
                     </div>
@@ -449,6 +588,33 @@
                                         bind:value={$form.voy}
                                         placeholder="Voyage"
                                         class="pl-9 h-9 text-sm bg-white"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FCL status & Container Number -->
+                        <div class="grid grid-cols-2 gap-4 items-end">
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Container Load</label>
+                                <label class="flex items-center gap-2 h-9 text-sm text-slate-700 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={$form.isFCL}
+                                        class="rounded text-teal-600 focus:ring-teal-500 border-slate-300 h-4 w-4"
+                                    />
+                                    FCL (Full Container Load)
+                                </label>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-700 uppercase tracking-wider { !$form.isFCL ? 'opacity-40' : '' }">No. Container</label>
+                                <div class="relative">
+                                    <Input
+                                        type="text"
+                                        bind:value={$form.no_container}
+                                        disabled={!$form.isFCL}
+                                        placeholder="Nomor Container"
+                                        class="h-9 text-sm bg-white disabled:bg-slate-50 disabled:opacity-50"
                                     />
                                 </div>
                             </div>

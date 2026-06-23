@@ -23,16 +23,21 @@
     } from "lucide-svelte";
     import { showToast } from "../../../Stores/toast.js";
     import SearchableSelect from "../../../Components/SearchableSelect.svelte";
+    import axios from "axios";
 
     export let activeTaxes = [];
     export let activeDiscounts = [];
     export let customers = [];
     export let invoice = null;
     export let invoiceTypes = [];
+    export let invoices = [];
 
     const form = useForm({
+        revised_invoice_id: invoice?.revised_invoice_id || null,
         customer_id: invoice?.customer_id || null,
         customer_name: invoice?.customer_name || "",
+        customer_address: invoice?.customer_address || "",
+        customer_npwp: invoice?.customer_npwp || "",
         invoice_type_id: invoice?.invoice_type_id || null,
         invoiced_at: invoice?.invoiced_at
             ? invoice.invoiced_at.split(" ")[0]
@@ -49,6 +54,12 @@
             : "",
         notes: invoice?.notes || "",
         no_faktur_pajak: invoice?.no_faktur_pajak || "",
+        isFCL: invoice?.isFCL === 1 || invoice?.isFCL === true,
+        no_container: invoice?.no_container || "",
+        isFaktur: invoice?.isFaktur === 1 || invoice?.isFaktur === true,
+        voy: invoice?.voy || "",
+        pelabuhan_asal: invoice?.pelabuhan_asal || "",
+        pelabuhan_tujuan: invoice?.pelabuhan_tujuan || "",
         items: invoice?.items?.length
             ? invoice.items.map((i) => ({
                   name: i.name,
@@ -185,6 +196,85 @@
         const selected = customers.find((c) => c.id === $form.customer_id);
         if (selected) {
             $form.customer_name = selected.name;
+            $form.customer_address = selected.address || "";
+            $form.customer_npwp = selected.npwp || "";
+        }
+    }
+
+    async function handleRevisionInvoiceChange(event) {
+        const id = event.detail.value;
+        if (!id) return;
+
+        try {
+            const response = await axios.get(`/api/invoices/${id}`);
+            const data = response.data;
+            if (data) {
+                $form.customer_id = data.customer_id;
+                $form.customer_name = data.customer_name;
+                $form.customer_address = data.customer_address || "";
+                $form.customer_npwp = data.customer_npwp || "";
+                $form.invoice_type_id = data.invoice_type_id;
+                $form.account_id = data.account_id;
+                $form.order_number = data.order_number || "";
+                $form.nama_kapal = data.nama_kapal || "";
+                $form.voy = data.voy || "";
+                $form.pelabuhan_asal = data.pelabuhan_asal || "";
+                $form.pelabuhan_tujuan = data.pelabuhan_tujuan || "";
+                $form.departure_date = data.departure_date ? data.departure_date.split(" ")[0] : "";
+                $form.notes = data.notes || "";
+                $form.no_faktur_pajak = data.no_faktur_pajak || "";
+                $form.isFCL = data.isFCL === 1 || data.isFCL === true;
+                $form.no_container = data.no_container || "";
+                $form.isFaktur = data.isFaktur === 1 || data.isFaktur === true;
+                
+                // Map items
+                $form.items = data.items.map(item => ({
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price
+                }));
+
+                // Map taxes
+                selectedTaxIds = [];
+                customTaxAmounts = {};
+                if (data.header_tax_details) {
+                    isTax = data.header_tax_details.length > 0;
+                    data.header_tax_details.forEach(ht => {
+                        const masterTax = activeTaxes.find(t => t.name === ht.name);
+                        if (masterTax) {
+                            selectedTaxIds.push(masterTax.id);
+                            if (masterTax.type === 'fixed') {
+                                customTaxAmounts[masterTax.id] = ht.amount;
+                            }
+                        }
+                    });
+                    selectedTaxIds = selectedTaxIds;
+                    customTaxAmounts = customTaxAmounts;
+                }
+
+                // Map discounts
+                selectedDiscountIds = [];
+                customDiscountAmounts = {};
+                if (data.header_discount_details) {
+                    isDiscount = data.header_discount_details.length > 0;
+                    data.header_discount_details.forEach(hd => {
+                        const masterDiscount = activeDiscounts.find(d => d.name === hd.name);
+                        if (masterDiscount) {
+                            selectedDiscountIds.push(masterDiscount.id);
+                            if (masterDiscount.type === 'fixed') {
+                                customDiscountAmounts[masterDiscount.id] = hd.amount;
+                            }
+                        }
+                    });
+                    selectedDiscountIds = selectedDiscountIds;
+                    customDiscountAmounts = customDiscountAmounts;
+                }
+                
+                showToast("Data invoice lama berhasil dimuat!", "success");
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("Gagal mengambil data invoice lama.", "error");
         }
     }
 
@@ -227,6 +317,20 @@
                     class="grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-slate-100 pb-6 mb-6"
                 >
                     <div class="space-y-4 col-span-2 grid grid-cols-2 gap-4">
+                        <!-- Revisi Dari Invoice -->
+                        <div class="space-y-1.5 col-span-2">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                >Revisi Dari Invoice (Invoice Number)</label
+                            >
+                            <SearchableSelect
+                                options={invoices}
+                                bind:value={$form.revised_invoice_id}
+                                on:change={handleRevisionInvoiceChange}
+                                placeholder="Pilih invoice untuk direvisi..."
+                            />
+                        </div>
+
                         <!-- Customer -->
                         <div class="space-y-1.5 col-span-2">
                             <label
@@ -238,6 +342,35 @@
                                 bind:value={$form.customer_id}
                                 on:change={updateCustomerName}
                                 placeholder="Select a customer..."
+                            />
+                        </div>
+
+                        <!-- Alamat Invoice -->
+                        <div class="space-y-1.5 col-span-2">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                for="customer_address">Alamat Invoice</label
+                            >
+                            <textarea
+                                id="customer_address"
+                                bind:value={$form.customer_address}
+                                placeholder="Masukkan Alamat Invoice..."
+                                class="flex min-h-[80px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            ></textarea>
+                        </div>
+
+                        <!-- NPWP -->
+                        <div class="space-y-1.5 col-span-2">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                for="customer_npwp">NPWP</label
+                            >
+                            <Input
+                                id="customer_npwp"
+                                type="text"
+                                bind:value={$form.customer_npwp}
+                                placeholder="Masukkan NPWP..."
+                                class="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
                             />
                         </div>
 
@@ -301,6 +434,7 @@
                             </div>
                         </div>
 
+                        <!-- Order Number -->
                         <div class="space-y-1.5">
                             <label
                                 class="text-xs font-bold text-slate-700 uppercase tracking-wider"
@@ -318,6 +452,8 @@
                                 />
                             </div>
                         </div>
+
+                        <!-- Nama Kapal -->
                         <div class="space-y-1.5">
                             <label
                                 class="text-xs font-bold text-slate-700 uppercase tracking-wider"
@@ -336,6 +472,64 @@
                             </div>
                         </div>
 
+                        <!-- Voy -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                >Voy</label
+                            >
+                            <div class="relative">
+                                <Anchor
+                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                />
+                                <Input
+                                    type="text"
+                                    bind:value={$form.voy}
+                                    placeholder="Voyage"
+                                    class="pl-9 h-9 text-sm bg-white"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Pelabuhan Asal -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                >Pelabuhan Asal</label
+                            >
+                            <div class="relative">
+                                <MapPin
+                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                />
+                                <Input
+                                    type="text"
+                                    bind:value={$form.pelabuhan_asal}
+                                    placeholder="Pelabuhan Asal"
+                                    class="pl-9 h-9 text-sm bg-white"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Pelabuhan Tujuan -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                >Pelabuhan Tujuan</label
+                            >
+                            <div class="relative">
+                                <MapPin
+                                    class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+                                />
+                                <Input
+                                    type="text"
+                                    bind:value={$form.pelabuhan_tujuan}
+                                    placeholder="Pelabuhan Tujuan"
+                                    class="pl-9 h-9 text-sm bg-white"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Dep. Date (Kapal) -->
                         <div class="space-y-1.5">
                             <label
                                 class="text-xs font-bold text-slate-700 uppercase tracking-wider"
@@ -352,11 +546,52 @@
                                 />
                             </div>
                         </div>
-                        <div class="space-y-1.5">
-                            <label
-                                class="text-xs font-bold text-slate-700 uppercase tracking-wider"
-                                >No Faktur Pajak</label
-                            >
+
+                        <div class="space-y-1.5 col-span-1">
+                            <!-- empty space for alignment -->
+                        </div>
+
+                        <!-- FCL status & Container Number -->
+                        <div class="space-y-1.5 col-span-1">
+                            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Container Load</label>
+                            <label class="flex items-center gap-2 h-9 text-sm text-slate-700 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    bind:checked={$form.isFCL}
+                                    class="rounded text-teal-600 focus:ring-teal-500 border-slate-300 h-4 w-4"
+                                />
+                                FCL (Full Container Load)
+                            </label>
+                        </div>
+                        <div class="space-y-1.5 col-span-1">
+                            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider { !$form.isFCL ? 'opacity-40' : '' }">No. Container</label>
+                            <div class="relative">
+                                <Input
+                                    type="text"
+                                    bind:value={$form.no_container}
+                                    disabled={!$form.isFCL}
+                                    placeholder="Nomor Container"
+                                    class="h-9 text-sm bg-white disabled:bg-slate-50 disabled:opacity-50"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- No Faktur Pajak -->
+                        <div class="space-y-1.5 col-span-2">
+                            <div class="flex items-center justify-between">
+                                <label
+                                    class="text-xs font-bold text-slate-700 uppercase tracking-wider"
+                                    >No Faktur Pajak</label
+                                >
+                                <label class="flex items-center gap-1.5 text-xs text-slate-600 font-medium cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={$form.isFaktur}
+                                        class="rounded text-teal-600 focus:ring-teal-500 border-slate-300 h-3.5 w-3.5"
+                                    />
+                                    is faktur otomatis?
+                                </label>
+                            </div>
                             <div class="relative">
                                 <FileText
                                     class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
@@ -364,8 +599,9 @@
                                 <Input
                                     type="text"
                                     bind:value={$form.no_faktur_pajak}
-                                    placeholder="No Faktur"
-                                    class="pl-9 h-9 text-sm bg-white"
+                                    disabled={$form.isFaktur}
+                                    placeholder={$form.isFaktur ? "Nomor Faktur Pajak (Otomatis)" : "No Faktur"}
+                                    class="pl-9 h-9 text-sm bg-white disabled:bg-slate-50 disabled:text-slate-500"
                                 />
                             </div>
                         </div>
