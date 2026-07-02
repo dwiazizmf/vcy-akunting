@@ -243,6 +243,7 @@
               <span class="flex items-center gap-1">Tanggal Kirim <ChevronDown class="h-3 w-3" /></span>
             </Table.Head>
             <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3 w-40">No TF</Table.Head>
+            <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3 w-32">Perusahaan</Table.Head>
             <Table.Head class="font-bold text-teal-700 text-[11px] uppercase tracking-wider py-3 cursor-pointer hover:text-teal-800">
               <span class="flex items-center gap-1">Customer Name <ChevronDown class="h-3 w-3" /></span>
             </Table.Head>
@@ -300,6 +301,13 @@
               <!-- No TF -->
               <Table.Cell class="py-2.5 text-xs text-slate-800 font-semibold">
                 {schedule.no_tf}
+              </Table.Cell>
+
+              <!-- Perusahaan -->
+              <Table.Cell class="py-2.5">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                  {schedule.company_name}
+                </span>
               </Table.Cell>
 
               <!-- Customer Name (Joined) -->

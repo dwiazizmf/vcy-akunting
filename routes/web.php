@@ -55,8 +55,18 @@ Route::post('/login', function (Illuminate\Http\Request $request) {
 Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
 Route::post('/set-company', function (Illuminate\Http\Request $request) {
-    $request->validate(['company_id' => 'required|integer']);
+    $request->validate(['company_id' => 'required']);
     session(['company_id' => $request->company_id]);
+    
+    if ($request->company_id === 'all') {
+        session()->forget('company_prefix');
+    } else {
+        $company = \App\Models\Settings\Company::find($request->company_id);
+        if ($company) {
+            session(['company_prefix' => $company->prefix]);
+        }
+    }
+    
     return back();
 })->name('set-company');
 
@@ -97,7 +107,7 @@ Route::get('/customers', function (Illuminate\Http\Request $request) {
     $status = $request->input('status', '');
     $perPage = (int) $request->input('per_page', 25);
     
-    $query = \App\Models\Incomes\Customer::query();
+    $query = \App\Models\Incomes\Customer::with('company');
 
     if ($search) {
         $query->where('name', 'ilike', '%' . $search . '%');
@@ -133,6 +143,7 @@ Route::get('/customers', function (Illuminate\Http\Request $request) {
         return [
             'id' => $customer->id,
             'name' => $customer->name,
+            'company_name' => $customer->company?->name,
             'email' => 'N/A',
             'phone' => 'N/A',
             'unpaid' => $unpaidPerCustomer[$customer->id] ?? 0,

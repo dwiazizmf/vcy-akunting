@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Accounting\Accounting\Ledger;
-use App\Models\Accounting\Accounting\Account;
-use App\Models\Accounting\Accounting\Journal;
+use App\Models\Accounting\Ledger;
+use App\Models\Accounting\Account;
+use App\Models\Accounting\Journal;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -17,11 +17,18 @@ class LedgerController extends Controller
     {
         $companyId = session('company_id') ?: 1;
         
-        $accounts = Account::with('type')
-            ->where('company_id', $companyId)
+        $accounts = Account::with(['type', 'company'])
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
             ->where('enabled', true)
             ->orderBy('code')
             ->get();
+
+        $accounts->transform(function ($account) {
+            $account->company_name = $account->company?->name ?? '-';
+            return $account;
+        });
 
         $accountId = $request->input('account_id');
         
@@ -39,7 +46,7 @@ class LedgerController extends Controller
         if ($accountId) {
             $account = Account::with('type')->find($accountId);
 
-            if ($account && $account->company_id == $companyId) {
+            if ($account && ($companyId === 'all' || $account->company_id == $companyId)) {
                 // Determine normal balance (Debit or Credit)
                 // Harta (Asset) & Beban (Expense) -> Debit
                 // Kewajiban (Liability), Modal (Equity), Pendapatan (Revenue) -> Credit
@@ -51,7 +58,9 @@ class LedgerController extends Controller
                           ->where('status', 'posted');
                     })
                     ->where('account_id', $accountId)
-                    ->where('company_id', $companyId)
+                    ->when($companyId !== 'all', function ($q) use ($companyId) {
+                        return $q->where('company_id', $companyId);
+                    })
                     ->select(
                         DB::raw('SUM(debit) as total_debit'),
                         DB::raw('SUM(credit) as total_credit')
@@ -75,7 +84,9 @@ class LedgerController extends Controller
                           ->where('status', 'posted');
                     })
                     ->where('account_id', $accountId)
-                    ->where('company_id', $companyId)
+                    ->when($companyId !== 'all', function ($q) use ($companyId) {
+                        return $q->where('company_id', $companyId);
+                    })
                     ->orderBy(Journal::select('date')
                         ->whereColumn('journals.id', 'ledgers.journal_id')
                         ->limit(1)

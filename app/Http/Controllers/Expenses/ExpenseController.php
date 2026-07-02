@@ -8,7 +8,7 @@ use Inertia\Inertia;
 use App\Models\Expenses\Expense;
 use App\Models\Expenses\ExpenseItem;
 use App\Models\Expenses\Vendor;
-use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Account;
 use App\Models\Settings\Tax;
 use App\Models\Settings\BankAccount;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +33,7 @@ class ExpenseController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
-        $query = Expense::with(['vendor', 'items'])
+        $query = Expense::with(['vendor', 'items', 'company'])
             ->when($search, function ($q) use ($search) {
                 $q->where('expense_number', 'like', "%{$search}%")
                   ->orWhere('vendor_name', 'like', "%{$search}%");
@@ -54,6 +54,11 @@ class ExpenseController extends Controller
         }
 
         $paginator = $query->orderBy('id', 'desc')->paginate($perPage);
+
+        $paginator->getCollection()->transform(function ($expense) {
+            $expense->company_name = $expense->company?->name ?? '-';
+            return $expense;
+        });
 
         $pagination = [
             'total'       => $paginator->total(),

@@ -172,6 +172,7 @@
             <Table.Row>
               <Table.Head class="w-[120px] font-semibold text-slate-700">Kode</Table.Head>
               <Table.Head class="font-semibold text-slate-700">Nama Akun</Table.Head>
+              <Table.Head class="font-semibold text-slate-700">Perusahaan</Table.Head>
               <Table.Head class="font-semibold text-slate-700">Tipe</Table.Head>
               <Table.Head class="font-semibold text-slate-700">Kategori</Table.Head>
               <Table.Head class="w-[100px] text-center font-semibold text-slate-700">Status</Table.Head>
@@ -199,6 +200,11 @@
                       </span>
                     {/if}
                   </div>
+                </Table.Cell>
+                <Table.Cell class="py-2">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                    {account.company_name}
+                  </span>
                 </Table.Cell>
                 <Table.Cell class="text-slate-600 py-2">{account.type?.name}</Table.Cell>
                 <Table.Cell class="text-slate-600 py-2">{account.type?.category}</Table.Cell>
@@ -228,7 +234,7 @@
               </Table.Row>
             {:else}
               <Table.Row>
-                <Table.Cell colspan={6} class="h-32 text-center text-slate-500">
+                <Table.Cell colspan={7} class="h-32 text-center text-slate-500">
                   Tidak ada data akun yang ditemukan.
                 </Table.Cell>
               </Table.Row>

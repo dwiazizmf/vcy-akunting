@@ -240,6 +240,7 @@
               <span class="flex items-center gap-1">Tanggal Kirim <ChevronDown class="h-3 w-3" /></span>
             </Table.Head>
             <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3 w-40">No Dokumen</Table.Head>
+            <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3 w-32">Perusahaan</Table.Head>
             <Table.Head class="font-bold text-teal-700 text-[11px] uppercase tracking-wider py-3 cursor-pointer hover:text-teal-800">
               <span class="flex items-center gap-1">Customer Name <ChevronDown class="h-3 w-3" /></span>
             </Table.Head>
@@ -299,6 +300,13 @@
                 {receipt.no_dokumen}
               </Table.Cell>
 
+              <!-- Perusahaan -->
+              <Table.Cell class="py-2.5">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                  {receipt.company_name}
+                </span>
+              </Table.Cell>
+
               <!-- Customer Name (Joined) -->
               <Table.Cell class="py-2.5 text-xs text-slate-700 font-medium">
                 {customerNames}
@@ -350,7 +358,7 @@
             <!-- Expanded Details Row (Unified Sub-table with Customer column) -->
             {#if isExpanded}
               <Table.Row class="bg-slate-50/20 hover:bg-slate-50/20">
-                <Table.Cell colspan="9" class="p-4 border-t border-slate-100">
+                <Table.Cell colspan="10" class="p-4 border-t border-slate-100">
                   <div class="bg-white border border-slate-150 rounded-xl p-5 shadow-sm space-y-4">
                     
                     <!-- Sub-header -->
@@ -433,7 +441,7 @@
 
           {#if receipts.length === 0}
             <Table.Row class="hover:bg-transparent">
-              <Table.Cell colspan="9" class="text-center py-16 text-slate-400 text-sm">
+              <Table.Cell colspan="10" class="text-center py-16 text-slate-400 text-sm">
                 Tidak ada data tanda terima yang sesuai filter.
               </Table.Cell>
             </Table.Row>

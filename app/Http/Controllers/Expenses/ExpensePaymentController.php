@@ -11,7 +11,7 @@ use App\Models\Expenses\Vendor;
 use App\Models\Settings\PaymentCategory;
 use App\Models\Settings\PaymentLimit;
 use App\Models\Settings\Tax;
-use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Account;
 use App\Services\JournalService;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +31,7 @@ class ExpensePaymentController extends Controller
         $perPage = $request->input('per_page', 10);
         $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
 
-        $paymentsQuery = ExpensePayment::with(['vendor', 'account', 'paymentCategory'])
+        $paymentsQuery = ExpensePayment::with(['vendor', 'account', 'paymentCategory', 'company'])
             ->when($search, function ($q) use ($search) {
                 $q->where('payment_number', 'like', "%{$search}%")
                   ->orWhereHas('vendor', function ($vq) use ($search) {
@@ -41,6 +41,11 @@ class ExpensePaymentController extends Controller
             ->orderBy('id', 'desc');
 
         $paginator = $paymentsQuery->paginate($perPage)->withQueryString();
+
+        $paginator->getCollection()->transform(function ($payment) {
+            $payment->company_name = $payment->company?->name ?? '-';
+            return $payment;
+        });
 
         $pagination = [
             'total' => $paginator->total(),

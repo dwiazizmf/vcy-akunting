@@ -6,7 +6,9 @@
 
     $: companies = $page.props.companies || [];
     $: activeCompanyId = $page.props.active_company_id;
-    $: activeCompany = companies.find((c) => c.id === activeCompanyId);
+    $: activeCompany = activeCompanyId === 'all' 
+        ? { id: 'all', name: 'Semua Perusahaan (Konsolidasi)' } 
+        : companies.find((c) => c.id === activeCompanyId);
     $: pathname = $page.url;
 
     function setCompany(id) {
@@ -97,6 +99,18 @@
                         class="text-xs font-semibold text-slate-500 px-3 py-2"
                         >Pilih Perusahaan</DropdownMenu.Label
                     >
+                    <DropdownMenu.Separator class="bg-slate-100 my-1" />
+                    <DropdownMenu.Item
+                        class="px-3 py-2 text-sm text-slate-700 hover:bg-teal-50 rounded-md cursor-pointer flex items-center justify-between font-medium text-teal-800 bg-teal-50/50"
+                        on:click={() => setCompany('all')}
+                    >
+                        <span>Semua Perusahaan (Konsolidasi)</span>
+                        {#if activeCompanyId === 'all'}
+                            <svg class="h-4 w-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        {/if}
+                    </DropdownMenu.Item>
                     <DropdownMenu.Separator class="bg-slate-100 my-1" />
                     {#each companies as company}
                         <DropdownMenu.Item
@@ -695,8 +709,9 @@
                 <select
                     class="w-full bg-teal-850 border-teal-700 text-teal-100 text-sm rounded-md focus:ring-teal-500 py-1.5 px-2"
                     value={activeCompanyId}
-                    on:change={(e) => setCompany(parseInt(e.target.value))}
+                    on:change={(e) => setCompany(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
                 >
+                    <option value="all">Semua Perusahaan (Konsolidasi)</option>
                     {#each companies as company}
                         <option value={company.id}>{company.name}</option>
                     {/each}

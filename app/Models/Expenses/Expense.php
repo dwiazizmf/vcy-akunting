@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\Settings\Company;
 use App\Models\Expenses\Vendor;
 use App\Models\Settings\BankAccount;
-use App\Models\Accounting\Accounting\Journal;
+use App\Models\Accounting\Journal;
 
 class Expense extends Model
 {

@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Accounting\Accounting\Journal;
-use App\Models\Accounting\Accounting\Ledger;
-use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Journal;
+use App\Models\Accounting\Ledger;
+use App\Models\Accounting\Account;
 use App\Models\Incomes\Customer;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -18,8 +18,10 @@ class JournalController extends Controller
     {
         $companyId = session('company_id') ?: 1;
         
-        $query = Journal::with(['ledgers', 'postedBy'])
-            ->where('company_id', $companyId);
+        $query = Journal::with(['ledgers', 'postedBy', 'company'])
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            });
             
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -43,6 +45,7 @@ class JournalController extends Controller
         $journals->getCollection()->transform(function ($journal) {
             $journal->total_debit = $journal->ledgers->sum('debit');
             $journal->total_credit = $journal->ledgers->sum('credit');
+            $journal->company_name = $journal->company?->name ?? '-';
             return $journal;
         });
 

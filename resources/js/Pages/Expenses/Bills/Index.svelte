@@ -166,6 +166,7 @@
                             <Table.Head class="w-10"></Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Date</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Number</Table.Head>
+                            <Table.Head class="font-semibold text-slate-600">Perusahaan</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Vendor</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Type</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Status</Table.Head>
@@ -198,6 +199,11 @@
                                     </Table.Cell>
                                     <Table.Cell class="py-2.5 text-sm">{new Date(expense.expense_date).toLocaleDateString('id-ID')}</Table.Cell>
                                     <Table.Cell class="py-2.5 text-sm font-semibold text-slate-800">{expense.expense_number}</Table.Cell>
+                                    <Table.Cell class="py-2.5">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                                            {expense.company_name}
+                                        </span>
+                                    </Table.Cell>
                                     <Table.Cell class="py-2.5 text-sm">{expense.vendor_name || '-'}</Table.Cell>
                                     <Table.Cell class="py-2.5 text-sm">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {expense.is_direct_expense ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-orange-50 text-orange-700 border border-orange-200'}">

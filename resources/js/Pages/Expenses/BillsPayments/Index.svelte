@@ -109,6 +109,7 @@
                             </Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Payment #</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Date</Table.Head>
+                            <Table.Head class="font-semibold text-slate-600">Perusahaan</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Vendor</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Category</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Bank Account</Table.Head>
@@ -120,7 +121,7 @@
                     <Table.Body>
                         {#if payments.length === 0}
                             <Table.Row>
-                                <Table.Cell colspan="9" class="h-24 text-center text-slate-500">
+                                <Table.Cell colspan="10" class="h-24 text-center text-slate-500">
                                     No payments found.
                                 </Table.Cell>
                             </Table.Row>
@@ -135,6 +136,11 @@
                                     <Table.Cell class="font-medium text-slate-900">{payment.payment_number}</Table.Cell>
                                     <Table.Cell class="text-slate-600">
                                         {new Date(payment.payment_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </Table.Cell>
+                                    <Table.Cell class="py-2.5">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                                            {payment.company_name}
+                                        </span>
                                     </Table.Cell>
                                     <Table.Cell class="font-medium text-slate-700">{payment.vendor?.name || '-'}</Table.Cell>
                                     <Table.Cell class="text-slate-600">

@@ -49,6 +49,7 @@
     { key: 'number',        label: 'Number',         visible: true  },
     { key: 'orderNumber',   label: 'Order Num',      visible: true  },
     { key: 'coa',           label: 'COA',            visible: true  },
+    { key: 'company',       label: 'Perusahaan',     visible: true  },
     { key: 'customer',      label: 'Customer',       visible: true  },
     { key: 'amount',        label: 'Amount',         visible: true  },
     { key: 'namaKapal',     label: 'Kapal',          visible: true  },
@@ -290,6 +291,7 @@
             {#if colVisible['number']}       <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Number</Table.Head>{/if}
             {#if colVisible['orderNumber']}  <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider w-[280px]">Order Num</Table.Head>{/if}
             {#if colVisible['coa']}          <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">COA</Table.Head>{/if}
+            {#if colVisible['company']}      <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Perusahaan</Table.Head>{/if}
             {#if colVisible['customer']}     <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider whitespace-nowrap">Customer</Table.Head>{/if}
             {#if colVisible['amount']}       <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Amount</Table.Head>{/if}
             {#if colVisible['namaKapal']}    <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Kapal</Table.Head>{/if}
@@ -383,6 +385,14 @@
                   {:else}
                     <span class="text-slate-300 text-xs">-</span>
                   {/if}
+                </Table.Cell>
+              {/if}
+
+              {#if colVisible['company']}
+                <Table.Cell>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                    {inv.company_name}
+                  </span>
                 </Table.Cell>
               {/if}
 

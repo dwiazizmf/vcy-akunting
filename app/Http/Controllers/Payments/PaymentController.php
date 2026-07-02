@@ -29,7 +29,7 @@ class PaymentController extends Controller
         $perPage = (int) $request->input('per_page', 10);
         $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
 
-        $query = Payment::with(['bankAccount', 'invoices.invoice.customer'])
+        $query = Payment::with(['bankAccount', 'invoices.invoice.customer', 'company'])
             ->when($search, fn($q) => $q->where('payment_number', 'like', "%{$search}%")
                 ->orWhereHas('invoices.invoice.customer', fn($cq) => $cq->where('name', 'like', "%{$search}%"))
             )
@@ -40,6 +40,7 @@ class PaymentController extends Controller
         $items = $paginator->map(fn($p) => [
             'id'             => $p->id,
             'payment_number' => $p->payment_number,
+            'company_name'   => $p->company?->name ?? '-',
             'customer_name'  => $p->invoices->map(fn($pi) => $pi->invoice?->customer?->name)->filter()->unique()->implode(', '),
             'paid_at'        => $p->paid_at?->format('d M Y'),
             'total_amount'   => $p->total_amount,

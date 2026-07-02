@@ -9,8 +9,8 @@ use App\Models\Settings\Company;
 use App\Models\Settings\PaymentCategory;
 use App\Models\Expenses\Vendor;
 use App\Models\Settings\BankAccount;
-use App\Models\Accounting\Accounting\Account;
-use App\Models\Accounting\Accounting\Journal;
+use App\Models\Accounting\Account;
+use App\Models\Accounting\Journal;
 use App\Models\Settings\User;
 
 class ExpensePayment extends Model

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Expenses\Vendor;
-use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Account;
 
 class VendorController extends Controller
 {
@@ -17,13 +17,18 @@ class VendorController extends Controller
         
         $search = $request->input('search');
 
-        $query = Vendor::with('account')
+        $query = Vendor::with(['account', 'company'])
             ->when($search, function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('vendor_code', 'like', "%{$search}%");
             });
 
         $paginator = $query->orderBy('id', 'desc')->paginate($perPage);
+
+        $paginator->getCollection()->transform(function ($vendor) {
+            $vendor->company_name = $vendor->company?->name ?? '-';
+            return $vendor;
+        });
 
         $pagination = [
             'total'       => $paginator->total(),

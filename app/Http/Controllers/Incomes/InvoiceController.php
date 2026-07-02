@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Incomes\Invoice;
 use App\Models\Incomes\InvoiceItem;
 use App\Models\Incomes\Customer;
-use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Account;
 use App\Models\Settings\Discount;
 use App\Helpers\InvoiceHelper;
 use Inertia\Inertia;
@@ -37,7 +37,7 @@ class InvoiceController extends Controller
         $dateTo = $request->input('date_to');
 
         // Eager load items to pass to frontend for expandable rows
-        $query = Invoice::with('items')->filter($request->all());
+        $query = Invoice::with(['items', 'company'])->filter($request->all());
 
         // Hide 'void' status from main view unless specifically filtered
         if (empty($status)) {
@@ -53,6 +53,7 @@ class InvoiceController extends Controller
                 'invoiceText'     => $inv->invoice_text ?: $inv->invoice_number,
                 'number'          => $inv->invoice_number,
                 'orderNumber'     => $inv->order_number,
+                'company_name'    => $inv->company?->name ?? '-',
                 'coa'             => '-',
                 'customer'        => $inv->customer_name,
                 'amount_raw'      => (float) $inv->grand_total,
@@ -261,16 +262,16 @@ class InvoiceController extends Controller
                 
                 // If it was posted, delete its journal entries
                 if ($oldInvoice->isPosted) {
-                    $journalIds = \App\Models\Accounting\Accounting\Ledger::where('ledgerable_id', $oldInvoice->id)
+                    $journalIds = \App\Models\Accounting\Ledger::where('ledgerable_id', $oldInvoice->id)
                         ->where('ledgerable_type', Invoice::class)
                         ->pluck('journal_id')
                         ->unique();
                         
-                    \App\Models\Accounting\Accounting\Ledger::where('ledgerable_id', $oldInvoice->id)
+                    \App\Models\Accounting\Ledger::where('ledgerable_id', $oldInvoice->id)
                         ->where('ledgerable_type', Invoice::class)
                         ->delete();
                         
-                    \App\Models\Accounting\Accounting\Journal::whereIn('id', $journalIds)->delete();
+                    \App\Models\Accounting\Journal::whereIn('id', $journalIds)->delete();
                     
                     $oldInvoice->update(['isPosted' => false]);
                 }
@@ -563,16 +564,16 @@ class InvoiceController extends Controller
                 // Void new revised invoice
                 if ($newRevisedInvoice) {
                     if ($newRevisedInvoice->isPosted) {
-                        $journalIds = \App\Models\Accounting\Accounting\Ledger::where('ledgerable_id', $newRevisedInvoice->id)
+                        $journalIds = \App\Models\Accounting\Ledger::where('ledgerable_id', $newRevisedInvoice->id)
                             ->where('ledgerable_type', Invoice::class)
                             ->pluck('journal_id')
                             ->unique();
                             
-                        \App\Models\Accounting\Accounting\Ledger::where('ledgerable_id', $newRevisedInvoice->id)
+                        \App\Models\Accounting\Ledger::where('ledgerable_id', $newRevisedInvoice->id)
                             ->where('ledgerable_type', Invoice::class)
                             ->delete();
                             
-                        \App\Models\Accounting\Accounting\Journal::whereIn('id', $journalIds)->delete();
+                        \App\Models\Accounting\Journal::whereIn('id', $journalIds)->delete();
                         
                         $newRevisedInvoice->update(['isPosted' => false]);
                     }

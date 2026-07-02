@@ -69,6 +69,7 @@
         <Table.Header class="bg-slate-50">
           <Table.Row>
             <Table.Head class="text-xs font-bold uppercase text-slate-500">No. Kwitansi</Table.Head>
+            <Table.Head class="text-xs font-bold uppercase text-slate-500">Perusahaan</Table.Head>
             <Table.Head class="text-xs font-bold uppercase text-slate-500">Customer</Table.Head>
             <Table.Head class="text-xs font-bold uppercase text-slate-500">Tgl Bayar</Table.Head>
             <Table.Head class="text-xs font-bold uppercase text-slate-500 text-right">Jumlah</Table.Head>
@@ -82,6 +83,11 @@
           {#each payments as p}
             <Table.Row class="hover:bg-slate-50/50">
               <Table.Cell class="font-mono text-sm font-semibold text-teal-700">{p.payment_number}</Table.Cell>
+              <Table.Cell>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                  {p.company_name}
+                </span>
+              </Table.Cell>
               <Table.Cell class="font-medium text-slate-800">{p.customer_name}</Table.Cell>
               <Table.Cell class="text-slate-600 text-sm">{p.paid_at}</Table.Cell>
               <Table.Cell class="text-right font-semibold text-slate-800">
@@ -102,7 +108,7 @@
             </Table.Row>
           {:else}
             <Table.Row>
-              <Table.Cell colspan={8} class="text-center py-12 text-slate-400">
+              <Table.Cell colspan={9} class="text-center py-12 text-slate-400">
                 Belum ada pembayaran. Klik "Catat Pembayaran" untuk mulai.
               </Table.Cell>
             </Table.Row>

@@ -214,6 +214,7 @@
               <span class="flex items-center gap-1">Tanggal Kirim <ChevronDown class="h-3 w-3" /></span>
             </Table.Head>
             <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3 w-40">Nomor</Table.Head>
+            <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3 w-32">Perusahaan</Table.Head>
             <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3">Customer Name</Table.Head>
             <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3 w-44">Kapal (Ship)</Table.Head>
             <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3 w-40">Invoice Number</Table.Head>
@@ -241,6 +242,12 @@
                       {lt.no_lt}
                     </Table.Cell>
                   {/if}
+
+                  <Table.Cell class="py-2.5">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                      {lt.company_name || '-'}
+                    </span>
+                  </Table.Cell>
 
                   <!-- Customer Name -->
                   <Table.Cell class="py-2.5 text-xs text-slate-700 font-medium">
@@ -338,7 +345,7 @@
 
           {#if lts.length === 0}
             <Table.Row class="hover:bg-transparent">
-              <Table.Cell colspan="8" class="text-center py-16 text-slate-400 text-sm">
+              <Table.Cell colspan="9" class="text-center py-16 text-slate-400 text-sm">
                 Tidak ada data pengiriman tagihan yang sesuai filter.
               </Table.Cell>
             </Table.Row>

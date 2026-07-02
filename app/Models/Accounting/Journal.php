@@ -4,10 +4,12 @@ namespace App\Models\Accounting;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Settings\User;
+use App\Traits\BelongsToCompany;
 
 class Journal extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, BelongsToCompany;
 
     protected $fillable = ['company_id', 'journal_number', 'date', 'reference', 'description', 'status', 'posted_at', 'posted_by'];
     protected $casts = ['date' => 'date', 'posted_at' => 'datetime'];

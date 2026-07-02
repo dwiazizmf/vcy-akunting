@@ -76,6 +76,7 @@
                     <Table.Header class="bg-slate-50">
                         <Table.Row>
                             <Table.Head class="font-semibold text-slate-600">Code</Table.Head>
+                            <Table.Head class="font-semibold text-slate-600">Perusahaan</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Name</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">NPWP</Table.Head>
                             <Table.Head class="font-semibold text-slate-600">Phone</Table.Head>
@@ -85,12 +86,17 @@
                     <Table.Body>
                         {#if vendors.length === 0}
                             <Table.Row>
-                                <Table.Cell colspan="5" class="text-center py-8 text-slate-500">No vendors found.</Table.Cell>
+                                <Table.Cell colspan="6" class="text-center py-8 text-slate-500">No vendors found.</Table.Cell>
                             </Table.Row>
                         {:else}
                             {#each vendors as vendor}
                                 <Table.Row class="hover:bg-slate-50/50 transition-colors">
                                     <Table.Cell class="py-2 text-sm">{vendor.vendor_code || '-'}</Table.Cell>
+                                    <Table.Cell class="py-2">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                                            {vendor.company_name}
+                                        </span>
+                                    </Table.Cell>
                                     <Table.Cell class="py-2 text-sm font-medium">{vendor.name}</Table.Cell>
                                     <Table.Cell class="py-2 text-sm text-slate-500">{vendor.npwp || '-'}</Table.Cell>
                                     <Table.Cell class="py-2 text-sm text-slate-500">{vendor.phone || '-'}</Table.Cell>

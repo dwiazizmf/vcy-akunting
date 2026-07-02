@@ -36,10 +36,21 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $activeCompanyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
+        $activeCompanyPrefix = session('company_prefix');
+        
+        if (!$activeCompanyPrefix && $activeCompanyId && $activeCompanyId !== 'all') {
+            $activeCompanyPrefix = Company::find($activeCompanyId)?->prefix;
+            if ($activeCompanyPrefix) {
+                session(['company_prefix' => $activeCompanyPrefix]);
+            }
+        }
+
         return [
             ...parent::share($request),
-            'companies' => Company::where('enabled', 1)->get(['id', 'name', 'enabled']),
-            'active_company_id' => session('company_id') ?: Company::where('enabled', 1)->first()?->id,
+            'companies' => Company::where('enabled', 1)->get(['id', 'name', 'enabled', 'prefix']),
+            'active_company_id' => $activeCompanyId,
+            'active_company_prefix' => $activeCompanyPrefix,
         ];
     }
 }

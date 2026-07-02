@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Accounting\Accounting\Account;
-use App\Models\Accounting\Accounting\AccountType;
+use App\Models\Accounting\Account;
+use App\Models\Accounting\AccountType;
 use Inertia\Inertia;
 
 class AccountController extends Controller
@@ -14,8 +14,10 @@ class AccountController extends Controller
     {
         $companyId = session('company_id') ?: 1;
         
-        $query = Account::with(['type', 'parent'])
-            ->where('company_id', $companyId);
+        $query = Account::with(['type', 'parent', 'company'])
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            });
             
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -30,6 +32,11 @@ class AccountController extends Controller
         }
 
         $accounts = $query->orderBy('code')->paginate($request->input('per_page', 25))->withQueryString();
+        
+        $accounts->getCollection()->transform(function ($account) {
+            $account->company_name = $account->company?->name ?? '-';
+            return $account;
+        });
         
         $types = AccountType::all();
         $parentAccounts = Account::where('company_id', $companyId)->orderBy('code')->get();

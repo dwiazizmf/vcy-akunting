@@ -4,7 +4,7 @@ namespace App\Models\Settings;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Account;
 use App\Models\Settings\Company;
 use Illuminate\Database\Eloquent\Builder;
 

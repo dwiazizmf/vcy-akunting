@@ -189,6 +189,7 @@
             <Table.Head class="font-bold text-teal-700 text-[11px] uppercase tracking-wider py-3 cursor-pointer hover:text-teal-800 w-44">
               <span class="flex items-center gap-1">Tanggal Kirim <ChevronDown class="h-3 w-3" /></span>
             </Table.Head>
+            <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3 w-32">Perusahaan</Table.Head>
             <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3">No Dokumen</Table.Head>
             <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3">Invoice Number</Table.Head>
             <Table.Head class="font-bold text-slate-700 text-[11px] uppercase tracking-wider py-3">Order Number</Table.Head>
@@ -206,6 +207,12 @@
               <!-- Tanggal Kirim -->
               <Table.Cell class="py-3 text-xs text-slate-600 font-semibold whitespace-nowrap">
                 {r.tanggal_kirim}
+              </Table.Cell>
+
+              <Table.Cell class="py-2.5">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                  {r.company_name || '-'}
+                </span>
               </Table.Cell>
 
               <!-- No Dokumen -->
@@ -253,7 +260,7 @@
 
           {#if reports.length === 0}
             <Table.Row class="hover:bg-transparent">
-              <Table.Cell colspan="6" class="text-center py-16 text-slate-400 text-sm">
+              <Table.Cell colspan="7" class="text-center py-16 text-slate-400 text-sm">
                 Tidak ada data Report Mayora yang sesuai filter.
               </Table.Cell>
             </Table.Row>

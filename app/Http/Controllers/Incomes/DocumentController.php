@@ -151,7 +151,7 @@ class DocumentController extends Controller
         $noDokumen = $request->input('no_tt', $request->input('no_tf', $request->input('no_lt', '')));
         $perPage = (int) $request->input('per_page', 25);
 
-        $query = Document::with(['invoices.customer'])->where('type', $type)->orderBy('id', 'desc');
+        $query = Document::with(['invoices.customer', 'company'])->where('type', $type)->orderBy('id', 'desc');
 
         if ($noDokumen) {
             $query->where('orders_text', 'ilike', '%' . $noDokumen . '%');
@@ -197,6 +197,7 @@ class DocumentController extends Controller
                 'up_person' => $doc->up_person ?? '',
                 'no_tlp' => $doc->no_tlp ?? '',
                 'address' => $doc->address ?? '',
+                'company_name' => $doc->company?->name ?? '-',
             ];
 
             $base['order_number'] = $doc->invoices->first()?->order_number ?? '';

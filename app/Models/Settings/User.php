@@ -17,6 +17,11 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasRoles;
 
+    protected static function newFactory()
+    {
+        return UserFactory::new();
+    }
+
     /**
      * Get the attributes that should be cast.
      *

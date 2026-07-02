@@ -24,12 +24,16 @@ class DashboardController extends Controller
 
         // 1. Total Revenues (Current Month vs Previous Month)
         $currentMonthRevenue = DB::table('payments')
-            ->where('company_id', $companyId)
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
             ->whereBetween('paid_at', [$startOfCurrentMonth, $endOfCurrentMonth])
             ->sum('total_amount');
 
         $previousMonthRevenue = DB::table('payments')
-            ->where('company_id', $companyId)
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
             ->whereBetween('paid_at', [$startOfPreviousMonth, $endOfPreviousMonth])
             ->sum('total_amount');
 
@@ -37,12 +41,16 @@ class DashboardController extends Controller
 
         // 2. Total Expenses (Current Month vs Previous Month)
         $currentMonthExpense = DB::table('expenses')
-            ->where('company_id', $companyId)
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
             ->whereBetween('expense_date', [$startOfCurrentMonth, $endOfCurrentMonth])
             ->sum('grand_total');
 
         $previousMonthExpense = DB::table('expenses')
-            ->where('company_id', $companyId)
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
             ->whereBetween('expense_date', [$startOfPreviousMonth, $endOfPreviousMonth])
             ->sum('grand_total');
 
@@ -55,12 +63,16 @@ class DashboardController extends Controller
 
         // 4. Outstanding Invoices (Piutang)
         $outstandingInvoicesTotal = DB::table('invoices')
-            ->where('company_id', $companyId)
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
             ->where('invoice_status_code', '!=', 'paid')
             ->sum('grand_total');
 
         $outstandingInvoicesCount = DB::table('invoices')
-            ->where('company_id', $companyId)
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
             ->where('invoice_status_code', '!=', 'paid')
             ->count();
 
@@ -72,12 +84,16 @@ class DashboardController extends Controller
             $monthEnd = $monthDate->copy()->endOfMonth();
 
             $revSum = DB::table('payments')
-                ->where('company_id', $companyId)
+                ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
                 ->whereBetween('paid_at', [$monthStart, $monthEnd])
                 ->sum('total_amount');
 
             $expSum = DB::table('expenses')
-                ->where('company_id', $companyId)
+                ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
                 ->whereBetween('expense_date', [$monthStart, $monthEnd])
                 ->sum('grand_total');
 
@@ -94,7 +110,9 @@ class DashboardController extends Controller
             ->join('expenses', 'expense_items.expense_id', '=', 'expenses.id')
             ->leftJoin('accounts', 'expense_items.account_id', '=', 'accounts.id')
             ->select('accounts.name as category_name', DB::raw('SUM(expense_items.total) as total'))
-            ->where('expenses.company_id', $companyId)
+            ->when($companyId !== 'all', function ($q) use ($companyId) {
+                return $q->where('expenses.company_id', $companyId);
+            })
             ->whereBetween('expenses.expense_date', [$startOfCurrentMonth, $endOfCurrentMonth])
             ->groupBy('expense_items.account_id', 'accounts.name')
             ->orderBy('total', 'desc')

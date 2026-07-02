@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Settings\Permission;
 use App\Models\Settings\Role;
-use App\Models\Accounting\Accounting\Account;
+use App\Models\Accounting\Account;
 
 class SettingsController extends Controller
 {

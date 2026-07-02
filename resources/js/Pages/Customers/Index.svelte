@@ -256,6 +256,9 @@
               <span class="flex items-center gap-1">Name <ChevronsUpDown class="h-3 w-3 opacity-60" /></span>
             </Table.Head>
             <Table.Head class="font-bold text-teal-700 text-xs py-2.5 cursor-pointer hover:text-teal-800 whitespace-nowrap">
+              <span class="flex items-center gap-1">Perusahaan <ChevronsUpDown class="h-3 w-3 opacity-60" /></span>
+            </Table.Head>
+            <Table.Head class="font-bold text-teal-700 text-xs py-2.5 cursor-pointer hover:text-teal-800 whitespace-nowrap">
               <span class="flex items-center gap-1">Email <ChevronsUpDown class="h-3 w-3 opacity-60" /></span>
             </Table.Head>
             <Table.Head class="font-bold text-teal-700 text-xs py-2.5 cursor-pointer hover:text-teal-800 whitespace-nowrap">
@@ -277,6 +280,11 @@
                 <a href="/customers/{cust.id}" class="text-teal-600 hover:text-teal-700 hover:underline text-sm">
                   {cust.name}
                 </a>
+              </Table.Cell>
+              <Table.Cell class="py-1.5">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                  {cust.company_name || '-'}
+                </span>
               </Table.Cell>
               <Table.Cell class="py-1.5 text-xs text-slate-500">
                 {#if cust.email}
@@ -335,7 +343,7 @@
 
           {#if customers.length === 0}
             <Table.Row class="hover:bg-transparent">
-              <Table.Cell colspan="6" class="text-center py-16 text-slate-400 text-sm">
+              <Table.Cell colspan="7" class="text-center py-16 text-slate-400 text-sm">
                 <div class="flex flex-col items-center gap-3">
                   <Users class="h-10 w-10 text-slate-200" />
                   <span>Tidak ada data customer yang sesuai</span>

@@ -123,6 +123,7 @@
             <Table.Row>
               <Table.Head class="w-[150px] font-semibold text-slate-700">No. Jurnal</Table.Head>
               <Table.Head class="w-[120px] font-semibold text-slate-700">Tanggal</Table.Head>
+              <Table.Head class="w-[150px] font-semibold text-slate-700">Perusahaan</Table.Head>
               <Table.Head class="font-semibold text-slate-700">Keterangan</Table.Head>
               <Table.Head class="w-[150px] text-right font-semibold text-slate-700">Total Transaksi</Table.Head>
               <Table.Head class="w-[100px] text-center font-semibold text-slate-700">Status</Table.Head>
@@ -140,6 +141,11 @@
                 </Table.Cell>
                 <Table.Cell class="text-slate-600 py-3">
                   {new Date(journal.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </Table.Cell>
+                <Table.Cell class="py-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                    {journal.company_name}
+                  </span>
                 </Table.Cell>
                 <Table.Cell class="py-3">
                   <p class="text-slate-800 line-clamp-1">{journal.description}</p>
@@ -185,7 +191,7 @@
               </Table.Row>
             {:else}
               <Table.Row>
-                <Table.Cell colspan={6} class="h-32 text-center text-slate-500">
+                <Table.Cell colspan={7} class="h-32 text-center text-slate-500">
                   Tidak ada data jurnal yang ditemukan.
                 </Table.Cell>
               </Table.Row>

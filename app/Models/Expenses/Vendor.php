@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Settings\Company;
+use App\Models\Accounting\Account;
 
 class Vendor extends Model
 {
