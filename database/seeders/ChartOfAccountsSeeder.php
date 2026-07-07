@@ -92,6 +92,57 @@ class ChartOfAccountsSeeder extends Seeder
                 'system' => true,
                 'enabled' => true,
             ]);
+
+            // Pajak (Taxes)
+            Account::firstOrCreate([
+                'company_id' => $company->id,
+                'code' => '211000'
+            ], [
+                'type_id' => $liabilityId,
+                'name' => 'Hutang PPN / PPN Keluaran',
+                'system' => true,
+                'enabled' => true,
+            ]);
+
+            Account::firstOrCreate([
+                'company_id' => $company->id,
+                'code' => '114000'
+            ], [
+                'type_id' => $assetId,
+                'name' => 'Uang Muka PPN / PPN Masukan',
+                'system' => true,
+                'enabled' => true,
+            ]);
+
+            Account::firstOrCreate([
+                'company_id' => $company->id,
+                'code' => '211210'
+            ], [
+                'type_id' => $liabilityId,
+                'name' => 'Hutang PPh 21',
+                'system' => true,
+                'enabled' => true,
+            ]);
+
+            Account::firstOrCreate([
+                'company_id' => $company->id,
+                'code' => '211230'
+            ], [
+                'type_id' => $liabilityId,
+                'name' => 'Hutang PPh 23',
+                'system' => true,
+                'enabled' => true,
+            ]);
+
+            Account::firstOrCreate([
+                'company_id' => $company->id,
+                'code' => '114230'
+            ], [
+                'type_id' => $assetId,
+                'name' => 'PPh 23 Dibayar Dimuka',
+                'system' => true,
+                'enabled' => true,
+            ]);
         }
     }
 }

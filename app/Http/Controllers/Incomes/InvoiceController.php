@@ -37,7 +37,7 @@ class InvoiceController extends Controller
         $dateTo = $request->input('date_to');
 
         // Eager load items to pass to frontend for expandable rows
-        $query = Invoice::with(['items', 'company'])->filter($request->all());
+        $query = Invoice::with(['items', 'company', 'documents', 'paymentInvoices.payment'])->filter($request->all());
 
         // Hide 'void' status from main view unless specifically filtered
         if (empty($status)) {
@@ -66,12 +66,32 @@ class InvoiceController extends Controller
                 'noTitipInternal' => 'TI-' . str_pad($inv->id % 1000, 4, '0', STR_PAD_LEFT),
                 'tglDokumenKirim' => '-',
                 'status'          => $inv->invoice_status_code ?? 'draft',
-                'statusPayment'   => $inv->invoice_status_code ?? 'draft',
+                'statusPayment'   => $inv->payment_status ?? 'unpaid',
                 'notes'           => $inv->notes_text,
                 'statusCreated'   => $inv->create_on ?: '-',
                 'faktur'          => $inv->no_faktur_pajak ?? $inv->no_faktur_int ?? '-',
                 'bpb'             => $inv->isBpb ? 'Ya' : 'Tidak',
                 'items'           => $inv->items, // Passing items array
+                'documents'       => $inv->documents->map(function ($doc) {
+                    return [
+                        'id'      => $doc->id,
+                        'nama'    => ucwords(str_replace('_', ' ', $doc->type)),
+                        'tgl'     => $doc->send_date ? date('d M Y', strtotime($doc->send_date)) : '-',
+                        'noTitip' => $doc->orders_text ?? '-',
+                        'status'  => $doc->status == 1 ? 'Terkirim' : 'Draft',
+                    ];
+                }),
+                'payments'        => collect($inv->paymentInvoices)->map(function ($pi) {
+                    $payment = $pi->payment;
+                    if (!$payment) return null;
+                    return [
+                        'noJurnal'   => $payment->payment_number,
+                        'total'      => $pi->allocated_amount,
+                        'keterangan' => $payment->notes ?: 'Pelunasan Invoice',
+                        'tgl'        => $payment->paid_at ? date('d M Y', strtotime($payment->paid_at)) : '-',
+                        'status'     => $payment->status === 'void' ? 'void' : 'paid',
+                    ];
+                })->filter()->values(),
             ];
         });
 

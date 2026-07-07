@@ -174,10 +174,10 @@ class JournalService
     {
         $companyId = $payment->company_id;
 
-        $payment->load(['bankAccount', 'customer', 'invoices.invoice']);
+        $payment->load(['bankAccount', 'invoices.invoice.customer']);
 
         $bankAccount = $payment->bankAccount;
-        $customer    = $payment->customer;
+        $customer    = $payment->invoices->first()?->invoice?->customer;
 
         if (!$bankAccount?->account_id) {
             throw new \RuntimeException("Bank account belum memiliki COA.");
@@ -200,7 +200,18 @@ class JournalService
 
             $totalAmount       = (float) $payment->total_amount;
             $overpaymentAmount = (float) $payment->overpayment_amount;
-            $arAmount          = $totalAmount - $overpaymentAmount;
+            $taxAmount         = (float) ($payment->tax_amount ?? 0);
+            $arAmount          = $totalAmount - $overpaymentAmount - $taxAmount;
+
+            if (!empty($payment->adjustments)) {
+                foreach ($payment->adjustments as $adj) {
+                    if ($adj['type'] === 'addition') {
+                        $arAmount -= $adj['amount'];
+                    } else {
+                        $arAmount += $adj['amount'];
+                    }
+                }
+            }
 
             // DEBIT Bank/Cash (full amount received)
             Ledger::create([
@@ -227,6 +238,69 @@ class JournalService
                 'credit'      => $arAmount,
                 'description' => "Pelunasan piutang - {$payment->customer_name}",
             ]);
+
+            // CREDIT Tax Payable (legacy if taxAmount > 0)
+            if ($taxAmount > 0 && $payment->tax_id) {
+                $taxRecord = \DB::table('taxes')->where('id', $payment->tax_id)->first();
+                $taxAccountId = $taxRecord?->account_id;
+                
+                // Fallback to "Pajak" or "Hutang" if not set in taxes table
+                if (!$taxAccountId) {
+                    $taxAccountId = Account::where('company_id', $companyId)->where('name', 'like', '%Pajak%')->first()?->id;
+                }
+                if (!$taxAccountId) {
+                    $taxAccountId = Account::where('company_id', $companyId)->where('name', 'like', '%Hutang%')->first()?->id;
+                }
+                
+                if ($taxAccountId) {
+                    Ledger::create([
+                        'company_id'  => $companyId,
+                        'journal_id'  => $journal->id,
+                        'account_id'  => $taxAccountId,
+                        'contact_id'  => $customer->id,
+                        'ledgerable_type' => Payment::class,
+                        'ledgerable_id'   => $payment->id,
+                        'debit'       => 0,
+                        'credit'      => $taxAmount,
+                        'description' => "Pajak " . ($taxRecord->name ?? '') . " - {$payment->payment_number}",
+                    ]);
+                }
+            }
+
+            // NEW: Adjustments
+            if (!empty($payment->adjustments)) {
+                foreach ($payment->adjustments as $adj) {
+                    $amt = (float)$adj['amount'];
+                    $accId = $adj['account_id'];
+                    $desc = !empty($adj['description']) ? $adj['description'] : "Penyesuaian - {$payment->payment_number}";
+                    
+                    if ($adj['type'] === 'addition') {
+                        Ledger::create([
+                            'company_id'  => $companyId,
+                            'journal_id'  => $journal->id,
+                            'account_id'  => $accId,
+                            'contact_id'  => $customer->id,
+                            'ledgerable_type' => Payment::class,
+                            'ledgerable_id'   => $payment->id,
+                            'debit'       => 0,
+                            'credit'      => $amt,
+                            'description' => $desc,
+                        ]);
+                    } else {
+                        Ledger::create([
+                            'company_id'  => $companyId,
+                            'journal_id'  => $journal->id,
+                            'account_id'  => $accId,
+                            'contact_id'  => $customer->id,
+                            'ledgerable_type' => Payment::class,
+                            'ledgerable_id'   => $payment->id,
+                            'debit'       => $amt,
+                            'credit'      => 0,
+                            'description' => $desc,
+                        ]);
+                    }
+                }
+            }
 
             // CREDIT Titipan Customer (if overpayment)
             if ($overpaymentAmount > 0) {

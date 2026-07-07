@@ -66,12 +66,22 @@ class PaymentController extends Controller
     {
         $banks = BankAccount::where('enabled', 1)->with('account')->get(['id', 'name', 'type', 'bank_name', 'account_id', 'is_default']);
         $customers = Customer::select('id', 'name')->orderBy('name')->get();
-        $taxes = \Illuminate\Support\Facades\DB::table('taxes')->where('enabled', true)->get();
+        
+        $companyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
+        $taxes = \Illuminate\Support\Facades\DB::table('taxes')
+            ->where('enabled', true)
+            ->where('company_id', $companyId)
+            ->get();
+
+        $accounts = \App\Models\Accounting\Account::where('company_id', $companyId)
+            ->where('enabled', true)
+            ->get(['id', 'name', 'code']);
 
         return Inertia::render('Expenses/Payments/Create', [
             'banks'     => $banks,
             'customers' => $customers,
             'taxes'     => $taxes,
+            'accounts'  => $accounts,
         ]);
     }
 
@@ -124,6 +134,11 @@ class PaymentController extends Controller
             'allocations'     => 'required|array|min:1',
             'allocations.*.invoice_id'        => 'required|integer|exists:invoices,id',
             'allocations.*.allocated_amount'  => 'required|numeric|min:0.01',
+            'adjustments'     => 'nullable|array',
+            'adjustments.*.account_id' => 'required|integer|exists:accounts,id',
+            'adjustments.*.amount'     => 'required|numeric|min:0',
+            'adjustments.*.type'       => 'required|in:addition,deduction',
+            'adjustments.*.description'=> 'nullable|string',
         ]);
 
         $companyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
@@ -131,26 +146,41 @@ class PaymentController extends Controller
         // Calculate total allocated
         $totalAllocated = collect($validated['allocations'])->sum('allocated_amount');
         
-        $taxAmount = 0;
-        if (!empty($validated['tax_id'])) {
-            $tax = \Illuminate\Support\Facades\DB::table('taxes')->where('id', $validated['tax_id'])->first();
-            if ($tax) {
-                $taxAmount = $tax->type === 'fixed' ? floatval($tax->rate) : $totalAllocated * ($tax->rate / 100);
+        $totalAdditions = 0;
+        $totalDeductions = 0;
+        $adjustments = [];
+
+        if (!empty($validated['adjustments'])) {
+            foreach ($validated['adjustments'] as $adj) {
+                if ($adj['amount'] > 0) {
+                    $adjustments[] = [
+                        'account_id' => $adj['account_id'],
+                        'amount'     => (float)$adj['amount'],
+                        'type'       => $adj['type'],
+                        'description'=> $adj['description'] ?? '',
+                    ];
+                    if ($adj['type'] === 'addition') {
+                        $totalAdditions += $adj['amount'];
+                    } else {
+                        $totalDeductions += $adj['amount'];
+                    }
+                }
             }
         }
         
-        $totalAmount = $totalAllocated + $taxAmount;
+        $totalAmount = $totalAllocated + $totalAdditions - $totalDeductions;
         $overpayment = 0;
 
-        return DB::transaction(function () use ($validated, $companyId, $totalAmount, $taxAmount, $overpayment) {
+        return DB::transaction(function () use ($validated, $companyId, $totalAmount, $adjustments, $overpayment) {
             // 1. Create payment
             $payment = Payment::create([
                 'company_id'         => $companyId,
                 'payment_number'     => $this->journalService->generatePaymentNumber(),
                 'paid_at'            => $validated['paid_at'],
                 'total_amount'       => $totalAmount,
-                'tax_id'             => $validated['tax_id'] ?? null,
-                'tax_amount'         => $taxAmount,
+                'tax_id'             => null,
+                'tax_amount'         => 0,
+                'adjustments'        => $adjustments,
                 'payment_method'     => $validated['payment_method'],
                 'bank_account_id'    => $validated['bank_account_id'],
                 'reference'          => $validated['reference'] ?? null,
@@ -183,7 +213,7 @@ class PaymentController extends Controller
 
     public function show(Payment $payment)
     {
-        $payment->load(['bankAccount', 'invoices.invoice.customer', 'journal.ledgers.account']);
+        $payment->load(['bankAccount', 'tax', 'invoices.invoice.customer', 'journal.ledgers.account']);
 
         $allocations = $payment->invoices->map(fn($pi) => [
             'invoice_id'       => $pi->invoice_id,
@@ -194,6 +224,16 @@ class PaymentController extends Controller
         ]);
 
         $customerNames = $payment->invoices->map(fn($pi) => $pi->invoice?->customer?->name)->filter()->unique()->implode(', ');
+
+        $adjs = $payment->adjustments ?? [];
+        if (!empty($adjs)) {
+            $accountIds = collect($adjs)->pluck('account_id')->unique();
+            $accounts = \App\Models\Accounting\Account::whereIn('id', $accountIds)->get()->keyBy('id');
+            foreach ($adjs as &$adj) {
+                $acc = $accounts->get($adj['account_id']);
+                $adj['account_name'] = $acc ? "{$acc->code} - {$acc->name}" : 'Unknown Account';
+            }
+        }
 
         return Inertia::render('Expenses/Payments/Show', [
             'payment'     => [
@@ -207,6 +247,9 @@ class PaymentController extends Controller
                 'reference'      => $payment->reference,
                 'notes'          => $payment->notes,
                 'overpayment'    => (float) $payment->overpayment_amount,
+                'tax_amount'     => (float) $payment->tax_amount,
+                'tax_name'       => $payment->tax?->name,
+                'adjustments'    => $adjs,
                 'status'         => $payment->status,
             ],
             'allocations' => $allocations,

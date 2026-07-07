@@ -10,7 +10,8 @@
     Search, AlertCircle, Info, Sparkles, Building, Lock
   } from 'lucide-svelte';
 
-  // Invoices data passed from Controller
+  // Props passed from Controller
+  export let document = {};
   export let invoices = [];
   export let errors = {};
 
@@ -47,7 +48,7 @@
     },
     { 
       value: 'schedule_tukar_faktur', 
-      label: 'Schedule Faktur', 
+      label: 'Schedule Faktur',
       abbr: 'SCH', 
       desc: 'Bisa campur banyak Customer, invoice unik.',
       icon: FileSpreadsheet,
@@ -69,17 +70,22 @@
   // FORM STATE
   // ================================================
   let form = {
-    type: '',
-    send_date: new Date().toISOString().substring(0, 10),
-    up_person: '',
-    customer_name: '',
-    no_tlp: '',
-    address: '',
-    invoice_ids: []
+    type: document.type || '',
+    send_date: document.send_date || '',
+    up_person: document.up_person || '',
+    customer_name: document.customer_name || '',
+    no_tlp: document.no_tlp || '',
+    address: document.address || '',
+    invoice_ids: document.selected_invoices || []
   };
 
   let addedInvoices = [];
   let submitting = false;
+
+  // Populate initially selected invoices
+  onMount(() => {
+    addedInvoices = invoices.filter(inv => form.invoice_ids.includes(inv.id));
+  });
 
   // Search logic for dropdown
   let searchQuery = '';
@@ -90,7 +96,7 @@
   $: selectedCustomerName = addedInvoices.length > 0 ? addedInvoices[0].customer_name : '';
   $: selectedCustomerAddress = addedInvoices.length > 0 ? addedInvoices[0].customer_address : '';
 
-  // Lock logic
+  // Lock logic (only if not schedule_tukar_faktur)
   $: {
     if (form.type && form.type !== 'schedule_tukar_faktur') {
       if (addedInvoices.length > 0) {
@@ -120,7 +126,7 @@
 
     // Filter out invoices already used in this type (except TTN)
     if (form.type !== 'tanda_terima_new') {
-      if (inv.used_in_types && inv.used_in_types.includes(form.type)) {
+      if (inv.used_in_types && inv.used_in_types.includes(form.type) && !document.selected_invoices.includes(inv.id)) {
         return false;
       }
     }
@@ -147,18 +153,6 @@
     }
   }
 
-  function selectType(value) {
-    if (form.type !== value) {
-      form.type = value;
-      // Reset items and locked fields on type change
-      addedInvoices = [];
-      form.invoice_ids = [];
-      form.customer_name = '';
-      form.address = '';
-      errors = {};
-    }
-  }
-
   function addInvoice(inv) {
     addedInvoices = [...addedInvoices, inv];
     form.invoice_ids = [...form.invoice_ids, inv.id];
@@ -173,7 +167,14 @@
 
   function submit() {
     submitting = true;
-    router.post('/documents', form, {
+    router.put(`/documents/${document.id}`, {
+      send_date: form.send_date,
+      up_person: form.up_person,
+      customer_name: form.customer_name,
+      no_tlp: form.no_tlp,
+      address: form.address,
+      invoice_ids: form.invoice_ids
+    }, {
       onError: (e) => {
         errors = e;
         submitting = false;
@@ -183,6 +184,15 @@
       }
     });
   }
+
+  // Get index path for cancel button
+  $: cancelPath = {
+    'tanda_terima': '/tanda-terima',
+    'tanda_terima_new': '/tanda-terima/new',
+    'surat_tagihan': '/surat-tagihan',
+    'schedule_tukar_faktur': '/schedule-tukar-faktur',
+    'titip_internal': '/titip-internal'
+  }[form.type] || '/tanda-terima';
 </script>
 
 <svelte:window on:keydown={handleKeyDown} on:click={handleClickOutside} />
@@ -196,78 +206,75 @@
         <button
           type="button"
           class="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200"
-          on:click={() => router.visit('/tanda-terima')}
+          on:click={() => router.visit(cancelPath)}
         >
           <ArrowLeft class="h-5 w-5" />
         </button>
         <div>
-          <h1 class="text-2xl font-bold tracking-tight text-slate-950 flex items-center gap-2">
-            Create Document
-            <Sparkles class="h-5 w-5 text-yellow-500 fill-yellow-500" />
-          </h1>
-          <p class="text-sm text-slate-500 mt-1">Buat dokumen tanda terima, surat tagihan, dan lainnya dengan validasi otomatis.</p>
+          <h1 class="text-2xl font-bold text-slate-950 tracking-tight">Edit Dokumen</h1>
+          <p class="text-xs text-slate-500 mt-1 font-medium">Ubah detail tanda terima, surat tagihan, schedule faktur, atau titip internal.</p>
         </div>
       </div>
-      
+
       <div class="flex items-center gap-3">
-        <button
-          type="button"
-          class="px-5 h-11 border border-slate-200 bg-white text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
-          on:click={() => router.visit('/tanda-terima')}
+        <Button
+          variant="outline"
+          class="rounded-xl h-11 px-5 border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs"
+          on:click={() => router.visit(cancelPath)}
           disabled={submitting}
         >
-          Batal
-        </button>
-        <button
-          type="button"
-          class="flex items-center justify-center gap-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white px-6 h-11 rounded-xl shadow-lg shadow-emerald-600/10 hover:shadow-emerald-600/20 transition-all font-semibold disabled:opacity-50"
+          Cancel
+        </Button>
+        <Button
+          class="rounded-xl h-11 px-5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs gap-2 shadow-sm shadow-teal-600/10 cursor-pointer"
           on:click={submit}
-          disabled={submitting || !form.type || form.invoice_ids.length === 0}
+          disabled={submitting || form.invoice_ids.length === 0}
         >
           <Save class="h-4 w-4" />
-          {submitting ? 'Menyimpan...' : 'Simpan Dokumen'}
-        </button>
+          {submitting ? 'Saving...' : 'Save Changes'}
+        </Button>
       </div>
     </div>
 
-    <!-- Alert Global Error -->
-    {#if errors.invoice_ids}
-      <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 flex gap-3 text-rose-900 animate-in fade-in slide-in-from-top-2">
-        <AlertCircle class="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-        <div>
-          <span class="font-bold text-sm">Gagal Menyimpan Dokumen:</span>
-          <p class="text-xs text-rose-700 mt-1">{errors.invoice_ids}</p>
-        </div>
-      </div>
-    {/if}
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Main Form Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
       
-      <!-- Left 2 Cols: Form Config and Invoices -->
+      <!-- Left 2 Cols: Step 1 & Step 2 -->
       <div class="lg:col-span-2 space-y-8">
         
-        <!-- STEP 1: SELECT TYPE -->
-        <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
-          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-            <span class="flex items-center justify-center h-6 w-6 rounded-full bg-teal-50 text-teal-700 text-xs font-black">1</span>
-            Pilih Jenis Dokumen
-          </h2>
-          
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- STEP 1: TYPE SELECTION (LOCKED) -->
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span class="flex items-center justify-center h-6 w-6 rounded-full bg-teal-50 text-teal-700 text-xs font-black">1</span>
+              Tipe Dokumen
+            </h2>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-xs font-semibold">
+              <Lock class="h-3 w-3" />
+              Terkunci untuk Edit
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             {#each docTypes as type}
               <button
                 type="button"
-                on:click={() => selectType(type.value)}
                 class={cn(
-                  "flex flex-col items-start p-4 rounded-xl border text-left transition-all duration-300 relative group cursor-pointer h-full",
-                  form.type === type.value
-                    ? "border-teal-500 bg-teal-50/20 ring-4 ring-teal-500/10"
-                    : "border-slate-200 bg-white hover:border-teal-200 hover:bg-slate-50/30"
+                  "relative flex flex-col items-start p-5 rounded-2xl border text-left transition-all duration-200 cursor-not-allowed",
+                  form.type === type.value 
+                    ? "bg-white border-teal-500 shadow-md ring-1 ring-teal-500" 
+                    : "bg-slate-50/50 border-slate-200/60 opacity-40"
                 )}
               >
-                <div class="flex items-center justify-between w-full mb-3">
+                {#if form.type === type.value}
+                  <div class="absolute top-4 right-4 h-5 w-5 bg-teal-500 rounded-full flex items-center justify-center text-white shadow-sm shadow-teal-500/25">
+                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                {/if}
+
+                <div class="flex items-center gap-3 mb-3">
                   <div class={cn(
-                    "h-9 w-9 rounded-lg flex items-center justify-center bg-gradient-to-br text-white",
+                    "p-2 rounded-xl bg-gradient-to-br text-white shadow-sm",
                     type.color
                   )}>
                     <svelte:component this={type.icon} class="h-4.5 w-4.5" />
@@ -284,9 +291,6 @@
               </button>
             {/each}
           </div>
-          {#if errors.type}
-            <p class="text-xs text-rose-500 mt-1 font-medium">{errors.type}</p>
-          {/if}
         </div>
 
         <!-- STEP 2: ADD INVOICES -->
@@ -315,7 +319,7 @@
                 <input
                   id="search_inv"
                   type="text"
-                  placeholder="Ketik nomor invoice, PO (Order Number), atau nama customer..."
+                  placeholder="Ketik nomor invoice, PO, atau nama customer..."
                   bind:value={searchQuery}
                   on:focus={() => showDropdown = true}
                   on:click={() => showDropdown = true}
@@ -410,6 +414,9 @@
                   </tbody>
                 </table>
               </div>
+              {#if errors.invoice_ids}
+                <p class="text-xs text-rose-500 mt-1 font-medium">{errors.invoice_ids}</p>
+              {/if}
             </div>
           </div>
         {/if}

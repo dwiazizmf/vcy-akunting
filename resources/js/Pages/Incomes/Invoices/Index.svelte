@@ -182,20 +182,6 @@
     paid:  'bg-emerald-100 text-emerald-800 border-emerald-200',
   };
 
-  // ------------------------------------------------
-  // DUMMY DATA UNTUK COLLAPSE
-  // ------------------------------------------------
-  // Dokumen kirim — format TI-xxxx untuk titip internal
-  const dummyDokumen = [
-    { nama: 'Invoice Original',    tgl: '15 Mei 2025', noTitip: 'TI-0179', status: 'Terkirim' },
-    { nama: 'Kwitansi Pembayaran', tgl: '17 Mei 2025', noTitip: 'TI-0180', status: 'Terkirim' },
-  ];
-
-  // Jurnal pembayaran dummy
-  const dummyJurnal = [
-    { noJurnal: 'JRN-2025-0341', total: 'Rp 12.500.000', keterangan: 'Pelunasan Invoice', tgl: '20 Mei 2025', status: 'paid'  },
-    { noJurnal: 'JRN-2025-0298', total: 'Rp  5.000.000', keterangan: 'DP Awal',           tgl: '10 Mei 2025', status: 'draft' },
-  ];
 </script>
 
 <AppLayout fullWidth={true}>
@@ -467,18 +453,17 @@
                 </Table.Cell>
               {/if}
 
-              <!-- STATUS PAYMENT — sumber sama: invoice_status_code -->
+              <!-- STATUS PAYMENT -->
               {#if colVisible['statusPayment']}
                 <Table.Cell>
-                  {#if statusKey === 'paid'}
+                  {#if inv.statusPayment === 'paid'}
                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-emerald-100 text-emerald-800 border-emerald-200 whitespace-nowrap">
                       <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                       Lunas
                     </span>
-                  {:else if statusKey === 'sent'}
+                  {:else if inv.statusPayment === 'partial'}
                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
-                      <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                      Menunggu
+                      Partial
                     </span>
                   {:else}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-slate-100 text-slate-500 border-slate-200 whitespace-nowrap">
@@ -515,6 +500,55 @@
               <Table.Row class="bg-slate-50/20 hover:bg-slate-50/20">
                 <Table.Cell colspan="25" class="p-0">
                   <div class="mx-4 my-3 space-y-4">
+
+                    <!-- ── SUMMARY CARDS ── -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <!-- Total Items -->
+                      <div class="bg-white border border-sky-100 rounded-xl px-4 py-3 shadow-sm flex items-center gap-3">
+                        <div class="h-8 w-8 rounded-lg bg-sky-50 flex items-center justify-center shrink-0">
+                          <svg class="h-4 w-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Jumlah Item</p>
+                          <p class="text-lg font-extrabold text-slate-800">{inv.items?.length ?? 0}</p>
+                        </div>
+                      </div>
+                      <!-- Grand Total Amount -->
+                      <div class="bg-white border border-teal-100 rounded-xl px-4 py-3 shadow-sm flex items-center gap-3">
+                        <div class="h-8 w-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
+                          <svg class="h-4 w-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        </div>
+                        <div class="min-w-0">
+                          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Amount</p>
+                          <p class="text-sm font-extrabold text-teal-700 truncate">{inv.amount}</p>
+                        </div>
+                      </div>
+                      <!-- Invoice Date -->
+                      <div class="bg-white border border-indigo-100 rounded-xl px-4 py-3 shadow-sm flex items-center gap-3">
+                        <div class="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                          <svg class="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice Date</p>
+                          <p class="text-sm font-bold text-slate-700">{inv.invoiceDate}</p>
+                        </div>
+                      </div>
+                      <!-- Payment Status -->
+                      <div class="bg-white border border-amber-100 rounded-xl px-4 py-3 shadow-sm flex items-center gap-3">
+                        <div class="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                          <svg class="h-4 w-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</p>
+                          <span class={cn(
+                            "text-[11px] font-bold px-2 py-0.5 rounded-full border",
+                            statusKey === 'paid'  ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                            statusKey === 'sent'  ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-slate-100 text-slate-600 border-slate-200'
+                          )}>{inv.status}</span>
+                        </div>
+                      </div>
+                    </div>
 
                     <!-- ── TABLE 0: Invoice Items ── -->
                     {#if inv.items && inv.items.length > 0}
@@ -555,7 +589,7 @@
                       <div class="flex items-center gap-2 px-4 py-2.5 bg-teal-50/70 border-b border-teal-100/60">
                         <svg class="h-3.5 w-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">List Dokumen — Invoice {inv.invoiceText || inv.number}</span>
-                        <span class="ml-auto text-[10px] text-teal-500">{dummyDokumen.length} dokumen</span>
+                        <span class="ml-auto text-[10px] text-teal-500">{inv.documents ? inv.documents.length : 0} dokumen</span>
                       </div>
                       <table class="w-full text-xs">
                         <thead class="bg-slate-50 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
@@ -568,30 +602,41 @@
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50 bg-white">
-                          {#each dummyDokumen as dok, idx}
-                            <tr class="hover:bg-slate-50/60 transition-colors">
-                              <td class="px-4 py-2.5 text-slate-400 font-mono">{idx + 1}</td>
-                              <td class="px-4 py-2.5 font-medium text-slate-800">
-                                <div class="flex items-center gap-2">
-                                  <svg class="h-3.5 w-3.5 text-teal-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                  {dok.nama}
-                                </div>
-                              </td>
-                              <td class="px-4 py-2.5 text-slate-500">{dok.tgl}</td>
-                              <td class="px-4 py-2.5">
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-violet-50 text-violet-700 border border-violet-200/60">
-                                  <span class="h-1 w-1 rounded-full bg-violet-500"></span>
-                                  {dok.noTitip}
-                                </span>
-                              </td>
-                              <td class="px-4 py-2.5">
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                                  {dok.status}
-                                </span>
-                              </td>
+                          {#if inv.documents && inv.documents.length > 0}
+                            {#each inv.documents as dok, idx}
+                              <tr class="hover:bg-slate-50/60 transition-colors">
+                                <td class="px-4 py-2.5 text-slate-400 font-mono">{idx + 1}</td>
+                                <td class="px-4 py-2.5 font-medium text-slate-800">
+                                  <div class="flex items-center gap-2">
+                                    <svg class="h-3.5 w-3.5 text-teal-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    {dok.nama}
+                                  </div>
+                                </td>
+                                <td class="px-4 py-2.5 text-slate-500">{dok.tgl}</td>
+                                <td class="px-4 py-2.5">
+                                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-violet-50 text-violet-700 border border-violet-200/60">
+                                    <span class="h-1 w-1 rounded-full bg-violet-500"></span>
+                                    {dok.noTitip}
+                                  </span>
+                                </td>
+                                <td class="px-4 py-2.5">
+                                  <span class={cn(
+                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+                                    dok.status === 'Terkirim' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'
+                                  )}>
+                                    {#if dok.status === 'Terkirim'}
+                                      <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                    {/if}
+                                    {dok.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            {/each}
+                          {:else}
+                            <tr>
+                              <td colspan="5" class="px-4 py-6 text-center text-slate-400 italic">Belum ada dokumen yang terhubung.</td>
                             </tr>
-                          {/each}
+                          {/if}
                         </tbody>
                       </table>
                     </div>
@@ -603,14 +648,18 @@
                         <svg class="h-3.5 w-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                         <span class="text-[11px] font-bold text-indigo-800 uppercase tracking-wider">Jurnal Pembayaran</span>
                         <span class="ml-auto">
-                          {#if statusKey === 'paid'}
+                          {#if inv.statusPayment === 'paid'}
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                               <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                               Lunas
                             </span>
-                          {:else}
+                          {:else if inv.statusPayment === 'partial'}
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                               <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                              Dibayar Sebagian (Partial)
+                            </span>
+                          {:else}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
                               Belum Lunas
                             </span>
                           {/if}
@@ -628,39 +677,49 @@
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50 bg-white">
-                          {#each dummyJurnal as jrn, idx}
-                            <tr class="hover:bg-indigo-50/20 transition-colors">
-                              <td class="px-4 py-2.5 text-slate-400 font-mono">{idx + 1}</td>
-                              <td class="px-4 py-2.5 font-mono font-semibold text-indigo-700">
-                                <div class="flex items-center gap-1.5">
-                                  <svg class="h-3 w-3 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                                  {jrn.noJurnal}
-                                </div>
-                              </td>
-                              <td class="px-4 py-2.5 text-slate-500">{jrn.tgl}</td>
-                              <td class="px-4 py-2.5 text-right font-semibold text-slate-800 font-mono">{jrn.total}</td>
-                              <td class="px-4 py-2.5 text-slate-600">{jrn.keterangan}</td>
-                              <td class="px-4 py-2.5">
-                                {#if jrn.status === 'paid'}
-                                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                                    Lunas
-                                  </span>
-                                {:else}
-                                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                    Draft
-                                  </span>
-                                {/if}
-                              </td>
+                          {#if inv.payments && inv.payments.length > 0}
+                            {#each inv.payments as jrn, idx}
+                              <tr class="hover:indigo-50/20 transition-colors">
+                                <td class="px-4 py-2.5 text-slate-400 font-mono">{idx + 1}</td>
+                                <td class="px-4 py-2.5 font-mono font-semibold text-indigo-700">
+                                  <div class="flex items-center gap-1.5">
+                                    <svg class="h-3 w-3 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                    {jrn.noJurnal}
+                                  </div>
+                                </td>
+                                <td class="px-4 py-2.5 text-slate-500">{jrn.tgl}</td>
+                                <td class="px-4 py-2.5 text-right font-semibold text-slate-800 font-mono">Rp {(parseFloat(jrn.total)||0).toLocaleString('id-ID')}</td>
+                                <td class="px-4 py-2.5 text-slate-600">{jrn.keterangan}</td>
+                                <td class="px-4 py-2.5">
+                                  {#if jrn.status === 'paid'}
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                      Lunas
+                                    </span>
+                                  {:else if jrn.status === 'void'}
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+                                      Batal / Void
+                                    </span>
+                                  {:else}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                      {jrn.status}
+                                    </span>
+                                  {/if}
+                                </td>
+                              </tr>
+                            {/each}
+                          {:else}
+                            <tr>
+                              <td colspan="6" class="px-4 py-6 text-center text-slate-400 italic">Belum ada riwayat pembayaran.</td>
                             </tr>
-                          {/each}
+                          {/if}
                         </tbody>
                         <!-- Total footer -->
                         <tfoot class="bg-indigo-50/40 border-t border-indigo-100 font-bold text-xs">
                           <tr>
                             <td colspan="3" class="px-4 py-2 text-slate-500 uppercase text-[10px] tracking-wider">Total Pembayaran</td>
                             <td class="px-4 py-2 text-right font-mono text-indigo-800">
-                              Rp {dummyJurnal.reduce((s, j) => s + parseInt(j.total.replace(/\D/g, '')), 0).toLocaleString('id-ID')}
+                              Rp {(inv.payments || []).reduce((s, j) => s + (parseFloat(j.total)||0), 0).toLocaleString('id-ID')}
                             </td>
                             <td colspan="2" class="px-4 py-2"></td>
                           </tr>

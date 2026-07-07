@@ -18,23 +18,32 @@
 
     let mobileMenuOpen = false;
     let mobileIncomesOpen = false;
+    let mobileDokumenOpen = false;
     let mobileExpensesOpen = false;
     let mobileDoubleEntryOpen = false;
 
     const subItems = [
         { name: "Customers", href: "/customers" },
+        { name: "History Invoice", href: "#history-invoice" },
+        { name: "Upload No Faktur", href: "/upload-no-faktur" },
+    ];
+
+    const dokumenTopItems = [
         { name: "Create Dokumen", href: "/documents/create" },
         { name: "Tanda Terima", href: "/tanda-terima" },
         { name: "Tanda Terima New", href: "/tanda-terima/new" },
-        { name: "List Kirim Tagihan", href: "/list-kirim-tagihan" },
-        { name: "Schedule Tukar Faktur", href: "/schedule-tukar-faktur" },
         { name: "Surat Tagihan", href: "/surat-tagihan" },
-        { name: "History Invoice", href: "#history-invoice" },
+        { name: "Schedule Tukar Faktur", href: "/schedule-tukar-faktur" },
+        { name: "Titip Internal", href: "/titip-internal" },
+    ];
+
+    const dokumenBottomItems = [
+        { name: "List Kirim Tagihan", href: "/list-kirim-tagihan" },
         { name: "Report Mayora", href: "/report-mayora" },
         { name: "Kwitansi", href: "/kwitansi" },
-        { name: "Titip Internal", href: "/titip-internal" },
-        { name: "Upload No Faktur", href: "/upload-no-faktur" },
     ];
+    
+    const dokumenItems = [...dokumenTopItems, ...dokumenBottomItems];
 </script>
 
 <header
@@ -316,7 +325,8 @@
                         "flex items-center gap-1.5 px-3 py-1.5 h-auto text-xs font-medium rounded-md transition cursor-pointer",
                         pathname.startsWith("/invoices") ||
                             pathname.startsWith("/customers") ||
-                            pathname.startsWith("/payments")
+                            pathname.startsWith("/payments") ||
+                            subItems.some(item => pathname.startsWith(item.href))
                             ? "bg-teal-700 text-white shadow-inner ring-1 ring-teal-600"
                             : "text-teal-100 hover:text-white hover:bg-teal-700/40",
                     )}
@@ -391,6 +401,97 @@
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator class="bg-slate-100 my-1" />
                 {#each subItems as item}
+                    <DropdownMenu.Item
+                        class={cn(
+                            "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold",
+                            pathname.startsWith(item.href)
+                                ? "bg-teal-50 text-teal-700"
+                                : "text-slate-700 hover:bg-slate-50",
+                        )}
+                    >
+                        <span
+                            class={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                pathname.startsWith(item.href)
+                                    ? "bg-teal-600"
+                                    : "bg-slate-300",
+                            )}
+                        ></span>
+                        <a href={item.href} class="w-full">{item.name}</a>
+                    </DropdownMenu.Item>
+                {/each}
+            </DropdownMenu.Content>
+        </DropdownMenu.Root>
+
+        <!-- Dokumen Dropdown -->
+        <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild let:builder>
+                <Button
+                    builders={[builder]}
+                    variant="ghost"
+                    class={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 h-auto text-xs font-medium rounded-md transition cursor-pointer",
+                        dokumenItems.some(item => pathname.startsWith(item.href))
+                            ? "bg-teal-700 text-white shadow-inner ring-1 ring-teal-600"
+                            : "text-teal-100 hover:text-white hover:bg-teal-700/40",
+                    )}
+                >
+                    <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                    </svg>
+                    Dokumen
+                    <svg
+                        class="h-3 w-3 opacity-60"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                        />
+                    </svg>
+                </Button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content
+                class="w-56 max-h-96 overflow-y-auto bg-white border border-slate-200 rounded-lg p-1 shadow-lg"
+            >
+                {#each dokumenTopItems as item}
+                    <DropdownMenu.Item
+                        class={cn(
+                            "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold",
+                            pathname.startsWith(item.href)
+                                ? "bg-teal-50 text-teal-700"
+                                : "text-slate-700 hover:bg-slate-50",
+                        )}
+                    >
+                        <span
+                            class={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                pathname.startsWith(item.href)
+                                    ? "bg-teal-600"
+                                    : "bg-slate-300",
+                            )}
+                        ></span>
+                        <a href={item.href} class="w-full">{item.name}</a>
+                    </DropdownMenu.Item>
+                {/each}
+                
+                <DropdownMenu.Separator class="bg-slate-100 my-1" />
+
+                {#each dokumenBottomItems as item}
                     <DropdownMenu.Item
                         class={cn(
                             "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold",
@@ -769,6 +870,47 @@
                             • Pembayaran
                         </a>
                         {#each subItems as item}
+                            <a
+                                href={item.href}
+                                class="px-3 py-1.5 text-xs text-teal-300 hover:text-white rounded-md"
+                                on:click={() => (mobileMenuOpen = false)}
+                            >
+                                • {item.name}
+                            </a>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+
+            <!-- Mobile Dokumen Expandable -->
+            <div>
+                <button
+                    class="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-teal-100 hover:text-white hover:bg-teal-850 rounded-md transition"
+                    on:click={() => (mobileDokumenOpen = !mobileDokumenOpen)}
+                >
+                    <span>Dokumen</span>
+                    <svg
+                        class={cn(
+                            "h-4 w-4 transition-transform",
+                            mobileDokumenOpen && "rotate-180",
+                        )}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                        />
+                    </svg>
+                </button>
+                {#if mobileDokumenOpen}
+                    <div
+                        class="pl-4 mt-1 flex flex-col border-l border-teal-800 ml-3 gap-1"
+                    >
+                        {#each dokumenItems as item}
                             <a
                                 href={item.href}
                                 class="px-3 py-1.5 text-xs text-teal-300 hover:text-white rounded-md"

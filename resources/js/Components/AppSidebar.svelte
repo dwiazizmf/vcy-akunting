@@ -4,7 +4,9 @@
   export let onClose = () => {};
   export let onToggleCollapse = () => {};
 
-  const subItems = ['Customers', 'Download E-Faktur', 'Create Dokumen', 'Tanda Terima', 'Tanda Terima New', 'List Kirim Tagihan', 'Schedule Tukar Faktur', 'Surat Tagihan', 'History Invoice', 'Report Mayora', 'Kwitansi', 'Titip Internal', 'Upload No Faktur'];
+  const subItems = ['Customers', 'Download E-Faktur', 'History Invoice', 'Upload No Faktur'];
+  const dokumenTopItems = ['Create Dokumen', 'Tanda Terima', 'Tanda Terima New', 'Surat Tagihan', 'Schedule Tukar Faktur', 'Titip Internal'];
+  const dokumenBottomItems = ['List Kirim Tagihan', 'Report Mayora', 'Kwitansi'];
 </script>
 
 <!-- Sidebar -->
@@ -115,6 +117,49 @@
           </a>
           {#each subItems as item}
             {@const href = item === 'Customers' ? '/customers' : (item === 'Create Dokumen' ? '/documents/create' : (item === 'Tanda Terima' ? '/tanda-terima' : (item === 'Tanda Terima New' ? '/tanda-terima/new' : (item === 'List Kirim Tagihan' ? '/list-kirim-tagihan' : (item === 'Schedule Tukar Faktur' ? '/schedule-tukar-faktur' : (item === 'Surat Tagihan' ? '/surat-tagihan' : (item === 'Report Mayora' ? '/report-mayora' : (item === 'Kwitansi' ? '/kwitansi' : (item === 'Titip Internal' ? '/titip-internal' : (item === 'Upload No Faktur' ? '/upload-no-faktur' : `#${item.toLowerCase().replace(/ /g, '-')}`))))))))))}
+            <a href={href} class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white rounded hover:bg-slate-700/30 transition-colors">
+              <span class="w-1.5 h-1.5 bg-gray-500 rounded-full shrink-0"></span>
+              {item}
+            </a>
+          {/each}
+        </div>
+      {/if}
+    </div>
+
+    <!-- Dokumen -->
+    <div>
+      <button
+        title="Dokumen"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-slate-700 transition-colors text-teal-400 {collapsed ? 'justify-center' : 'justify-between'}"
+      >
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          {#if !collapsed}<span class="text-sm font-medium whitespace-nowrap">Dokumen</span>{/if}
+        </div>
+        {#if !collapsed}
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        {/if}
+      </button>
+
+      <!-- Submenu (only when expanded) -->
+      {#if !collapsed}
+        <div class="ml-4 mt-1 space-y-0.5">
+          {#each dokumenTopItems as item}
+            {@const href = item === 'Create Dokumen' ? '/documents/create' : (item === 'Tanda Terima' ? '/tanda-terima' : (item === 'Tanda Terima New' ? '/tanda-terima/new' : (item === 'Schedule Tukar Faktur' ? '/schedule-tukar-faktur' : (item === 'Surat Tagihan' ? '/surat-tagihan' : (item === 'Titip Internal' ? '/titip-internal' : `#${item.toLowerCase().replace(/ /g, '-')}`)))))}
+            <a href={href} class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white rounded hover:bg-slate-700/30 transition-colors">
+              <span class="w-1.5 h-1.5 bg-gray-500 rounded-full shrink-0"></span>
+              {item}
+            </a>
+          {/each}
+
+          <div class="my-2 border-t border-slate-700"></div>
+
+          {#each dokumenBottomItems as item}
+            {@const href = item === 'List Kirim Tagihan' ? '/list-kirim-tagihan' : (item === 'Report Mayora' ? '/report-mayora' : (item === 'Kwitansi' ? '/kwitansi' : `#${item.toLowerCase().replace(/ /g, '-')}`))}
             <a href={href} class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white rounded hover:bg-slate-700/30 transition-colors">
               <span class="w-1.5 h-1.5 bg-gray-500 rounded-full shrink-0"></span>
               {item}

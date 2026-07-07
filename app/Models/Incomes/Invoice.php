@@ -47,4 +47,9 @@ class Invoice extends Model
         return $this->belongsToMany(\App\Models\Incomes\Document::class, 'document_invoices')
                     ->withTimestamps();
     }
+
+    public function paymentInvoices()
+    {
+        return $this->hasMany(\App\Models\Expenses\PaymentInvoice::class, 'invoice_id');
+    }
 }

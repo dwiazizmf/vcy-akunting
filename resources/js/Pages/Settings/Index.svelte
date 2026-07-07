@@ -885,9 +885,29 @@
             <!-- Preview -->
             <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
               <p class="text-xs font-medium text-slate-500 mb-1">Preview Format Faktur:</p>
-              <p class="text-sm font-mono font-bold text-teal-700">
-                {[invSet.first_faktur, invSet.second_faktur, invSet.third_faktur, invSet.fourth_faktur].filter(Boolean).join('/')}
-                {#if invSet.no_awal !== undefined}/{String(invSet.no_awal).padStart(4, '0')}{/if}
+              <p class="text-base font-mono font-bold text-teal-700 tracking-wide">
+                {[invSet.first_faktur, invSet.second_faktur, invSet.third_faktur, invSet.fourth_faktur]
+                  .filter(v => v !== null && v !== undefined && String(v).trim() !== '')
+                  .concat([String(parseInt(invSet.no_awal) || 1).padStart(
+                    !isNaN(parseInt(invSet.no_akhir)) ? String(parseInt(invSet.no_akhir)).length : 4,
+                    '0'
+                  )])
+                  .join('/') || '—'}
+              </p>
+              <p class="text-[10px] text-slate-400 mt-1.5">
+                Format: 
+                <span class="font-mono">
+                  {[invSet.first_faktur, invSet.second_faktur, invSet.third_faktur, invSet.fourth_faktur]
+                    .filter(v => v !== null && v !== undefined && String(v).trim() !== '')
+                    .join('/')}
+                  {[invSet.first_faktur, invSet.second_faktur, invSet.third_faktur, invSet.fourth_faktur]
+                    .filter(v => v !== null && v !== undefined && String(v).trim() !== '').length > 0 ? '/' : ''}
+                  <span class="text-teal-500">{String(parseInt(invSet.no_awal) || 1).padStart(
+                    !isNaN(parseInt(invSet.no_akhir)) ? String(parseInt(invSet.no_akhir)).length : 4,
+                    '0'
+                  )}</span>
+                  <span class="text-slate-300 ml-1">← nomor urut</span>
+                </span>
               </p>
             </div>
 

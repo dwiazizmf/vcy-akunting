@@ -47,9 +47,9 @@ class DocumentController extends Controller
     {
         $validated = $request->validate([
             'type'          => 'required|string|in:tanda_terima,tanda_terima_new,surat_tagihan,schedule_tukar_faktur,titip_internal',
-            'send_date'     => 'required|date',
+            'send_date'     => 'nullable|date',
             'up_person'     => 'nullable|string',
-            'customer_name' => 'required|string',
+            'customer_name' => 'nullable|string',
             'no_tlp'        => 'nullable|string',
             'address'       => 'nullable|string',
             'invoice_ids'   => 'required|array|min:1',
@@ -114,6 +114,124 @@ class DocumentController extends Controller
             $path = $redirectPaths[$validated['type']] ?? '/dashboard';
 
             return redirect($path)->with('success', "Dokumen {$document->orders_text} berhasil disimpan.");
+        });
+    }
+
+    /**
+     * Show the form for editing the specified document.
+     */
+    public function edit($id)
+    {
+        $document = Document::with('invoices')->findOrFail($id);
+        $selectedInvoiceIds = $document->invoices->pluck('id')->toArray();
+
+        $invoices = Invoice::with(['customer', 'documents'])
+            ->where(function ($q) {
+                $q->whereIn('payment_status', ['unpaid', 'partial'])
+                  ->where('invoice_status_code', 'posted');
+            })
+            ->orWhereIn('id', $selectedInvoiceIds)
+            ->orderBy('invoice_number', 'asc')
+            ->get()
+            ->map(function ($inv) {
+                return [
+                    'id'             => $inv->id,
+                    'customer_id'    => $inv->customer_id,
+                    'customer_name'  => $inv->customer?->name ?? 'Unknown',
+                    'customer_address'=> $inv->customer?->address ?? '',
+                    'invoice_number' => $inv->invoice_number,
+                    'invoice_text'   => $inv->invoice_text ?? $inv->invoice_number,
+                    'order_number'   => $inv->order_number ?? '',
+                    'used_in_types'  => $inv->documents->pluck('type')->toArray()
+                ];
+            });
+
+        return Inertia::render('Incomes/Documents/Edit', [
+            'document' => [
+                'id'            => $document->id,
+                'type'          => $document->type,
+                'send_date'     => $document->send_date ? $document->send_date->format('Y-m-d') : null,
+                'up_person'     => $document->up_person,
+                'customer_name' => $document->customer_name,
+                'no_tlp'        => $document->no_tlp,
+                'address'       => $document->address,
+                'selected_invoices' => $selectedInvoiceIds
+            ],
+            'invoices' => $invoices
+        ]);
+    }
+
+    /**
+     * Update the specified document in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        $document = Document::findOrFail($id);
+
+        $validated = $request->validate([
+            'send_date'     => 'nullable|date',
+            'up_person'     => 'nullable|string',
+            'customer_name' => 'nullable|string',
+            'no_tlp'        => 'nullable|string',
+            'address'       => 'nullable|string',
+            'invoice_ids'   => 'required|array|min:1',
+            'invoice_ids.*' => 'required|integer|exists:invoices,id',
+        ]);
+
+        $invoices = Invoice::whereIn('id', $validated['invoice_ids'])->get();
+
+        // 1. Validasi Customer Sama (Jika bukan tipe schedule_tukar_faktur)
+        if ($document->type !== 'schedule_tukar_faktur') {
+            $customerIds = $invoices->pluck('customer_id')->unique();
+            if ($customerIds->count() > 1) {
+                return back()->withErrors([
+                    'invoice_ids' => 'Semua invoice harus berasal dari customer yang sama untuk tipe dokumen ini.'
+                ]);
+            }
+        }
+
+        // 2. Validasi Invoice Duplikat (Jika bukan tanda_terima_new)
+        if ($document->type !== 'tanda_terima_new') {
+            $alreadyUsed = DB::table('document_invoices')
+                ->join('documents', 'document_invoices.document_id', '=', 'documents.id')
+                ->whereNull('documents.deleted_at')
+                ->where('documents.id', '!=', $document->id)
+                ->whereIn('document_invoices.invoice_id', $validated['invoice_ids'])
+                ->where('documents.type', $document->type)
+                ->pluck('document_invoices.invoice_id');
+
+            if ($alreadyUsed->isNotEmpty()) {
+                $usedInvoiceNumbers = Invoice::whereIn('id', $alreadyUsed)
+                    ->pluck('invoice_number')
+                    ->implode(', ');
+                return back()->withErrors([
+                    'invoice_ids' => "Invoice berikut sudah pernah dibuatkan dokumen dengan tipe ini sebelumnya: {$usedInvoiceNumbers}"
+                ]);
+            }
+        }
+
+        return DB::transaction(function () use ($validated, $document) {
+            $document->update([
+                'send_date'     => $validated['send_date'],
+                'up_person'     => $validated['up_person'] ?? null,
+                'customer_name' => $validated['customer_name'],
+                'no_tlp'        => $validated['no_tlp'] ?? null,
+                'address'       => $validated['address'] ?? null,
+            ]);
+
+            $document->invoices()->sync($validated['invoice_ids']);
+
+            // Redirect ke halaman index masing-masing
+            $redirectPaths = [
+                'tanda_terima'          => '/tanda-terima',
+                'tanda_terima_new'      => '/tanda-terima/new',
+                'surat_tagihan'         => '/surat-tagihan',
+                'schedule_tukar_faktur' => '/schedule-tukar-faktur',
+                'titip_internal'        => '/titip-internal',
+            ];
+            $path = $redirectPaths[$document->type] ?? '/dashboard';
+
+            return redirect($path)->with('success', "Dokumen {$document->orders_text} berhasil diperbarui.");
         });
     }
 

@@ -357,7 +357,7 @@
                       <Eye class="h-3.5 w-3.5 text-slate-400" />
                       View Detail
                     </DropdownMenu.Item>
-                    <DropdownMenu.Item class="text-xs gap-2 cursor-pointer" on:click={() => router.visit(`/surat-tagihan/${letter.id}/edit`)}>
+                    <DropdownMenu.Item class="text-xs gap-2 cursor-pointer" on:click={() => router.visit(`/documents/${letter.id}/edit`)}>
                       <Pencil class="h-3.5 w-3.5 text-slate-400" />
                       Edit
                     </DropdownMenu.Item>

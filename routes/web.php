@@ -283,7 +283,7 @@ Route::post('/api/customers', function (\Illuminate\Http\Request $request) {
     return response()->json($customer);
 });
 
-Route::resource('documents', \App\Http\Controllers\Incomes\DocumentController::class)->only(['create', 'store']);
+Route::resource('documents', \App\Http\Controllers\Incomes\DocumentController::class)->only(['create', 'store', 'edit', 'update']);
 
 
 

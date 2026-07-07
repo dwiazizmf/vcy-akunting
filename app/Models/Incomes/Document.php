@@ -22,7 +22,6 @@ class Document extends Model
         'customer_name',
         'no_tlp',
         'address',
-        'order_number',
         'status',
         'orders',
         'orders_text',

@@ -19,15 +19,16 @@
 
     export let banks = [];
     export let customers = [];
-    export let taxes = [];
+    export let accounts = [];
     export let errors = {};
+
+    $: accountOptions = accounts.map(a => ({ id: a.id, name: `${a.code} - ${a.name}` }));
 
     // Form state
     let form = {
         paid_at: new Date().toISOString().split("T")[0],
         payment_method: "transfer",
         bank_account_id: banks.find((b) => b.is_default)?.id ?? banks[0]?.id ?? null,
-        tax_id: null,
         reference: "",
         notes: "",
         allocations: [
@@ -39,6 +40,7 @@
                 allocated_amount: "",
             },
         ],
+        adjustments: [],
     };
 
     let isSaving = false;
@@ -70,6 +72,14 @@
 
     function handleCustomerChange(index) {
         const line = form.allocations[index];
+
+        // Ensure all lines belong to the same customer
+        const otherCustomer = form.allocations.find((a, i) => i !== index && a.customer_id)?.customer_id;
+        if (otherCustomer && line.customer_id && otherCustomer !== line.customer_id) {
+            showToast("Hanya bisa memilih tagihan dari Customer yang sama dalam 1 pembayaran!", "error");
+            line.customer_id = otherCustomer;
+        }
+
         line.invoice_id = "";
         line.outstanding = 0;
         line.allocated_amount = "";
@@ -82,6 +92,14 @@
 
     function handleInvoiceChange(index) {
         const line = form.allocations[index];
+        
+        // Prevent duplicate invoice selection
+        const duplicate = form.allocations.some((a, i) => i !== index && a.invoice_id == line.invoice_id);
+        if (duplicate && line.invoice_id) {
+            showToast("Tagihan (Invoice) ini sudah dipilih di baris lain!", "error");
+            line.invoice_id = "";
+        }
+
         const invList = customerInvoices[line.customer_id] || [];
         const inv = invList.find((i) => i.id == line.invoice_id);
 
@@ -116,15 +134,24 @@
         form.allocations = form.allocations.filter((_, i) => i !== index);
     }
 
+    function addAdjustment() {
+        form.adjustments = [
+            ...form.adjustments,
+            { id: Date.now(), account_id: "", amount: "", type: "deduction", description: "" }
+        ];
+    }
+
+    function removeAdjustment(index) {
+        form.adjustments = form.adjustments.filter((_, i) => i !== index);
+    }
+
     $: totalAllocated = form.allocations.reduce(
         (sum, line) => sum + (parseFloat(line.allocated_amount) || 0),
         0,
     );
-    $: selectedTax = taxes.find(t => t.id == form.tax_id);
-    $: ppnAmount = selectedTax
-        ? (selectedTax.type === 'fixed' ? parseFloat(selectedTax.rate) : totalAllocated * (parseFloat(selectedTax.rate) / 100))
-        : 0;
-    $: totalPayment = totalAllocated + ppnAmount;
+    $: totalAdditions = form.adjustments.filter(a => a.type === 'addition').reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
+    $: totalDeductions = form.adjustments.filter(a => a.type === 'deduction').reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
+    $: totalPayment = totalAllocated + totalAdditions - totalDeductions;
 
     function submit() {
         // Basic validation
@@ -184,14 +211,6 @@
                     </p>
                 </div>
             </div>
-            <Button
-                class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white gap-2"
-                on:click={submit}
-                disabled={isSaving}
-            >
-                <Save size={16} />
-                {isSaving ? "Menyimpan..." : "Simpan Pembayaran"}
-            </Button>
         </div>
 
         <!-- Payment Info -->
@@ -253,6 +272,19 @@
                         placeholder="No. transfer / cek"
                         class="h-9"
                     />
+                </div>
+
+                <div class="md:col-span-4 space-y-2">
+                    <label
+                        class="text-xs font-bold text-slate-500 uppercase tracking-wider block"
+                        >Catatan Tambahan</label
+                    >
+                    <textarea
+                        bind:value={form.notes}
+                        rows="2"
+                        placeholder="Catatan opsional..."
+                        class="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-sm outline-none focus:border-teal-500 resize-none"
+                    ></textarea>
                 </div>
             </div>
         </div>
@@ -370,23 +402,10 @@
 
             <!-- Footer Totals -->
             <div
-                class="bg-slate-50 p-6 border-t border-slate-200 flex flex-col md:flex-row gap-6 justify-between items-start"
+                class="bg-slate-50 p-6 border-t border-slate-200"
             >
-                <div class="w-full md:w-1/2">
-                    <label
-                        class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1"
-                        >Catatan Tambahan</label
-                    >
-                    <textarea
-                        bind:value={form.notes}
-                        rows="3"
-                        placeholder="Catatan opsional..."
-                        class="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-sm outline-none focus:border-teal-500 resize-none"
-                    ></textarea>
-                </div>
-
                 <div
-                    class="w-full md:w-[400px] flex flex-col items-end space-y-3"
+                    class="w-full flex flex-col items-end space-y-3"
                 >
                     <!-- Total Allocation (Sum) -->
                     <div class="flex items-center justify-between w-full">
@@ -398,25 +417,66 @@
                         >
                     </div>
 
-                    <!-- PPN Select -->
-                    <div class="flex items-center justify-between w-full pt-3 border-t border-slate-200">
-                        <span class="text-slate-600 font-medium">Pilih PPN:</span>
-                        <select
-                            bind:value={form.tax_id}
-                            class="flex h-9 w-48 items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                        >
-                            <option value={null}>-- Tanpa PPN --</option>
-                            {#each taxes as tax}
-                                <option value={tax.id}>{tax.name} ({tax.type === 'percentage' ? parseFloat(tax.rate) + '%' : 'Rp ' + parseFloat(tax.rate).toLocaleString('id-ID')})</option>
-                            {/each}
-                        </select>
+                    <!-- Adjustments Section -->
+                    <div class="w-full pt-4 border-t border-slate-200 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-700 font-bold">Penyesuaian (Biaya/Pajak)</span>
+                            <Button variant="outline" size="sm" class="h-7 text-xs px-2" on:click={addAdjustment}>
+                                <Plus size={12} class="mr-1" /> Tambah
+                            </Button>
+                        </div>
+                        
+                        {#if form.adjustments.length === 0}
+                            <p class="text-[11px] text-slate-400 italic text-right">Tidak ada penyesuaian tambahan.</p>
+                        {/if}
+
+                        {#each form.adjustments as adj, j (adj.id)}
+                            <div class="flex flex-col gap-2 p-3 bg-white border border-slate-200 rounded-lg relative">
+                                <Button variant="ghost" size="icon" class="absolute top-1 right-1 h-6 w-6 text-slate-400 hover:text-red-500" on:click={() => removeAdjustment(j)}>
+                                    <Trash2 size={12} />
+                                </Button>
+                                <div class="grid grid-cols-2 gap-2 mt-2">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase">Tipe</label>
+                                        <select bind:value={adj.type} class="w-full h-8 text-xs border border-slate-200 rounded px-2">
+                                            <option value="deduction">Memotong (Debit)</option>
+                                            <option value="addition">Menambah (Kredit)</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase">Akun COA</label>
+                                        <SearchableSelect
+                                            options={accountOptions}
+                                            bind:value={adj.account_id}
+                                            placeholder="-- Cari/Pilih Akun --"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase">Keterangan</label>
+                                        <Input type="text" bind:value={adj.description} placeholder="Contoh: PPh 23..." class="h-8 text-xs" />
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase">Nominal</label>
+                                        <Input type="number" min="0" step="0.01" bind:value={adj.amount} class="h-8 text-xs text-right font-bold" placeholder="0" />
+                                    </div>
+                                </div>
+                            </div>
+                        {/each}
                     </div>
 
-                    <!-- PPN Amount -->
-                    {#if ppnAmount > 0}
-                        <div class="flex items-center justify-between w-full pt-1 text-teal-700">
-                            <span class="text-sm font-medium">Nilai PPN:</span>
-                            <span class="text-sm font-bold">+ Rp {fmt(ppnAmount)}</span>
+                    <!-- Summary -->
+                    {#if totalAdditions > 0}
+                        <div class="flex items-center justify-between w-full pt-3 text-rose-600">
+                            <span class="text-sm font-medium">Total Penambahan:</span>
+                            <span class="text-sm font-bold">+ Rp {fmt(totalAdditions)}</span>
+                        </div>
+                    {/if}
+                    {#if totalDeductions > 0}
+                        <div class="flex items-center justify-between w-full pt-1 text-teal-600">
+                            <span class="text-sm font-medium">Total Pemotongan:</span>
+                            <span class="text-sm font-bold">- Rp {fmt(totalDeductions)}</span>
                         </div>
                     {/if}
 
@@ -424,6 +484,18 @@
                     <div class="flex items-center justify-between w-full pt-3 border-t border-slate-200">
                         <span class="text-slate-800 font-bold">Total Pembayaran:</span>
                         <span class="text-teal-700 font-bold text-xl">Rp {fmt(totalPayment)}</span>
+                    </div>
+
+                    <!-- Save Payment Button -->
+                    <div class="pt-6 w-full flex justify-end">
+                        <Button
+                            class="w-full bg-teal-600 hover:bg-teal-700 text-white gap-2 h-11 text-sm font-bold rounded-xl cursor-pointer"
+                            on:click={submit}
+                            disabled={isSaving}
+                        >
+                            <Save size={16} />
+                            {isSaving ? "Menyimpan..." : "Simpan Pembayaran"}
+                        </Button>
                     </div>
                 </div>
             </div>

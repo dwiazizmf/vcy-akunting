@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Settings\Company;
 use App\Models\Settings\User;
+use App\Models\Settings\BankAccount;
+use App\Models\Accounting\Journal;
 
 class Payment extends Model
 {
@@ -15,7 +17,7 @@ class Payment extends Model
     protected $fillable = [
         'company_id', 'payment_number',
         'paid_at', 'total_amount', 'tax_id', 'tax_amount', 'payment_method', 'bank_account_id',
-        'reference', 'notes', 'overpayment_amount', 'journal_id',
+        'reference', 'notes', 'overpayment_amount', 'adjustments', 'journal_id',
         'status', 'created_by',
     ];
 
@@ -23,6 +25,7 @@ class Payment extends Model
         'paid_at'            => 'date',
         'total_amount'       => 'decimal:2',
         'overpayment_amount' => 'decimal:2',
+        'adjustments'        => 'array',
     ];
 
     public function invoices()
@@ -43,5 +46,10 @@ class Payment extends Model
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function tax()
+    {
+        return $this->belongsTo(\App\Models\Settings\Tax::class, 'tax_id');
     }
 }
