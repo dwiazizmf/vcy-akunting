@@ -18,6 +18,13 @@
   export let parentAccounts = [];
   export let filters = { search: '', type_id: '' };
 
+  $: groupedAccounts = (accounts.data || []).reduce((acc, account) => {
+    const groupName = account.type ? `${account.type.category} - ${account.type.name}` : 'Lainnya';
+    if (!acc.has(groupName)) acc.set(groupName, []);
+    acc.get(groupName).push(account);
+    return acc;
+  }, new Map());
+
   let search = filters.search || '';
   let type_id = filters.type_id || '';
   let isModalOpen = false;
@@ -180,58 +187,65 @@
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {#each accounts.data as account}
-              <Table.Row class="hover:bg-slate-50 transition-colors group">
-                <Table.Cell class="font-medium text-slate-900 py-2">
-                  {#if account.parent_id}
-                    <span class="pl-4 text-slate-500">-</span> {account.code}
-                  {:else}
-                    {account.code}
-                  {/if}
-                </Table.Cell>
-                <Table.Cell class="py-2">
-                  <div class="flex items-center gap-2">
-                    <span class={account.parent_id ? 'text-slate-600' : 'font-medium text-slate-800'}>
-                      {account.name}
-                    </span>
-                    {#if account.system}
-                      <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-medium border border-slate-200">
-                        System
-                      </span>
-                    {/if}
-                  </div>
-                </Table.Cell>
-                <Table.Cell class="py-2">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
-                    {account.company_name}
-                  </span>
-                </Table.Cell>
-                <Table.Cell class="text-slate-600 py-2">{account.type?.name}</Table.Cell>
-                <Table.Cell class="text-slate-600 py-2">{account.type?.category}</Table.Cell>
-                <Table.Cell class="text-center py-2">
-                  {#if account.enabled}
-                    <span class="inline-flex items-center px-2 py-1 rounded-full bg-teal-50 text-teal-700 text-xs font-medium ring-1 ring-inset ring-teal-600/20">
-                      Aktif
-                    </span>
-                  {:else}
-                    <span class="inline-flex items-center px-2 py-1 rounded-full bg-slate-50 text-slate-600 text-xs font-medium ring-1 ring-inset ring-slate-500/20">
-                      Nonaktif
-                    </span>
-                  {/if}
-                </Table.Cell>
-                <Table.Cell class="text-right py-2">
-                  <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-teal-600" on:click={() => openEditModal(account)}>
-                      <Pencil size={14} />
-                    </Button>
-                    {#if !account.system}
-                      <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50" on:click={() => deleteAccount(account.id)}>
-                        <Trash2 size={14} />
-                      </Button>
-                    {/if}
-                  </div>
+            {#each [...groupedAccounts] as [groupName, groupAccounts]}
+              <Table.Row class="bg-slate-100 hover:bg-slate-100 border-y border-slate-200">
+                <Table.Cell colspan={7} class="font-semibold text-slate-800 py-3 px-4 shadow-sm">
+                  {groupName}
                 </Table.Cell>
               </Table.Row>
+              {#each groupAccounts as account}
+                <Table.Row class="hover:bg-slate-50 transition-colors group">
+                  <Table.Cell class="font-medium text-slate-900 py-2">
+                    {#if account.parent_id}
+                      <span class="pl-4 text-slate-500">-</span> {account.code}
+                    {:else}
+                      {account.code}
+                    {/if}
+                  </Table.Cell>
+                  <Table.Cell class="py-2">
+                    <div class="flex items-center gap-2">
+                      <span class={account.parent_id ? 'text-slate-600' : 'font-medium text-slate-800'}>
+                        {account.name}
+                      </span>
+                      {#if account.system}
+                        <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-medium border border-slate-200">
+                          System
+                        </span>
+                      {/if}
+                    </div>
+                  </Table.Cell>
+                  <Table.Cell class="py-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                      {account.company_name}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell class="text-slate-600 py-2">{account.type?.name}</Table.Cell>
+                  <Table.Cell class="text-slate-600 py-2">{account.type?.category}</Table.Cell>
+                  <Table.Cell class="text-center py-2">
+                    {#if account.enabled}
+                      <span class="inline-flex items-center px-2 py-1 rounded-full bg-teal-50 text-teal-700 text-xs font-medium ring-1 ring-inset ring-teal-600/20">
+                        Aktif
+                      </span>
+                    {:else}
+                      <span class="inline-flex items-center px-2 py-1 rounded-full bg-slate-50 text-slate-600 text-xs font-medium ring-1 ring-inset ring-slate-500/20">
+                        Nonaktif
+                      </span>
+                    {/if}
+                  </Table.Cell>
+                  <Table.Cell class="text-right py-2">
+                    <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-teal-600" on:click={() => openEditModal(account)}>
+                        <Pencil size={14} />
+                      </Button>
+                      {#if !account.system}
+                        <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50" on:click={() => deleteAccount(account.id)}>
+                          <Trash2 size={14} />
+                        </Button>
+                      {/if}
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              {/each}
             {:else}
               <Table.Row>
                 <Table.Cell colspan={7} class="h-32 text-center text-slate-500">

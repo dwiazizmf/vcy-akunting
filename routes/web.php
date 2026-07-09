@@ -40,17 +40,27 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::post('/login', function (Illuminate\Http\Request $request) {
-    $email = $request->input('email');
-    $password = $request->input('password');
+    $credentials = $request->validate([
+        'username' => 'required|string',
+        'password' => 'required|string',
+    ]);
 
-    if ($email === 'admin@vcy.com' && $password === 'password') {
-        return redirect('/dashboard');
+    if (\Illuminate\Support\Facades\Auth::attempt($credentials)) {
+        $request->session()->regenerate();
+        return redirect()->intended('/dashboard');
     }
 
     return back()->withErrors([
-        'error' => 'Kombinasi email dan password tidak cocok.',
+        'username' => 'Kombinasi username dan password tidak cocok.',
     ]);
 });
+
+Route::post('/logout', function (Illuminate\Http\Request $request) {
+    \Illuminate\Support\Facades\Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect('/login');
+})->name('logout');
 
 Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 

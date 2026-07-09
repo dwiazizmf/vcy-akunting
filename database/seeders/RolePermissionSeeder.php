@@ -15,18 +15,41 @@ class RolePermissionSeeder extends Seeder
         // Dashboard
         'dashboard.view',
 
-        // Invoices
+        // Incomes
         'invoices.view',
         'invoices.create',
         'invoices.edit',
         'invoices.delete',
         'invoices.post',
+        'incomes.tanda-terima.manage',
+        'incomes.surat-tagihan.manage',
+        'incomes.schedule-tukar-faktur.manage',
+        'incomes.titip-internal.manage',
 
         // Customers
         'customers.view',
         'customers.create',
         'customers.edit',
         'customers.delete',
+
+        // Expenses
+        'expenses.view',
+        'expenses.create',
+        'expenses.edit',
+        'expenses.delete',
+        'expenses.post',
+
+        // Vendors
+        'vendors.view',
+        'vendors.create',
+        'vendors.edit',
+        'vendors.delete',
+
+        // Accounting
+        'accounting.view',
+        'accounts.manage',
+        'journals.manage',
+        'ledgers.view',
 
         // Reports
         'reports.view',
@@ -36,6 +59,7 @@ class RolePermissionSeeder extends Seeder
         'settings.view',
         'settings.companies.manage',
         'settings.taxes.manage',
+        'settings.discounts.manage',
         'settings.invoice-settings.manage',
         'settings.users.manage',
         'settings.roles.manage',
@@ -49,15 +73,22 @@ class RolePermissionSeeder extends Seeder
         'admin' => [
             'dashboard.view',
             'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete', 'invoices.post',
+            'incomes.tanda-terima.manage', 'incomes.surat-tagihan.manage', 'incomes.schedule-tukar-faktur.manage', 'incomes.titip-internal.manage',
             'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
+            'expenses.view', 'expenses.create', 'expenses.edit', 'expenses.delete', 'expenses.post',
+            'vendors.view', 'vendors.create', 'vendors.edit', 'vendors.delete',
+            'accounting.view', 'accounts.manage', 'journals.manage', 'ledgers.view',
             'reports.view', 'reports.export',
-            'settings.view', 'settings.companies.manage', 'settings.taxes.manage',
+            'settings.view', 'settings.companies.manage', 'settings.taxes.manage', 'settings.discounts.manage',
             'settings.invoice-settings.manage', 'settings.users.manage',
         ],
         'staff' => [
             'dashboard.view',
             'invoices.view', 'invoices.create', 'invoices.edit',
+            'incomes.tanda-terima.manage', 'incomes.surat-tagihan.manage',
             'customers.view', 'customers.create', 'customers.edit',
+            'expenses.view', 'expenses.create', 'expenses.edit',
+            'vendors.view', 'vendors.create', 'vendors.edit',
             'reports.view',
         ],
     ];

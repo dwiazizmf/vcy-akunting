@@ -20,10 +20,11 @@ class AdminUserSeeder extends Seeder
         }
 
         // Buat user admin default
-        $admin = User::firstOrCreate(
+        $admin = User::updateOrCreate(
             ['email' => 'admin@vcy.test'],
             [
                 'name'     => 'Super Admin',
+                'username' => 'admin',
                 'password' => Hash::make('password123'),
             ]
         );

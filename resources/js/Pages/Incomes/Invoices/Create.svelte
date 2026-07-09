@@ -50,11 +50,14 @@
         order_number: "",
         nama_kapal: "",
         voy: "",
+        kode_pelabuhan_asal: "",
         pelabuhan_asal: "",
+        kode_pelabuhan_tujuan: "",
         pelabuhan_tujuan: "",
         departure_date: "",
         notes: "",
         no_faktur_pajak: "",
+        alamat_faktur_pajak: "",
         isFCL: false,
         no_container: "",
         isFaktur: false,
@@ -228,11 +231,14 @@
                 $form.order_number = data.order_number || "";
                 $form.nama_kapal = data.nama_kapal || "";
                 $form.voy = data.voy || "";
+                $form.kode_pelabuhan_asal = data.kode_pelabuhan_asal || "";
                 $form.pelabuhan_asal = data.pelabuhan_asal || "";
+                $form.kode_pelabuhan_tujuan = data.kode_pelabuhan_tujuan || "";
                 $form.pelabuhan_tujuan = data.pelabuhan_tujuan || "";
                 $form.departure_date = data.departure_date ? data.departure_date.split(" ")[0] : "";
                 $form.notes = data.notes || "";
                 $form.no_faktur_pajak = data.no_faktur_pajak || "";
+                $form.alamat_faktur_pajak = data.alamat_faktur_pajak || "";
                 $form.isFCL = data.isFCL === 1 || data.isFCL === true;
                 $form.no_container = data.no_container || "";
                 $form.isFaktur = data.isFaktur === 1 || data.isFaktur === true;
@@ -541,6 +547,21 @@
                                 />
                             </div>
                         </div>
+
+                        <div class="space-y-1.5 md:col-span-2">
+                            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                Alamat Faktur Pajak
+                            </label>
+                            <div class="relative">
+                                <MapPin class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                <Input
+                                    type="text"
+                                    bind:value={$form.alamat_faktur_pajak}
+                                    placeholder="Alamat Faktur Pajak"
+                                    class="pl-9 h-9 text-sm bg-white"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </Card.Content>
             </Card.Root>
@@ -621,6 +642,14 @@
                         </div>
 
                         <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Kode Pel. Asal</label>
+                            <div class="relative">
+                                <MapPin class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                <Input type="text" bind:value={$form.kode_pelabuhan_asal} placeholder="Kode" class="pl-9 h-9 text-sm bg-white" />
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
                             <label
                                 class="text-xs font-bold text-slate-700 uppercase tracking-wider"
                                 >Pelabuhan Asal</label
@@ -635,6 +664,14 @@
                                     placeholder="Pelabuhan Asal"
                                     class="pl-9 h-9 text-sm bg-white"
                                 />
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Kode Pel. Tujuan</label>
+                            <div class="relative">
+                                <MapPin class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                <Input type="text" bind:value={$form.kode_pelabuhan_tujuan} placeholder="Kode" class="pl-9 h-9 text-sm bg-white" />
                             </div>
                         </div>
 

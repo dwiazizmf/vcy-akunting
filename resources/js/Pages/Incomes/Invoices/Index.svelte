@@ -714,15 +714,25 @@
                             </tr>
                           {/if}
                         </tbody>
-                        <!-- Total footer -->
                         <tfoot class="bg-indigo-50/40 border-t border-indigo-100 font-bold text-xs">
-                          <tr>
-                            <td colspan="3" class="px-4 py-2 text-slate-500 uppercase text-[10px] tracking-wider">Total Pembayaran</td>
-                            <td class="px-4 py-2 text-right font-mono text-indigo-800">
-                              Rp {(inv.payments || []).reduce((s, j) => s + (parseFloat(j.total)||0), 0).toLocaleString('id-ID')}
-                            </td>
-                            <td colspan="2" class="px-4 py-2"></td>
-                          </tr>
+                          {#if true}
+                            {@const totalPaid = (inv.payments || []).reduce((s, j) => s + (j.status === 'void' ? 0 : (parseFloat(j.total)||0)), 0)}
+                            {@const remaining = (inv.amount_raw || 0) - totalPaid}
+                            <tr>
+                              <td colspan="3" class="px-4 py-2 text-slate-500 uppercase text-[10px] tracking-wider">Total Pembayaran</td>
+                              <td class="px-4 py-2 text-right font-mono text-indigo-800">
+                                Rp {totalPaid.toLocaleString('id-ID')}
+                              </td>
+                              <td colspan="2" class="px-4 py-2"></td>
+                            </tr>
+                            <tr class="border-t border-indigo-100">
+                              <td colspan="3" class="px-4 py-2 text-slate-500 uppercase text-[10px] tracking-wider">Sisa Pembayaran</td>
+                              <td class="px-4 py-2 text-right font-mono text-rose-600">
+                                Rp {remaining.toLocaleString('id-ID')}
+                              </td>
+                              <td colspan="2" class="px-4 py-2"></td>
+                            </tr>
+                          {/if}
                         </tfoot>
                       </table>
                     </div>

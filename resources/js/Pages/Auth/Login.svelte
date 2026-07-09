@@ -3,10 +3,10 @@
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { cn } from '$lib/utils.js';
-  import { Mail, Lock, LogIn, Eye, EyeOff, ShieldAlert } from 'lucide-svelte';
+  import { User, Lock, LogIn, Eye, EyeOff, ShieldAlert } from 'lucide-svelte';
   import { fly } from 'svelte/transition';
 
-  let email = '';
+  let username = '';
   let password = '';
   let remember = false;
   let showPassword = false;
@@ -17,8 +17,8 @@
     submitting = true;
     errors = {};
     
-    if (!email) {
-      errors.email = 'Email wajib diisi.';
+    if (!username) {
+      errors.username = 'Username wajib diisi.';
     }
     if (!password) {
       errors.password = 'Password wajib diisi.';
@@ -29,7 +29,7 @@
       return;
     }
 
-    router.post('/login', { email, password, remember }, {
+    router.post('/login', { username, password, remember }, {
       onError: (err) => {
         errors = err;
         submitting = false;
@@ -72,21 +72,21 @@
 
       <!-- Form -->
       <form on:submit|preventDefault={submit} class="space-y-4">
-        <!-- Email Field -->
+        <!-- Username Field -->
         <div class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="email">Email</label>
+          <label class="text-xs font-bold text-slate-700 uppercase tracking-wider" for="username">Username</label>
           <div class="relative">
-            <Mail class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <User class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
-              id="email"
-              type="email"
-              placeholder="name@company.com"
-              bind:value={email}
-              class={cn("pl-9 bg-white border-slate-200 shadow-sm h-9 text-sm focus-visible:ring-teal-500/20 focus-visible:border-teal-750", errors.email && "border-red-450")}
+              id="username"
+              type="text"
+              placeholder="Masukkan username"
+              bind:value={username}
+              class={cn("pl-9 bg-white border-slate-200 shadow-sm h-9 text-sm focus-visible:ring-teal-500/20 focus-visible:border-teal-750", errors.username && "border-red-450")}
             />
           </div>
-          {#if errors.email}
-            <p class="text-xs text-red-500 mt-1">{errors.email}</p>
+          {#if errors.username}
+            <p class="text-xs text-red-500 mt-1">{errors.username}</p>
           {/if}
         </div>
 

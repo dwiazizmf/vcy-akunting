@@ -44,6 +44,10 @@
     ];
     
     const dokumenItems = [...dokumenTopItems, ...dokumenBottomItems];
+
+    function logout() {
+        router.post("/logout");
+    }
 </script>
 
 <header
@@ -257,6 +261,7 @@
                     <DropdownMenu.Separator class="bg-slate-100 my-1" />
                     <DropdownMenu.Item
                         class="px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer font-medium"
+                        on:click={logout}
                         >Keluar</DropdownMenu.Item
                     >
                 </DropdownMenu.Content>
