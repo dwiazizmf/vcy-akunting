@@ -9,8 +9,8 @@
 
 Sebelum mulai bekerja, baca dan ikuti semua panduan berikut:
 
-1. **[Desain & UI Rules](.gemini/desain.md)** — Standar tampilan, warna, komponen, dan estetika
-2. **[Project Overview](.gemini/project-overview.md)** — Arsitektur, struktur folder, dan konvensi kode
+1. **[Desain & UI Rules](.agents/desain.md)** — Standar tampilan, warna, komponen, dan estetika
+2. **[Project Overview](.agents/project-overview.md)** — Arsitektur, struktur folder, dan konvensi kode
 
 ---
 

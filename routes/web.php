@@ -81,6 +81,7 @@ Route::post('/set-company', function (Illuminate\Http\Request $request) {
 })->name('set-company');
 
 // Invoice routes menggunakan Controller
+Route::get('invoices/print', [InvoiceController::class, 'print'])->name('invoices.print');
 Route::post('invoices/bulk-post', [InvoiceController::class, 'bulkPost'])->name('invoices.bulk-post');
 Route::resource('invoices', InvoiceController::class);
 Route::post('invoices/{invoice}/post', [InvoiceController::class, 'post'])->name('invoices.post');

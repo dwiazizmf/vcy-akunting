@@ -51,8 +51,8 @@ vcy-accounting/
 │       └── TandaTerima/
 ├── routes/
 │   └── web.php               # Semua route, di-group per modul
-└── .gemini/
-    ├── GEMINI.md             # ← File ini, dibaca otomatis
+└── .agents/
+    ├── AGENTS.md             # ← File ini, dibaca otomatis
     ├── desain.md             # Panduan desain & UI
     └── project-overview.md  # File ini
 ```

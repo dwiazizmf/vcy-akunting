@@ -384,6 +384,70 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Print invoices.
+     */
+    public function print(Request $request)
+    {
+        $ids = $request->input('ids');
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada invoice yang dipilih.');
+        }
+
+        $invoices = Invoice::with('items')->whereIn('id', $ids)->get();
+
+        if ($invoices->isEmpty()) {
+            return back()->with('error', 'Invoice tidak ditemukan.');
+        }
+
+        $data_multi = [];
+        foreach ($invoices as $inv) {
+            $inv->terima_dari = $inv->customer_name;
+            $inv->alamat_invoice = $inv->customer_address;
+            $inv->isTax = $inv->is_tax ? 1 : 0;
+            $inv->amount = $inv->subtotal;
+
+            // Paginate items based on the original logic (max 15 lines per page)
+            $pages = [];
+            $currentPageItems = [];
+            $currentLinesForPagination = 0;
+            $bb = 0;
+
+            foreach ($inv->items as $item) {
+                $nameLength = strlen($item->name);
+                $ceil_total = ($nameLength > 40) ? ceil($nameLength / 40) : 1;
+                $currentLinesForPagination += $ceil_total;
+                
+                if ($currentLinesForPagination > 14) {
+                    $currentLinesForPagination = $ceil_total;
+                    $bb++;
+                }
+                
+                $pages[$bb][] = \App\Http\Controllers\Incomes\PrintInvoiceHelper::formatItemForPrint($item);
+            }
+
+            $formattedPages = array_values($pages);
+
+            $data_multi[] = [
+                'inv' => $inv, // We only need the single invoice model here now
+                'pages' => $formattedPages,
+            ];
+        }
+
+        $companyId = session('company_id') ?? $invoices->first()->company_id;
+
+        $abc = [
+            'data_multi' => $data_multi,
+            'company' => $companyId,
+        ];
+
+        return view('incomes.invoices.print', compact('abc'));
+    }
+
+    /**
      * Bulk post invoices.
      */
     public function bulkPost(Request $request)
