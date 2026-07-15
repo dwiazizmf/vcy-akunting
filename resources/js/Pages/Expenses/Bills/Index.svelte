@@ -5,6 +5,10 @@
     import { Input } from '$lib/components/ui/input';
     import * as Table from '$lib/components/ui/table';
     import Pagination from '../../../Components/Pagination.svelte';
+    import FilterPanel from '../../../Components/FilterPanel.svelte';
+    import TableCard from '../../../Components/TableCard.svelte';
+    import ColumnToggle from '../../../Components/ColumnToggle.svelte';
+    import EmptyState from '../../../Components/EmptyState.svelte';
     import { ChevronDown, ChevronRight, Plus } from 'lucide-svelte';
     import { showConfirm } from '../../../Stores/confirmStore.js';
     import { showToast } from '../../../Stores/toast.js';
@@ -20,9 +24,24 @@
     let dateTo = filters.date_to || '';
     let perPage = filters.per_page || 10;
     
-    let debounceTimer;
     let expandedRows = [];
     let selectedIds = [];
+
+    // ================================================
+    // DEFINISI KOLOM 
+    // ================================================
+    let columns = [
+        { key: 'date',        label: 'Date',        visible: true },
+        { key: 'number',      label: 'Number',      visible: true },
+        { key: 'company',     label: 'Perusahaan',  visible: true },
+        { key: 'vendor',      label: 'Vendor',      visible: true },
+        { key: 'type',        label: 'Type',        visible: true },
+        { key: 'status',      label: 'Status',      visible: true },
+        { key: 'payment',     label: 'Payment',     visible: true },
+        { key: 'amount',      label: 'Amount',      visible: true },
+    ];
+
+    $: colVisible = Object.fromEntries(columns.map(c => [c.key, c.visible]));
 
     function toggleAll(e) {
         if (e.target.checked) {
@@ -40,14 +59,21 @@
         }
     }
 
-    function handleFilterChange() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            router.get('/expenses', { search, status, date_from: dateFrom, date_to: dateTo, per_page: perPage }, {
-                preserveState: true,
-                replace: true
-            });
-        }, 300);
+    function applyFilter() {
+        router.get('/expenses', { search, status, date_from: dateFrom, date_to: dateTo, per_page: perPage, page: 1 }, {
+            preserveState: true,
+            replace: true
+        });
+    }
+
+    function resetFilter() {
+        search = ''; status = ''; dateFrom = ''; dateTo = '';
+        applyFilter();
+    }
+
+    function changePerPage(e) {
+        perPage = parseInt(e.target.value);
+        applyFilter();
     }
 
     function onGoToPage(page) {
@@ -88,6 +114,8 @@
             });
         }
     }
+
+    $: hasActiveFilter = !!(search || status || dateFrom || dateTo);
 </script>
 
 <AppLayout title="Expenses">
@@ -97,184 +125,197 @@
                 <h1 class="text-2xl font-bold text-slate-800">Expenses & Bills</h1>
                 <p class="text-sm text-slate-500">Manage your vendor bills and direct expenses.</p>
             </div>
-            <Button on:click={createExpense} class="bg-teal-700 hover:bg-teal-800 text-white cursor-pointer shadow-sm gap-2">
-                <Plus size={16} /> Create Expense
-            </Button>
+            <div class="flex items-center gap-2">
+                {#if selectedIds.length > 0}
+                    <Button variant="outline" class="border-teal-600 text-teal-700 hover:bg-teal-50 shadow-sm" on:click={bulkPost}>
+                        Bulk Post ({selectedIds.length})
+                    </Button>
+                {/if}
+                <Button on:click={createExpense} class="bg-teal-700 hover:bg-teal-800 text-white cursor-pointer shadow-sm gap-2">
+                    <Plus size={16} /> Create Expense
+                </Button>
+            </div>
         </div>
 
         <!-- Stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Bills</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Bills</p>
                 <p class="text-2xl font-bold text-slate-800">{stats.total}</p>
             </div>
-            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Draft</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Draft</p>
                 <p class="text-2xl font-bold text-yellow-600">{stats.draft}</p>
             </div>
-            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Posted</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Posted</p>
                 <p class="text-2xl font-bold text-teal-600">{stats.posted}</p>
             </div>
-            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Amount (Valid)</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Amount (Valid)</p>
                 <p class="text-xl font-bold text-slate-800">Rp {stats.totalAmount.toLocaleString()}</p>
             </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-            <!-- Filter Bar -->
-            <div class="p-4 border-b border-slate-100 flex flex-col lg:flex-row gap-4 justify-between items-center bg-slate-50/50">
-                <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                    <Input type="text" placeholder="Search Number or Vendor..." bind:value={search} on:input={handleFilterChange} class="w-full sm:w-64" />
-                    
-                    <select bind:value={status} on:change={handleFilterChange} class="h-9 w-full sm:w-40 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm">
+        <FilterPanel {hasActiveFilter} onApply={applyFilter} onReset={resetFilter}>
+            <svelte:fragment slot="inputs">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Search</label>
+                    <Input type="text" placeholder="Number or Vendor..." bind:value={search} on:keydown={(e) => e.key === 'Enter' && applyFilter()} class="bg-white border-slate-200" />
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
+                    <select bind:value={status} on:change={applyFilter} class="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-inner outline-none focus:border-teal-500 cursor-pointer">
                         <option value="">All Statuses</option>
                         <option value="draft">Draft</option>
                         <option value="posted">Posted</option>
                         <option value="void">Void</option>
                     </select>
-
-                    <Input type="date" bind:value={dateFrom} on:change={handleFilterChange} class="w-full sm:w-auto" />
-                    <span class="text-slate-400">-</span>
-                    <Input type="date" bind:value={dateTo} on:change={handleFilterChange} class="w-full sm:w-auto" />
                 </div>
-                
-                <div class="flex items-center gap-2 w-full sm:w-auto self-start sm:self-auto">
-                    {#if selectedIds.length > 0}
-                        <Button variant="outline" class="border-teal-600 text-teal-700 hover:bg-teal-50" on:click={bulkPost}>
-                            Bulk Post ({selectedIds.length})
-                        </Button>
-                    {/if}
-                    <span class="text-sm text-slate-500 ml-2">Show</span>
-                    <select bind:value={perPage} on:change={handleFilterChange} class="h-9 w-20 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm">
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                        <option value={100}>100</option>
-                    </select>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">From Date</label>
+                    <Input type="date" bind:value={dateFrom} class="bg-white border-slate-200 cursor-pointer" />
                 </div>
-            </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">To Date</label>
+                    <Input type="date" bind:value={dateTo} class="bg-white border-slate-200 cursor-pointer" />
+                </div>
+            </svelte:fragment>
+        </FilterPanel>
 
-            <div class="overflow-x-auto flex-1">
-                <Table.Root>
-                    <Table.Header class="bg-slate-50">
-                        <Table.Row>
-                            <Table.Head class="w-10 text-center">
-                                <input type="checkbox" on:change={toggleAll} class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300" />
-                            </Table.Head>
-                            <Table.Head class="w-10"></Table.Head>
-                            <Table.Head class="font-semibold text-slate-600">Date</Table.Head>
-                            <Table.Head class="font-semibold text-slate-600">Number</Table.Head>
-                            <Table.Head class="font-semibold text-slate-600">Perusahaan</Table.Head>
-                            <Table.Head class="font-semibold text-slate-600">Vendor</Table.Head>
-                            <Table.Head class="font-semibold text-slate-600">Type</Table.Head>
-                            <Table.Head class="font-semibold text-slate-600">Status</Table.Head>
-                            <Table.Head class="font-semibold text-slate-600">Payment</Table.Head>
-                            <Table.Head class="font-semibold text-slate-600 text-right">Amount</Table.Head>
-                            <Table.Head class="font-semibold text-slate-600 text-right">Actions</Table.Head>
-                        </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                        {#if expenses.length === 0}
-                            <Table.Row>
-                                <Table.Cell colspan="10" class="text-center py-8 text-slate-500">No expenses found matching the criteria.</Table.Cell>
-                            </Table.Row>
-                        {:else}
-                            {#each expenses as expense}
-                                <Table.Row class="hover:bg-slate-50/50 transition-colors group cursor-pointer {selectedIds.includes(expense.id) ? 'bg-teal-50/30' : ''}" on:click={() => toggleRow(expense.id)}>
-                                    <Table.Cell class="py-2.5 text-center" on:click={(e) => e.stopPropagation()}>
-                                        {#if expense.expense_status_code === 'draft'}
-                                            <input type="checkbox" bind:group={selectedIds} value={expense.id} class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300" />
-                                        {/if}
-                                    </Table.Cell>
-                                    <Table.Cell class="py-2.5" on:click={(e) => e.stopPropagation()}>
-                                        <button class="text-slate-400 hover:text-teal-600 transition-colors" on:click={() => toggleRow(expense.id)}>
-                                            {#if expandedRows.includes(expense.id)}
-                                                <ChevronDown size={18} />
-                                            {:else}
-                                                <ChevronRight size={18} />
-                                            {/if}
-                                        </button>
-                                    </Table.Cell>
-                                    <Table.Cell class="py-2.5 text-sm">{new Date(expense.expense_date).toLocaleDateString('id-ID')}</Table.Cell>
-                                    <Table.Cell class="py-2.5 text-sm font-semibold text-slate-800">{expense.expense_number}</Table.Cell>
-                                    <Table.Cell class="py-2.5">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
-                                            {expense.company_name}
-                                        </span>
-                                    </Table.Cell>
-                                    <Table.Cell class="py-2.5 text-sm">{expense.vendor_name || '-'}</Table.Cell>
-                                    <Table.Cell class="py-2.5 text-sm">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {expense.is_direct_expense ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-orange-50 text-orange-700 border border-orange-200'}">
-                                            {expense.is_direct_expense ? 'Direct' : 'Bill'}
-                                        </span>
-                                    </Table.Cell>
-                                    <Table.Cell class="py-2.5">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {expense.expense_status_code === 'posted' ? 'bg-emerald-100 text-emerald-800' : expense.expense_status_code === 'void' ? 'bg-slate-100 text-slate-600' : 'bg-yellow-100 text-yellow-800'}">
-                                            {expense.expense_status_code.toUpperCase()}
-                                        </span>
-                                    </Table.Cell>
-                                    <Table.Cell class="py-2.5">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {expense.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-800' : expense.payment_status === 'partial' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">
-                                            {expense.payment_status.toUpperCase()}
-                                        </span>
-                                    </Table.Cell>
-                                    <Table.Cell class="py-2.5 text-sm font-semibold text-right">Rp {parseFloat(expense.grand_total).toLocaleString('id-ID')}</Table.Cell>
-                                    <Table.Cell class="py-2.5 text-right">
-                                        <div class="flex justify-end gap-2" on:click|stopPropagation>
-                                            {#if expense.expense_status_code === 'draft'}
-                                                <Button variant="outline" size="sm" class="h-7 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 cursor-pointer" on:click={() => postExpense(expense.id)}>Post</Button>
-                                            {/if}
-                                            <Button variant="outline" size="sm" class="h-7 text-xs cursor-pointer" on:click={() => viewExpense(expense.id)}>Edit</Button>
-                                        </div>
-                                    </Table.Cell>
-                                </Table.Row>
-                                
-                                <!-- EXPANDABLE ROW CONTENT -->
-                                {#if expandedRows.includes(expense.id)}
-                                    <Table.Row class="bg-slate-50/80 hover:bg-slate-50/80">
-                                        <Table.Cell colspan="10" class="p-0 border-b border-slate-200">
-                                            <div class="pl-12 pr-6 py-4">
-                                                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Line Items</h4>
-                                                <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
-                                                    <table class="w-full text-sm">
-                                                        <thead class="bg-slate-100 border-b border-slate-200">
-                                                            <tr>
-                                                                <th class="py-2 px-3 text-left font-semibold text-slate-600">Description</th>
-                                                                <th class="py-2 px-3 text-right font-semibold text-slate-600">Amount</th>
-                                                                <th class="py-2 px-3 text-right font-semibold text-slate-600">Tax</th>
-                                                                <th class="py-2 px-3 text-right font-semibold text-slate-600">Total</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {#each expense.items as item}
-                                                                <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
-                                                                    <td class="py-2 px-3">{item.description}</td>
-                                                                    <td class="py-2 px-3 text-right tabular-nums">Rp {parseFloat(item.amount).toLocaleString('id-ID')}</td>
-                                                                    <td class="py-2 px-3 text-right tabular-nums text-slate-500">Rp {parseFloat(item.tax_amount).toLocaleString('id-ID')}</td>
-                                                                    <td class="py-2 px-3 text-right font-medium tabular-nums">Rp {parseFloat(item.total).toLocaleString('id-ID')}</td>
-                                                                </tr>
-                                                            {/each}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                                {#if expense.notes}
-                                                    <div class="mt-3 text-sm text-slate-600 bg-yellow-50/50 p-2 rounded border border-yellow-100">
-                                                        <strong>Notes:</strong> {expense.notes}
-                                                    </div>
-                                                {/if}
-                                            </div>
-                                        </Table.Cell>
-                                    </Table.Row>
-                                {/if}
-                            {/each}
-                        {/if}
-                    </Table.Body>
-                </Table.Root>
-            </div>
+        <TableCard {pagination} {perPage} {hasActiveFilter} statsTotal={stats.total} onChangePerPage={changePerPage} onGoToPage={onGoToPage}>
+            <svelte:fragment slot="toolbar-actions">
+                <ColumnToggle bind:columns={columns} />
+            </svelte:fragment>
             
-            <Pagination {pagination} {onGoToPage} />
-        </div>
+            <Table.Header class="bg-slate-50/60">
+                <Table.Row class="hover:bg-transparent border-b border-slate-100">
+                    <Table.Head class="w-8 text-center"><input type="checkbox" on:change={toggleAll} class="rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer" /></Table.Head>
+                    <Table.Head class="w-8"></Table.Head>
+                    {#if colVisible['date']}    <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Date</Table.Head>{/if}
+                    {#if colVisible['number']}  <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Number</Table.Head>{/if}
+                    {#if colVisible['company']} <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Perusahaan</Table.Head>{/if}
+                    {#if colVisible['vendor']}  <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Vendor</Table.Head>{/if}
+                    {#if colVisible['type']}    <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Type</Table.Head>{/if}
+                    {#if colVisible['status']}  <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Status</Table.Head>{/if}
+                    {#if colVisible['payment']} <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Payment</Table.Head>{/if}
+                    {#if colVisible['amount']}  <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider text-right">Amount</Table.Head>{/if}
+                    <Table.Head class="font-semibold text-slate-500 text-[10px] uppercase tracking-wider text-right">Actions</Table.Head>
+                </Table.Row>
+            </Table.Header>
+            <Table.Body>
+                {#if expenses.length === 0}
+                    <Table.Row>
+                        <Table.Cell colspan="11" class="p-0">
+                            <EmptyState title="Tidak ada Expenses" description="Belum ada data expense yang sesuai dengan kriteria pencarian atau filter Anda." />
+                        </Table.Cell>
+                    </Table.Row>
+                {:else}
+                    {#each expenses as expense}
+                        <Table.Row class="hover:bg-slate-50/50 transition-colors group cursor-pointer {selectedIds.includes(expense.id) ? 'bg-teal-50/30' : ''}" on:click={() => toggleRow(expense.id)}>
+                            <Table.Cell class="py-2.5 text-center" on:click={(e) => e.stopPropagation()}>
+                                {#if expense.expense_status_code === 'draft'}
+                                    <input type="checkbox" bind:group={selectedIds} value={expense.id} class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300 cursor-pointer" />
+                                {/if}
+                            </Table.Cell>
+                            <Table.Cell class="py-2.5" on:click={(e) => e.stopPropagation()}>
+                                <button class="text-slate-400 hover:text-teal-600 transition-colors" on:click={() => toggleRow(expense.id)}>
+                                    {#if expandedRows.includes(expense.id)}
+                                        <ChevronDown size={18} />
+                                    {:else}
+                                        <ChevronRight size={18} />
+                                    {/if}
+                                </button>
+                            </Table.Cell>
+                            {#if colVisible['date']}
+                                <Table.Cell class="py-2.5 text-sm">{new Date(expense.expense_date).toLocaleDateString('id-ID')}</Table.Cell>
+                            {/if}
+                            {#if colVisible['number']}
+                                <Table.Cell class="py-2.5 text-sm font-semibold text-slate-800">{expense.expense_number}</Table.Cell>
+                            {/if}
+                            {#if colVisible['company']}
+                                <Table.Cell class="py-2.5">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
+                                        {expense.company_name}
+                                    </span>
+                                </Table.Cell>
+                            {/if}
+                            {#if colVisible['vendor']}
+                                <Table.Cell class="py-2.5 text-sm">{expense.vendor_name || '-'}</Table.Cell>
+                            {/if}
+                            {#if colVisible['type']}
+                                <Table.Cell class="py-2.5 text-sm">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {expense.is_direct_expense ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-orange-50 text-orange-700 border border-orange-200'}">
+                                        {expense.is_direct_expense ? 'Direct' : 'Bill'}
+                                    </span>
+                                </Table.Cell>
+                            {/if}
+                            {#if colVisible['status']}
+                                <Table.Cell class="py-2.5">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {expense.expense_status_code === 'posted' ? 'bg-emerald-100 text-emerald-800' : expense.expense_status_code === 'void' ? 'bg-slate-100 text-slate-600' : 'bg-yellow-100 text-yellow-800'}">
+                                        {expense.expense_status_code.toUpperCase()}
+                                    </span>
+                                </Table.Cell>
+                            {/if}
+                            {#if colVisible['payment']}
+                                <Table.Cell class="py-2.5">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {expense.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-800' : expense.payment_status === 'partial' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">
+                                        {expense.payment_status.toUpperCase()}
+                                    </span>
+                                </Table.Cell>
+                            {/if}
+                            {#if colVisible['amount']}
+                                <Table.Cell class="py-2.5 text-sm font-semibold text-right">Rp {parseFloat(expense.grand_total).toLocaleString('id-ID')}</Table.Cell>
+                            {/if}
+                            <Table.Cell class="py-2.5 text-right">
+                                <div class="flex justify-end gap-2" on:click|stopPropagation>
+                                    {#if expense.expense_status_code === 'draft'}
+                                        <Button variant="outline" size="sm" class="h-7 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 cursor-pointer" on:click={() => postExpense(expense.id)}>Post</Button>
+                                    {/if}
+                                    <Button variant="outline" size="sm" class="h-7 text-xs cursor-pointer" on:click={() => viewExpense(expense.id)}>Edit</Button>
+                                </div>
+                            </Table.Cell>
+                        </Table.Row>
+                        
+                        {#if expandedRows.includes(expense.id)}
+                            <Table.Row class="bg-slate-50/80 hover:bg-slate-50/80">
+                                <Table.Cell colspan="11" class="p-0 border-b border-slate-200">
+                                    <div class="pl-12 pr-6 py-4">
+                                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Line Items</h4>
+                                        <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                                            <table class="w-full text-sm">
+                                                <thead class="bg-slate-100 border-b border-slate-200">
+                                                    <tr>
+                                                        <th class="py-2 px-3 text-left font-semibold text-slate-600">Description</th>
+                                                        <th class="py-2 px-3 text-right font-semibold text-slate-600">Amount</th>
+                                                        <th class="py-2 px-3 text-right font-semibold text-slate-600">Tax</th>
+                                                        <th class="py-2 px-3 text-right font-semibold text-slate-600">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {#each expense.items as item}
+                                                        <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                                                            <td class="py-2 px-3">{item.description}</td>
+                                                            <td class="py-2 px-3 text-right tabular-nums">Rp {parseFloat(item.amount).toLocaleString('id-ID')}</td>
+                                                            <td class="py-2 px-3 text-right tabular-nums text-slate-500">Rp {parseFloat(item.tax_amount).toLocaleString('id-ID')}</td>
+                                                            <td class="py-2 px-3 text-right font-medium tabular-nums">Rp {parseFloat(item.total).toLocaleString('id-ID')}</td>
+                                                        </tr>
+                                                    {/each}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {#if expense.notes}
+                                            <div class="mt-3 text-sm text-slate-600 bg-yellow-50/50 p-2 rounded border border-yellow-100">
+                                                <strong>Notes:</strong> {expense.notes}
+                                            </div>
+                                        {/if}
+                                    </div>
+                                </Table.Cell>
+                            </Table.Row>
+                        {/if}
+                    {/each}
+                {/if}
+            </Table.Body>
+        </TableCard>
     </div>
 </AppLayout>
