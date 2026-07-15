@@ -80,6 +80,8 @@ Fungsi/komponen berikut **HARUS dibuat sebagai komponen Svelte terpisah** jika s
 2. Apakah ini kandidat komponen reusable? → jika ya, buat terpisah
 3. Apakah tampilan mobile sudah dicek? → jangan pakai `overflow-hidden` di container yang ada dropdown
 4. Apakah sudah build untuk verifikasi tidak ada error?
+5. **Rekomendasi Model AI**: Setiap membuat *Implementation Plan*, **WAJIB** menambahkan keterangan apakah *job* tersebut bisa dikerjakan oleh model ringan (misal: **Gemini Flash**), atau wajib dikerjakan oleh model berat (misal: **Gemini Pro**, **Claude**, atau **GPT**).
+
 
 1. Aturan Penanganan Pajak & Diskon (JSONB Hybrid)
 
