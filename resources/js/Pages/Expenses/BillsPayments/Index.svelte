@@ -79,6 +79,16 @@
         }
     }
 
+    async function unpostPayment(id) {
+        if (await showConfirm('Are you sure you want to unpost this payment? The related journal will be deleted.')) {
+            router.post(`/expense-payments/${id}/unpost`, {}, {
+                preserveScroll: true,
+                onSuccess: () => showToast('Payment unposted successfully!', 'success'),
+                onError: (e) => showToast(Object.values(e)[0] || 'Failed to unpost payment.', 'error')
+            });
+        }
+    }
+
     async function bulkPost() {
         if (selectedIds.length === 0) return;
         if (await showConfirm(`Are you sure you want to post ${selectedIds.length} payments to ledger?`)) {
@@ -201,6 +211,8 @@
                             <Table.Cell class="text-right">
                                 {#if payment.status !== 'posted'}
                                     <Button variant="outline" size="sm" class="h-7 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 cursor-pointer" on:click={() => postPayment(payment.id)}>Post</Button>
+                                {:else}
+                                    <Button variant="outline" size="sm" class="h-7 text-xs border-orange-500 text-orange-600 hover:bg-orange-50 cursor-pointer" on:click={() => unpostPayment(payment.id)}>Unpost</Button>
                                 {/if}
                             </Table.Cell>
                         </Table.Row>

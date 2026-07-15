@@ -92,6 +92,7 @@ class ExpensePaymentController extends Controller
 
     public function store(Request $request)
     {
+        \App\Helpers\PeriodLockHelper::validateDate($request->payment_date);
         $request->validate([
             'payment_date' => 'required|date',
             'vendor_id' => 'required|exists:vendors,id',
@@ -215,6 +216,24 @@ class ExpensePaymentController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Failed to post payment: ' . $e->getMessage()]);
+        }
+    }
+
+    public function unpost(ExpensePayment $expense_payment)
+    {
+        if ($expense_payment->status !== 'posted') {
+            return back()->withErrors(['error' => 'Payment is not posted.']);
+        }
+
+        try {
+            DB::beginTransaction();
+            $this->journalService->unpostExpensePayment($expense_payment);
+            $expense_payment->update(['status' => 'draft']);
+            DB::commit();
+            return back()->with('success', 'Payment unposted successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Failed to unpost payment: ' . $e->getMessage()]);
         }
     }
 

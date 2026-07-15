@@ -86,8 +86,10 @@ Route::get('invoices/print', [InvoiceController::class, 'print'])->name('invoice
 Route::post('invoices/bulk-post', [InvoiceController::class, 'bulkPost'])->name('invoices.bulk-post');
 Route::resource('invoices', InvoiceController::class);
 Route::post('invoices/{invoice}/post', [InvoiceController::class, 'post'])->name('invoices.post');
+Route::post('invoices/{invoice}/unpost', [InvoiceController::class, 'unpost'])->name('invoices.unpost');
 
 // Payment routes
+Route::post('payments/{payment}/unpost', [PaymentController::class, 'unpost'])->name('payments.unpost');
 Route::resource('payments', PaymentController::class)->except(['edit', 'update']);
 Route::get('/api/payments/outstanding', [PaymentController::class, 'outstandingInvoices']);
 Route::get('/api/invoices/{invoice}', function (\App\Models\Incomes\Invoice $invoice) {
@@ -110,8 +112,10 @@ Route::resource('vendors', VendorController::class)->except(['show']);
 Route::post('expenses/bulk-post', [ExpenseController::class, 'bulkPost'])->name('expenses.bulk-post');
 Route::resource('expenses', ExpenseController::class);
 Route::post('expenses/{expense}/post', [ExpenseController::class, 'post'])->name('expenses.post');
+Route::post('expenses/{expense}/unpost', [ExpenseController::class, 'unpost'])->name('expenses.unpost');
 Route::post('expense-payments/bulk-post', [ExpensePaymentController::class, 'bulkPost'])->name('expense-payments.bulk-post');
 Route::post('expense-payments/{expense_payment}/post', [ExpensePaymentController::class, 'post'])->name('expense-payments.post');
+Route::post('expense-payments/{expense_payment}/unpost', [ExpensePaymentController::class, 'unpost'])->name('expense-payments.unpost');
 Route::resource('expense-payments', ExpensePaymentController::class)->only(['index', 'create', 'store']);
 
 Route::get('/customers', function (Illuminate\Http\Request $request) {
@@ -582,6 +586,13 @@ Route::prefix('api/settings')->group(function () {
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
     // Roles & Permissions
+    Route::get('/api/roles', [RoleController::class, 'getRoles']);
+    Route::post('/users/{user}/roles', [RoleController::class, 'assignRole']);
+    Route::delete('/users/{user}/roles/{role}', [RoleController::class, 'removeRole']);
+
+    Route::get('/posted-periode', [App\Http\Controllers\Settings\PostedPeriodeController::class, 'index']);
+    Route::post('/posted-periode/{periode}/toggle', [App\Http\Controllers\Settings\PostedPeriodeController::class, 'toggle']);
+
     Route::get('/roles', [RoleController::class, 'index']);
     Route::post('/roles', [RoleController::class, 'store']);
     Route::put('/roles/{id}', [RoleController::class, 'update']);

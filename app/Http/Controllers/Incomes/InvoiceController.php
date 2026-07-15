@@ -162,6 +162,7 @@ class InvoiceController extends Controller
 
     public function store(Request $request)
     {
+        \App\Helpers\PeriodLockHelper::validateDate($request->invoiced_at);
         $validated = $request->validate([
             'customer_id'         => 'required|integer',
             'customer_name'       => 'required|string',
@@ -485,6 +486,27 @@ class InvoiceController extends Controller
         return back()->with('success', $message);
     }
 
+    public function unpost(Invoice $invoice)
+    {
+        \App\Helpers\PeriodLockHelper::validateDate($invoice->invoiced_at);
+
+        if ($invoice->payment_status !== 'unpaid') {
+            return redirect()->back()->withErrors(['status' => 'Invoice ini sudah memiliki pembayaran aktif. Harap batalkan pembayaran (unpost & hapus) terlebih dahulu.']);
+        }
+
+        if (!$invoice->isPosted) {
+            return back()->with('error', 'Invoice ini belum diposting.');
+        }
+
+        try {
+            $this->journalService->unpostInvoiceJournal($invoice);
+            return back()->with('success', 'Berhasil membatalkan posting invoice.');
+        } catch (\Exception $e) {
+            \Log::error('Error unposting invoice: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membatalkan posting: ' . $e->getMessage());
+        }
+    }
+
     public function edit(Invoice $invoice)
     {
         $invoice->load('items');
@@ -526,6 +548,13 @@ class InvoiceController extends Controller
 
     public function update(Request $request, Invoice $invoice)
     {
+        \App\Helpers\PeriodLockHelper::validateDate($invoice->invoiced_at);
+        \App\Helpers\PeriodLockHelper::validateDate($request->invoiced_at);
+
+        if ($invoice->payment_status !== 'unpaid') {
+            return redirect()->back()->withErrors(['status' => 'Invoice ini sudah memiliki pembayaran aktif. Harap hapus pembayaran terlebih dahulu jika ingin mengubah data.']);
+        }
+
         if ($invoice->invoice_status_code !== 'draft') {
             return redirect()->back()->withErrors(['status' => 'Hanya invoice dengan status Draft yang bisa diedit.']);
         }
@@ -742,8 +771,15 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index')->with('success', 'Invoice updated successfully.');
     }
 
+
     public function destroy(Invoice $invoice)
     {
+        \App\Helpers\PeriodLockHelper::validateDate($invoice->invoiced_at);
+
+        if ($invoice->payment_status !== 'unpaid') {
+            return redirect()->back()->withErrors(['status' => 'Invoice ini sudah memiliki pembayaran aktif. Harap batalkan pembayaran (unpost & hapus) terlebih dahulu.']);
+        }
+
         if ($invoice->invoice_status_code === 'posted') {
             return redirect()->back()->withErrors(['status' => 'Invoice sudah di-posting. Harap Unpost terlebih dahulu sebelum membatalkan.']);
         }

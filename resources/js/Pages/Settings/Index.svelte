@@ -9,7 +9,7 @@
     Building2, Users, FileText, Receipt, Settings, Search, Plus,
     Pencil, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Save, X, AlertCircle, CheckCircle, Shield, Key,
-    Upload, Image, Tag, Percent
+    Upload, Image, Tag, Percent, Lock, Unlock
   } from 'lucide-svelte';
 
   // ============================================================
@@ -98,6 +98,32 @@
     setTimeout(() => toast = { ...toast, show: false }, 3000);
   }
   import { showConfirm } from '../../Stores/confirmStore.js';
+
+  // Periods
+  let periodYear = new Date().getFullYear();
+  let periods = [];
+  let periodLoading = false;
+
+  async function loadPeriods() {
+    periodLoading = true;
+    try {
+      periods = await apiFetch(`/api/settings/posted-periode?year=${periodYear}`);
+    } catch(e) { showToast('Gagal memuat data periode', 'error'); }
+    periodLoading = false;
+  }
+
+  async function togglePeriod(id, currentStatus) {
+    if (!(await showConfirm(currentStatus ? 'Buka periode ini?' : 'Kunci periode ini?'))) return;
+    try {
+      await apiFetch(`/api/settings/posted-periode/${id}/toggle`, { method: 'POST', body: { status: !currentStatus } });
+      showToast('Status periode berhasil diubah', 'success');
+      await loadPeriods();
+    } catch(e) { showToast('Gagal mengubah status', 'error'); }
+  }
+
+  $: if (currentTab === 'periods') {
+     loadPeriods();
+  }
 
   // ============================================================
   // CSRF TOKEN
@@ -533,7 +559,8 @@
           { id: 'invoice-setting', label: 'Setting Faktur', icon: FileText },
           { id: 'taxes', label: 'Pajak', icon: Receipt },
           { id: 'discounts', label: 'Diskon', icon: Percent },
-          { id: 'invoice-types', label: 'Tipe Invoice', icon: Tag }
+          { id: 'invoice-types', label: 'Tipe Invoice', icon: Tag },
+          { id: 'periods', label: 'Kunci Periode', icon: Lock }
         ] as tab}
           <button
             id="tab-{tab.id}"
@@ -1173,6 +1200,50 @@
                 <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={invoiceTypesPag.currentPage >= invoiceTypesPag.lastPage} on:click={() => loadInvoiceTypes(invoiceTypePag.currentPage + 1)}><ChevronRight class="h-3.5 w-3.5" /></button>
                 <button class="h-7 w-7 flex items-center justify-center rounded hover:bg-slate-200 text-slate-500 disabled:opacity-30" disabled={invoiceTypesPag.currentPage >= invoiceTypesPag.lastPage} on:click={() => loadInvoiceTypes(invoiceTypesPag.lastPage)}><ChevronsRight class="h-3.5 w-3.5" /></button>
               </div>
+            </div>
+          {/if}
+        </Card.Content>
+      </Card.Root>
+    {/if}
+
+    <!-- Kunci Periode Tab -->
+    {#if currentTab === 'periods'}
+      <Card.Root class="shadow-sm border-slate-200">
+        <Card.Header class="bg-slate-50/50 border-b border-slate-100 pb-3">
+          <div class="flex items-center justify-between">
+            <div class="space-y-1">
+              <Card.Title class="text-base text-slate-800">Kunci Periode Akuntansi</Card.Title>
+              <Card.Description class="text-xs">Cegah perubahan atau penambahan transaksi pada periode yang sudah ditutup.</Card.Description>
+            </div>
+            <div class="flex items-center gap-2">
+              <Button variant="outline" size="sm" class="h-8 w-8 p-0 border-slate-200 cursor-pointer" on:click={() => { periodYear--; loadPeriods(); }}><ChevronLeft class="h-4 w-4" /></Button>
+              <span class="text-sm font-bold w-12 text-center text-slate-700">{periodYear}</span>
+              <Button variant="outline" size="sm" class="h-8 w-8 p-0 border-slate-200 cursor-pointer" on:click={() => { periodYear++; loadPeriods(); }}><ChevronRight class="h-4 w-4" /></Button>
+            </div>
+          </div>
+        </Card.Header>
+        <Card.Content class="p-0">
+          {#if periodLoading}
+            <div class="p-8 text-center text-sm text-slate-500">Memuat periode...</div>
+          {:else}
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4">
+              {#each periods as p}
+                <div class="flex flex-col items-center justify-center p-4 border rounded-xl transition-all {p.status ? 'border-rose-200 bg-rose-50/30' : 'border-teal-200 bg-teal-50/30'}">
+                  <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Bulan</div>
+                  <div class="text-xl font-black mb-3 {p.status ? 'text-rose-900' : 'text-teal-900'}">{p.bulan}</div>
+                  
+                  <button
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-colors {p.status ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-teal-100 text-teal-700 hover:bg-teal-200'}"
+                    on:click={() => togglePeriod(p.id, p.status)}
+                  >
+                    {#if p.status}
+                      <Lock class="h-3 w-3" /> Tutup
+                    {:else}
+                      <Unlock class="h-3 w-3" /> Buka
+                    {/if}
+                  </button>
+                </div>
+              {/each}
             </div>
           {/if}
         </Card.Content>

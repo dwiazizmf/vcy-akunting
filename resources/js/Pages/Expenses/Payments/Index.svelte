@@ -5,7 +5,8 @@
   import { Input } from '$lib/components/ui/input';
   import * as Card from '$lib/components/ui/card';
   import * as Table from '$lib/components/ui/table';
-  import { Search, Eye, Plus, CreditCard, ArrowLeft, ArrowRight } from 'lucide-svelte';
+  import { Plus, Search, Eye, ArrowLeft, ArrowRight, RefreshCw, CreditCard } from 'lucide-svelte';
+  import { showConfirm } from '../../../Stores/confirmStore.js';
   import { showToast } from '../../../Stores/toast.js';
 
   export let payments = [];
@@ -23,7 +24,17 @@
 
   function goToPage(page) {
     if (page < 1 || page > pagination.lastPage) return;
-    router.get('/payments', { search, per_page: perPage, page }, { preserveState: true, replace: true });
+    router.get('/payments', { search, per_page: perPage, page }, { preserveState: true, preserveScroll: true, replace: true });
+  }
+
+  async function unpostPayment(id) {
+    if (await showConfirm('Batalkan posting payment ini? Jurnal akuntansi yang terkait akan dihapus.')) {
+      router.post(`/payments/${id}/unpost`, {}, {
+        preserveScroll: true,
+        onSuccess: () => showToast('Posting payment berhasil dibatalkan!', 'success'),
+        onError: (e) => showToast(Object.values(e)[0] || 'Gagal unpost payment.', 'error'),
+      });
+    }
   }
 
   const methodLabel = { cash: 'Tunai', transfer: 'Transfer', giro: 'Giro', cheque: 'Cek' };
@@ -76,7 +87,8 @@
             <Table.Head class="text-xs font-bold uppercase text-slate-500">Metode</Table.Head>
             <Table.Head class="text-xs font-bold uppercase text-slate-500">Bank / Kas</Table.Head>
             <Table.Head class="text-xs font-bold uppercase text-slate-500">Referensi</Table.Head>
-            <Table.Head class="w-16"></Table.Head>
+            <Table.Head class="text-xs font-bold uppercase text-slate-500">Status</Table.Head>
+            <Table.Head class="w-20"></Table.Head>
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -101,6 +113,16 @@
               <Table.Cell class="text-slate-500 text-sm">{p.bank_name}</Table.Cell>
               <Table.Cell class="text-slate-400 text-xs font-mono">{p.reference || '-'}</Table.Cell>
               <Table.Cell>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {p.status === 'posted' ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-800'}">
+                  {(p.status || 'draft').toUpperCase()}
+                </span>
+              </Table.Cell>
+              <Table.Cell class="flex items-center gap-1">
+                {#if p.status === 'posted'}
+                  <button class="p-1.5 rounded-md text-orange-400 hover:text-orange-600 hover:bg-orange-50 transition" on:click={() => unpostPayment(p.id)} title="Unpost Payment">
+                    <RefreshCw class="h-4 w-4" />
+                  </button>
+                {/if}
                 <button class="p-1.5 rounded-md text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition" on:click={() => router.visit(`/payments/${p.id}`)} title="Lihat Detail">
                   <Eye class="h-4 w-4" />
                 </button>

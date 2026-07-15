@@ -112,6 +112,7 @@ class ExpenseController extends Controller
 
     public function store(Request $request)
     {
+        \App\Helpers\PeriodLockHelper::validateDate($request->date);
         // Validation logic
         $validated = $request->validate([
             'expense_number' => 'required|string|max:191',
@@ -233,6 +234,20 @@ class ExpenseController extends Controller
             return back()->with('success', 'Expense posted successfully.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Failed to post expense: ' . $e->getMessage()]);
+        }
+    }
+
+    public function unpost(Expense $expense)
+    {
+        if ($expense->expense_status_code !== 'posted') {
+            return back()->withErrors(['error' => 'Expense is not posted.']);
+        }
+
+        try {
+            $this->journalService->unpostExpense($expense);
+            return back()->with('success', 'Expense unposted successfully.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to unpost expense: ' . $e->getMessage()]);
         }
     }
 

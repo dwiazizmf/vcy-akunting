@@ -68,6 +68,7 @@ class JournalService
      */
     public function createInvoiceJournal(Invoice $invoice): Journal
     {
+        \App\Helpers\PeriodLockHelper::validateDate($invoice->invoiced_at);
         $companyId = $invoice->company_id;
 
         // Load customer with account
@@ -163,6 +164,31 @@ class JournalService
     }
 
     /**
+     * Unpost invoice journal.
+     */
+    public function unpostInvoiceJournal(Invoice $invoice): void
+    {
+        \App\Helpers\PeriodLockHelper::validateDate($invoice->invoiced_at);
+
+        DB::transaction(function () use ($invoice) {
+            $journalId = \App\Models\Accounting\Ledger::where('ledgerable_type', Invoice::class)
+                ->where('ledgerable_id', $invoice->id)
+                ->value('journal_id');
+                
+            if ($journalId) {
+                // Delete ledgers first to be safe (softDeletes or hard deletes)
+                \App\Models\Accounting\Ledger::where('journal_id', $journalId)->forceDelete();
+                Journal::where('id', $journalId)->forceDelete();
+            }
+
+            $invoice->update([
+                'isPosted'             => false,
+                'invoice_status_code'  => 'draft',
+            ]);
+        });
+    }
+
+    /**
      * Create journal when Payment is received.
      *
      * Entry:
@@ -172,6 +198,7 @@ class JournalService
      */
     public function createPaymentJournal(Payment $payment): Journal
     {
+        \App\Helpers\PeriodLockHelper::validateDate($payment->paid_at);
         $companyId = $payment->company_id;
 
         $payment->load(['bankAccount', 'invoices.invoice.customer']);
@@ -332,6 +359,23 @@ class JournalService
     }
 
     /**
+     * Unpost payment journal.
+     */
+    public function unpostPaymentJournal(Payment $payment): void
+    {
+        \App\Helpers\PeriodLockHelper::validateDate($payment->paid_at);
+
+        DB::transaction(function () use ($payment) {
+            if ($payment->journal_id) {
+                \App\Models\Accounting\Ledger::where('journal_id', $payment->journal_id)->forceDelete();
+                Journal::where('id', $payment->journal_id)->forceDelete();
+            }
+
+            $payment->update(['journal_id' => null]);
+        });
+    }
+
+    /**
      * Update payment_status for a given invoice based on total paid.
      */
     public function updateInvoicePaymentStatus(int $invoiceId): void
@@ -356,6 +400,8 @@ class JournalService
      */
     public function postExpense(\App\Models\Expenses\Expense $expense): ?Journal
     {
+        \App\Helpers\PeriodLockHelper::validateDate($expense->date);
+
         return DB::transaction(function () use ($expense) {
             $companyId = session('company_id') ?: $expense->company_id;
             
@@ -442,8 +488,30 @@ class JournalService
         });
     }
 
+    /**
+     * Unpost expense journal.
+     */
+    public function unpostExpense(\App\Models\Expenses\Expense $expense): void
+    {
+        \App\Helpers\PeriodLockHelper::validateDate($expense->date);
+
+        DB::transaction(function () use ($expense) {
+            if ($expense->journal_id) {
+                \App\Models\Accounting\Ledger::where('journal_id', $expense->journal_id)->forceDelete();
+                Journal::where('id', $expense->journal_id)->forceDelete();
+            }
+
+            $expense->update([
+                'journal_id' => null,
+                'expense_status_code' => 'draft'
+            ]);
+        });
+    }
+
     public function postExpensePayment(\App\Models\Expenses\ExpensePayment $payment): ?Journal
     {
+        \App\Helpers\PeriodLockHelper::validateDate($payment->payment_date);
+
         return DB::transaction(function () use ($payment) {
             $companyId = session('company_id') ?: $payment->company_id;
             
@@ -525,6 +593,27 @@ class JournalService
             }
 
             return $journal;
+        });
+    }
+
+    /**
+     * Unpost expense payment journal.
+     */
+    public function unpostExpensePayment(\App\Models\Expenses\ExpensePayment $payment): void
+    {
+        \App\Helpers\PeriodLockHelper::validateDate($payment->payment_date);
+
+        DB::transaction(function () use ($payment) {
+            if ($payment->journal_id) {
+                \App\Models\Accounting\Ledger::where('journal_id', $payment->journal_id)->forceDelete();
+                Journal::where('id', $payment->journal_id)->forceDelete();
+            }
+
+            $payment->update(['journal_id' => null]);
+
+            foreach ($payment->lines as $line) {
+                $this->updateExpensePaymentStatus($line->expense_id);
+            }
         });
     }
 

@@ -124,6 +124,7 @@ class PaymentController extends Controller
 
     public function store(Request $request)
     {
+        \App\Helpers\PeriodLockHelper::validateDate($request->paid_at);
         $validated = $request->validate([
             'paid_at'         => 'required|date',
             'tax_id'          => 'nullable|exists:taxes,id',
@@ -268,8 +269,25 @@ class PaymentController extends Controller
 
     public function destroy(Payment $payment)
     {
+        \App\Helpers\PeriodLockHelper::validateDate($payment->paid_at);
         // TODO: Reverse journal before deleting
         $payment->delete();
         return redirect()->route('payments.index')->with('success', 'Pembayaran dihapus.');
+    }
+
+    public function unpost(Payment $payment)
+    {
+        if ($payment->status !== 'posted') {
+            return back()->with('error', 'Payment ini belum diposting.');
+        }
+
+        try {
+            $this->journalService->unpostPaymentJournal($payment);
+            $payment->update(['status' => 'draft']);
+            return back()->with('success', 'Berhasil membatalkan posting payment.');
+        } catch (\Exception $e) {
+            \Log::error('Error unposting payment: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membatalkan posting: ' . $e->getMessage());
+        }
     }
 }
