@@ -105,3 +105,61 @@ Mengingat integritas data sangat krusial dalam akuntansi, sistem diwajibkan memi
 - **Fase 3: Expenses & Bills** (Pembelian operasional, Vendor Bills, dan Bill Payments).
 - **Fase 4: Rekonsiliasi Bank** (Fitur upload Excel rekening koran, auto-matching, dan manual approval).
 - **Fase 5: Laporan Keuangan Lengkap** (Neraca 8-Kolom, Laba Rugi, Mutasi Piutang, Aging Report Piutang).
+
+🧠 Brainstorm: Audit & Grand Plan VCY Accounting
+📋 Context
+Aplikasi ini sudah memiliki pondasi yang kuat (modul Incomes matang, dan modul Expenses seperti Bills & BillsPayments sudah berfungsi baik). Namun, kita perlu menyusun skala prioritas pengembangan selanjutnya yang seimbang antara menambah fitur, merapikan kode (technical debt), dan menjaga keandalan sistem berskala besar.
+
+Berikut adalah 4 opsi arah fokus pengembangan yang bisa kita ambil saat ini:
+
+Option A: Fokus pada Keamanan & Audit Trail (Prioritas Sistem)
+Meningkatkan pertahanan aplikasi dari manipulasi internal dan mencatat setiap perubahan data keuangan yang sensitif.
+
+✅ Pros:
+
+Audit Logging: Menggunakan (misal: spatie/laravel-activitylog) untuk merekam "Siapa, melakukan apa, kapan, dan mengubah apa" (data before-after). Jika tagihan berubah, kita punya buktinya.
+Pessimistic Locking: Memastikan pencegahan race-condition saat men-generate nomor dokumen atau menyimpan jurnal secara bersamaan.
+RBAC (Role-Based Access): Mencegah user biasa membatalkan transaksi yang sudah divalidasi/dilunasi.
+❌ Cons:
+
+Fokus murni di backend, tidak ada perubahan visual atau fitur bisnis baru bagi user.
+📊 Effort: Medium
+
+Option B: Fokus pada Performa & Beban Server (Scalability)
+Mengoptimalkan aplikasi agar tidak lambat atau crash saat data mencapai ratusan ribu baris, terutama karena kita menggunakan database legacy.
+
+✅ Pros:
+
+Resolusi N+1 Query: Mencegah server mati kehabisan memori dengan memastikan implementasi Eager Loading (with()) di semua Controller tabel.
+Database Indexing: Mempercepat pencarian data dengan menambahkan index pada kolom krusial (nomor invoice, tanggal, status).
+Optimasi Report: Menggunakan chunking atau paginasi berbasis cursor untuk penarikan laporan skala besar.
+❌ Cons:
+
+Membutuhkan pengetesan ekstensif (load testing) untuk memastikan perubahan query tidak merusak logika bisnis.
+📊 Effort: Medium to High
+
+Option C: Fokus Standarisasi UI/UX & Reusability (Technical Debt)
+Menyelesaikan ekstraksi komponen UI yang berulang sesuai dengan panduan .agents/project-overview.md.
+
+✅ Pros:
+
+Mengekstrak DataTable.svelte dan EmptyState.svelte sebagai komponen utuh.
+Menghilangkan ribuan baris kode yang duplikat di halaman Index.svelte pada modul Invoices, Payments, Bills, dll.
+Membuat pembuatan halaman modul baru di masa depan menjadi sangat instan.
+❌ Cons:
+
+Memaksa kita memodifikasi ulang halaman yang saat ini "sudah jalan dan aman-aman saja" (seperti Bills dan Invoices).
+📊 Effort: Medium
+
+Option D: Fokus Penyelesaian Modul Bisnis (Fitur Baru)
+Melanjutkan pengembangan fungsionalitas bisnis yang belum tersentuh atau belum selesai seratus persen.
+
+✅ Pros:
+
+Menyelesaikan modul Settings (Pengaturan Pajak, Chart of Accounts, User Management).
+Menyelesaikan modul Accounting/Journals agar terintegrasi penuh dengan seluruh transaksi (Invoices & Bills otomatis masuk ke Jurnal).
+Menjadikan aplikasi mencapai status Minimum Viable Product (MVP) lebih cepat.
+❌ Cons:
+
+Membangun fitur baru tanpa membereskan opsi A, B, atau C terlebih dahulu berarti kita menumpuk "utang" performa dan UI yang harus dibayar lebih mahal di akhir proyek.
+📊 Effort: High
