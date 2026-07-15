@@ -12,6 +12,7 @@ use App\Http\Controllers\Settings\RoleController;
 use App\Http\Controllers\Settings\InvoiceSettingController;
 use App\Http\Controllers\Settings\PaymentLimitController;
 use App\Http\Controllers\Settings\BankAccountController;
+use App\Http\Controllers\Settings\ActivityLogController;
 use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\JournalController;
 use App\Http\Controllers\Accounting\LedgerController;
@@ -543,6 +544,7 @@ Route::get('/upload-no-faktur', function () {
 
 // Main Settings page (Inertia)
 Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+Route::get('/settings/activity-log', [ActivityLogController::class, 'index'])->name('activity-log');
 
 // Payment Limits & Categories
 Route::get('/settings/payment-limits', [PaymentLimitController::class, 'index'])->name('payment-limits.index');

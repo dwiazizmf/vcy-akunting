@@ -10,10 +10,12 @@ use App\Models\Settings\Company;
 use App\Models\Expenses\Vendor;
 use App\Models\Settings\BankAccount;
 use App\Models\Accounting\Journal;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Expense extends Model
 {
-    use HasFactory, SoftDeletes, \App\Traits\HasHybridTaxes, \App\Traits\BelongsToCompany;
+    use HasFactory, SoftDeletes, \App\Traits\HasHybridTaxes, \App\Traits\BelongsToCompany, LogsActivity;
 
     protected $guarded = ['id'];
 
@@ -23,6 +25,14 @@ class Expense extends Model
         'header_tax_details' => 'array',
         'is_direct_expense' => 'boolean',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     public function vendor()
     {

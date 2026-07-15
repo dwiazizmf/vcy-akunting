@@ -769,36 +769,95 @@
             </DropdownMenu.Content>
         </DropdownMenu.Root>
 
-        <a
-            href="/settings"
-            class={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ml-auto",
-                pathname.startsWith("/settings")
-                    ? "bg-teal-700 text-white shadow-inner ring-1 ring-teal-600"
-                    : "text-teal-100 hover:text-white hover:bg-teal-700/40",
-            )}
-        >
-            <svg
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        <!-- Settings Dropdown -->
+        <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild let:builder>
+                <Button
+                    builders={[builder]}
+                    variant="ghost"
+                    class={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 h-auto text-xs font-medium rounded-md transition cursor-pointer ml-auto",
+                        pathname.startsWith("/settings")
+                            ? "bg-teal-700 text-white shadow-inner ring-1 ring-teal-600"
+                            : "text-teal-100 hover:text-white hover:bg-teal-700/40",
+                    )}
+                >
+                    <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                        />
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                    </svg>
+                    Settings
+                    <svg
+                        class="h-3 w-3 opacity-60"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                        />
+                    </svg>
+                </Button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content
+                class="w-48 bg-white border border-slate-200 rounded-lg p-1 shadow-lg"
             >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-            </svg>
-            Settings
-        </a>
+                <DropdownMenu.Item
+                    class={cn(
+                        "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold",
+                        pathname === "/settings"
+                            ? "bg-teal-50 text-teal-700"
+                            : "text-slate-700 hover:bg-slate-50",
+                    )}
+                >
+                    <span
+                        class={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            pathname === "/settings"
+                                ? "bg-teal-600"
+                                : "bg-slate-300",
+                        )}
+                    ></span>
+                    <a href="/settings" class="w-full">General Settings</a>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                    class={cn(
+                        "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold",
+                        pathname.startsWith("/settings/activity-log")
+                            ? "bg-teal-50 text-teal-700"
+                            : "text-slate-700 hover:bg-slate-50",
+                    )}
+                >
+                    <span
+                        class={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            pathname.startsWith("/settings/activity-log")
+                                ? "bg-teal-600"
+                                : "bg-slate-300",
+                        )}
+                    ></span>
+                    <a href="/settings/activity-log" class="w-full">Activity Log</a>
+                </DropdownMenu.Item>
+            </DropdownMenu.Content>
+        </DropdownMenu.Root>
     </nav>
 
     <!-- Mobile Menu Drawer -->

@@ -9,10 +9,12 @@ use App\Models\Settings\Company;
 use App\Models\Settings\User;
 use App\Models\Settings\BankAccount;
 use App\Models\Accounting\Journal;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Payment extends Model
 {
-    use SoftDeletes, \App\Traits\BelongsToCompany;
+    use SoftDeletes, \App\Traits\BelongsToCompany, LogsActivity;
 
     protected $fillable = [
         'company_id', 'payment_number',
@@ -27,6 +29,14 @@ class Payment extends Model
         'overpayment_amount' => 'decimal:2',
         'adjustments'        => 'array',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     public function invoices()
     {

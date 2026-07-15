@@ -110,19 +110,24 @@ class JournalController extends Controller
             $date = Carbon::parse($validated['date']);
             $prefix = 'JRN-' . $date->format('Ym') . '-';
             
-            $lastJournal = Journal::where('company_id', $companyId)
-                                  ->where('journal_number', 'like', $prefix . '%')
-                                  ->orderBy('journal_number', 'desc')
-                                  ->first();
-                                  
-            if ($lastJournal) {
-                $lastNumber = intval(substr($lastJournal->journal_number, -4));
-                $newNumber = $lastNumber + 1;
-            } else {
-                $newNumber = 1;
-            }
-            
-            $journalNumber = $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+            $journalNumber = app(\App\Services\DocumentNumberService::class)->generateNext(
+                Journal::class,
+                'journal_number',
+                function($maxNumber) use ($prefix) {
+                    if ($maxNumber) {
+                        $lastNumber = intval(substr($maxNumber, -4));
+                        $newNumber = $lastNumber + 1;
+                    } else {
+                        $newNumber = 1;
+                    }
+                    return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+                },
+                function($query) use ($companyId, $prefix) {
+                    return $query->where('company_id', $companyId)
+                                 ->where('journal_number', 'like', $prefix . '%')
+                                 ->orderBy('journal_number', 'desc');
+                }
+            );
 
             // Create Header
             $journalData = [

@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Settings\Company;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Invoice extends Model
 {
-    use HasFactory, Filterable, \App\Traits\HasHybridTaxes, \App\Traits\BelongsToCompany;
+    use HasFactory, Filterable, \App\Traits\HasHybridTaxes, \App\Traits\BelongsToCompany, LogsActivity;
 
     protected $table = 'invoices';
 
@@ -22,6 +24,14 @@ class Invoice extends Model
         'isFCL' => 'boolean',
         'isFaktur' => 'boolean',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     public function modelFilter()
     {

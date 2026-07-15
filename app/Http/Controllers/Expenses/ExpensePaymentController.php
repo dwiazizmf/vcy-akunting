@@ -147,7 +147,26 @@ class ExpensePaymentController extends Controller
         try {
             DB::beginTransaction();
 
-            $paymentNumber = 'PAY-EXP-' . time();
+            $paymentNumber = app(\App\Services\DocumentNumberService::class)->generateNext(
+                \App\Models\Expenses\ExpensePayment::class,
+                'payment_number',
+                function($maxNumber) {
+                    $prefix = 'PAY-EXP-' . date('Ym') . '-';
+                    if ($maxNumber && str_starts_with($maxNumber, $prefix)) {
+                        $lastNumber = intval(substr($maxNumber, -4));
+                        $newNumber = $lastNumber + 1;
+                    } else {
+                        $newNumber = 1;
+                    }
+                    return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+                },
+                function($query) use ($companyId) {
+                    $prefix = 'PAY-EXP-' . date('Ym') . '-';
+                    return $query->where('company_id', $companyId)
+                                 ->where('payment_number', 'like', $prefix . '%')
+                                 ->orderBy('payment_number', 'desc');
+                }
+            );
 
             $payment = ExpensePayment::create([
                 'company_id' => $companyId,

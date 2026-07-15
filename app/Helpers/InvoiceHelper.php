@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use App\Models\Incomes\Invoice;
 use Carbon\Carbon;
+use App\Services\DocumentNumberService;
 
 class InvoiceHelper
 {
@@ -17,32 +18,37 @@ class InvoiceHelper
         $month = $parsedDate->month;
         $year = $parsedDate->year;
 
-        // Get max invoice number for this month and year that is exactly 5 digits
-        $lastInvoiceNumber = Invoice::whereYear('invoiced_at', $year)
-            ->whereMonth('invoiced_at', $month)
-            ->whereRaw('LENGTH(invoice_number) = 5')
-            ->max('invoice_number');
+        return app(DocumentNumberService::class)->generateNext(
+            Invoice::class,
+            'invoice_number',
+            function ($maxNumber) use ($month, $year) {
+                if ($maxNumber) {
+                    $nextNumber = intval($maxNumber) + 1;
+                } else {
+                    $nextNumber = 1;
+                }
 
-        if ($lastInvoiceNumber) {
-            $nextNumber = intval($lastInvoiceNumber) + 1;
-        } else {
-            $nextNumber = 1;
-        }
+                $paddedNumber = str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                
+                $romanMonths = [
+                    1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',
+                    7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'
+                ];
+                $romanMonth = $romanMonths[$month];
 
-        $paddedNumber = str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-        
-        $romanMonths = [
-            1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',
-            7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'
-        ];
-        $romanMonth = $romanMonths[$month];
+                $invoiceText = "{$paddedNumber}/{$romanMonth}/{$year}";
 
-        $invoiceText = "{$paddedNumber}/{$romanMonth}/{$year}";
-
-        return [
-            'invoice_number' => $paddedNumber,
-            'invoice_text' => $invoiceText
-        ];
+                return [
+                    'invoice_number' => $paddedNumber,
+                    'invoice_text' => $invoiceText
+                ];
+            },
+            function ($query) use ($month, $year) {
+                return $query->whereYear('invoiced_at', $year)
+                             ->whereMonth('invoiced_at', $month)
+                             ->whereRaw('LENGTH(invoice_number) = 5');
+            }
+        );
     }
 
     /**
@@ -57,7 +63,7 @@ class InvoiceHelper
 
         // Find the highest revision tag in the database for this base invoice
         $maxRevision = 0;
-        $existingInvoices = Invoice::where(function($q) use ($baseInvoiceNumber, $baseInvoiceText) {
+        $existingInvoices = Invoice::lockForUpdate()->where(function($q) use ($baseInvoiceNumber, $baseInvoiceText) {
             $q->where('invoice_number', 'like', $baseInvoiceNumber . '.R%')
               ->orWhere('invoice_text', 'like', $baseInvoiceText . '.R%')
               ->orWhere('invoice_number', $baseInvoiceNumber)

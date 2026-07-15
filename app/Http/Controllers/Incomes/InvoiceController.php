@@ -221,21 +221,6 @@ class InvoiceController extends Controller
         $grandTotal = $subtotal - $totalDiscount + $totalTax;
         
         $companyId = session('company_id') ?: 1;
-        $revisedInvoiceId = $validated['revised_invoice_id'] ?? null;
-        $invoiceData = null;
-        $rInvoiceText = null;
-
-        if ($revisedInvoiceId) {
-            $oldInvoice = Invoice::findOrFail($revisedInvoiceId);
-            $revData = InvoiceHelper::generateRevisionInvoiceData($oldInvoice->invoice_text, $oldInvoice->invoice_number);
-            $invoiceData = [
-                'invoice_number' => $revData['invoice_number'],
-                'invoice_text' => $revData['invoice_text'],
-            ];
-            $rInvoiceText = $oldInvoice->invoice_text;
-        } else {
-            $invoiceData = InvoiceHelper::generateInvoiceData($validated['invoiced_at']);
-        }
 
         $isFaktur = (bool)($validated['isFaktur'] ?? false);
         $noFakturInt = null;
@@ -279,9 +264,19 @@ class InvoiceController extends Controller
             }
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $companyId, $invoiceData, $rInvoiceText, $revisedInvoiceId, $subtotal, $grandTotal, $totalTax, $headerTaxes, $totalDiscount, $headerDiscounts, $isFaktur, $noFakturInt, $noFakturPajak) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $companyId, $subtotal, $grandTotal, $totalTax, $headerTaxes, $totalDiscount, $headerDiscounts, $isFaktur, $noFakturInt, $noFakturPajak) {
+            $revisedInvoiceId = $validated['revised_invoice_id'] ?? null;
+            $invoiceData = null;
+            $rInvoiceText = null;
+
             if ($revisedInvoiceId) {
                 $oldInvoice = Invoice::findOrFail($revisedInvoiceId);
+                $revData = InvoiceHelper::generateRevisionInvoiceData($oldInvoice->invoice_text, $oldInvoice->invoice_number);
+                $invoiceData = [
+                    'invoice_number' => $revData['invoice_number'],
+                    'invoice_text' => $revData['invoice_text'],
+                ];
+                $rInvoiceText = $oldInvoice->invoice_text;
                 
                 // If it was posted, delete its journal entries
                 if ($oldInvoice->isPosted) {
@@ -300,6 +295,8 @@ class InvoiceController extends Controller
                 }
                 
                 $oldInvoice->update(['invoice_status_code' => 'void']);
+            } else {
+                $invoiceData = InvoiceHelper::generateInvoiceData($validated['invoiced_at']);
             }
 
             $invoice = Invoice::create([
