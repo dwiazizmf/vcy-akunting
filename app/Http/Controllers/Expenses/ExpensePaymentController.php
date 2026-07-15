@@ -237,6 +237,29 @@ class ExpensePaymentController extends Controller
         }
     }
 
+    public function destroy(ExpensePayment $expense_payment)
+    {
+        if ($expense_payment->status === 'posted') {
+            return back()->withErrors(['error' => 'Payment is already posted. Harap unpost terlebih dahulu.']);
+        }
+
+        try {
+            DB::beginTransaction();
+            $expense_payment->update(['status' => 'void']);
+            
+            // Sync status to related expenses
+            foreach ($expense_payment->lines as $line) {
+                $this->journalService->updateExpensePaymentStatus($line->expense_id);
+            }
+            
+            DB::commit();
+            return back()->with('success', 'Payment voided successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Failed to void payment: ' . $e->getMessage()]);
+        }
+    }
+
     public function bulkPost(Request $request)
     {
         $request->validate([

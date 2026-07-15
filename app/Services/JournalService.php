@@ -622,7 +622,11 @@ class JournalService
         $expense = \App\Models\Expenses\Expense::find($expenseId);
         if (!$expense) return;
 
-        $totalPaid = \App\Models\Expenses\ExpensePaymentLine::where('expense_id', $expenseId)->sum('amount_paid');
+        $totalPaid = \App\Models\Expenses\ExpensePaymentLine::where('expense_id', $expenseId)
+            ->whereHas('expensePayment', function($q) {
+                $q->where('status', '!=', 'void');
+            })
+            ->sum('amount_paid');
         $amount    = (float) $expense->grand_total;
 
         $status = match(true) {

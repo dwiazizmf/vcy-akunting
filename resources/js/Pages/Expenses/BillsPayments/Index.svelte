@@ -103,6 +103,16 @@
         }
     }
 
+    async function voidPayment(id) {
+        if (await showConfirm('Are you sure you want to void this payment? This action cannot be undone.')) {
+            router.delete(`/expense-payments/${id}`, {
+                preserveScroll: true,
+                onSuccess: () => showToast('Payment voided successfully!', 'success'),
+                onError: (e) => showToast(Object.values(e)[0] || 'Failed to void payment.', 'error')
+            });
+        }
+    }
+
     $: hasActiveFilter = !!(search);
 </script>
 
@@ -209,10 +219,17 @@
                                 </Table.Cell>
                             {/if}
                             <Table.Cell class="text-right">
-                                {#if payment.status !== 'posted'}
-                                    <Button variant="outline" size="sm" class="h-7 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 cursor-pointer" on:click={() => postPayment(payment.id)}>Post</Button>
+                                {#if payment.status !== 'void'}
+                                    <div class="flex justify-end gap-2">
+                                        {#if payment.status !== 'posted'}
+                                            <Button variant="outline" size="sm" class="h-7 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 cursor-pointer" on:click={() => postPayment(payment.id)}>Post</Button>
+                                        {:else}
+                                            <Button variant="outline" size="sm" class="h-7 text-xs border-orange-500 text-orange-600 hover:bg-orange-50 cursor-pointer" on:click={() => unpostPayment(payment.id)}>Unpost</Button>
+                                        {/if}
+                                        <Button variant="outline" size="sm" class="h-7 text-xs border-red-500 text-red-600 hover:bg-red-50 {payment.status === 'posted' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={payment.status === 'posted'} title={payment.status === 'posted' ? "Harap Unpost terlebih dahulu" : "Void Payment"} on:click={() => { if(payment.status !== 'posted') voidPayment(payment.id); }}>Void</Button>
+                                    </div>
                                 {:else}
-                                    <Button variant="outline" size="sm" class="h-7 text-xs border-orange-500 text-orange-600 hover:bg-orange-50 cursor-pointer" on:click={() => unpostPayment(payment.id)}>Unpost</Button>
+                                    <span class="text-[10px] font-bold text-red-500 uppercase mt-1">VOIDED</span>
                                 {/if}
                             </Table.Cell>
                         </Table.Row>

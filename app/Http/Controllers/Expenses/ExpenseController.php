@@ -205,6 +205,14 @@ class ExpenseController extends Controller
 
     public function edit(Expense $expense)
     {
+        if ($expense->payment_status !== 'unpaid') {
+            return redirect()->route('expenses.index')->withErrors(['error' => 'Expense ini sudah memiliki pembayaran aktif. Harap batalkan pembayaran terlebih dahulu.']);
+        }
+
+        if ($expense->expense_status_code !== 'draft') {
+            return redirect()->route('expenses.index')->withErrors(['error' => 'Hanya expense dengan status Draft yang bisa diedit.']);
+        }
+
         $expense->load('items');
         $vendors = Vendor::all();
         $accounts = Account::where('enabled', true)->get();
@@ -239,6 +247,10 @@ class ExpenseController extends Controller
 
     public function unpost(Expense $expense)
     {
+        if ($expense->payment_status !== 'unpaid') {
+            return back()->withErrors(['error' => 'Expense ini sudah memiliki pembayaran aktif. Harap batalkan pembayaran terlebih dahulu.']);
+        }
+
         if ($expense->expense_status_code !== 'posted') {
             return back()->withErrors(['error' => 'Expense is not posted.']);
         }
@@ -248,6 +260,24 @@ class ExpenseController extends Controller
             return back()->with('success', 'Expense unposted successfully.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Failed to unpost expense: ' . $e->getMessage()]);
+        }
+    }
+
+    public function destroy(Expense $expense)
+    {
+        if ($expense->payment_status !== 'unpaid') {
+            return back()->withErrors(['error' => 'Expense ini sudah memiliki pembayaran aktif. Harap batalkan pembayaran terlebih dahulu.']);
+        }
+
+        if ($expense->expense_status_code === 'posted') {
+            return back()->withErrors(['error' => 'Expense sudah di-posting. Harap Unpost terlebih dahulu sebelum membatalkan.']);
+        }
+
+        try {
+            $expense->update(['expense_status_code' => 'void']);
+            return back()->with('success', 'Expense voided successfully.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to void expense: ' . $e->getMessage()]);
         }
     }
 

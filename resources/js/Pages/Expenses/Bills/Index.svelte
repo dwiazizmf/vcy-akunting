@@ -111,6 +111,16 @@
         }
     }
 
+    async function voidExpense(id) {
+        if (await showConfirm('Are you sure you want to void this expense? This action cannot be undone.')) {
+            router.delete(`/expenses/${id}`, {
+                preserveScroll: true,
+                onSuccess: () => showToast('Expense voided successfully!', 'success'),
+                onError: (e) => showToast(Object.values(e)[0] || 'Failed to void expense.', 'error')
+            });
+        }
+    }
+
     async function bulkPost() {
         if (selectedIds.length === 0) return;
         if (await showConfirm(`Are you sure you want to post ${selectedIds.length} expenses to ledger?`)) {
@@ -279,12 +289,17 @@
                             {/if}
                             <Table.Cell class="py-2.5 text-right">
                                 <div class="flex justify-end gap-2" on:click|stopPropagation>
-                                    {#if expense.expense_status_code === 'draft'}
-                                        <Button variant="outline" size="sm" class="h-7 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 cursor-pointer" on:click={() => postExpense(expense.id)}>Post</Button>
-                                    {:else if expense.expense_status_code === 'posted'}
-                                        <Button variant="outline" size="sm" class="h-7 text-xs border-orange-500 text-orange-600 hover:bg-orange-50 cursor-pointer" on:click={() => unpostExpense(expense.id)}>Unpost</Button>
+                                    {#if expense.expense_status_code !== 'void'}
+                                        {#if expense.expense_status_code === 'draft'}
+                                            <Button variant="outline" size="sm" class="h-7 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 cursor-pointer" on:click={() => postExpense(expense.id)}>Post</Button>
+                                        {:else if expense.expense_status_code === 'posted'}
+                                            <Button variant="outline" size="sm" class="h-7 text-xs border-orange-500 text-orange-600 hover:bg-orange-50 {expense.payment_status !== 'unpaid' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={expense.payment_status !== 'unpaid'} title={expense.payment_status !== 'unpaid' ? "Terdapat pembayaran aktif" : "Unpost"} on:click={() => { if(expense.payment_status === 'unpaid') unpostExpense(expense.id); }}>Unpost</Button>
+                                        {/if}
+                                        <Button variant="outline" size="sm" class="h-7 text-xs {expense.payment_status !== 'unpaid' || expense.expense_status_code !== 'draft' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={expense.payment_status !== 'unpaid' || expense.expense_status_code !== 'draft'} title={expense.payment_status !== 'unpaid' ? "Terdapat pembayaran aktif" : (expense.expense_status_code !== 'draft' ? "Harap Unpost terlebih dahulu" : "Edit")} on:click={() => { if(expense.payment_status === 'unpaid' && expense.expense_status_code === 'draft') viewExpense(expense.id); }}>Edit</Button>
+                                        <Button variant="outline" size="sm" class="h-7 text-xs border-red-500 text-red-600 hover:bg-red-50 {expense.payment_status !== 'unpaid' || expense.expense_status_code !== 'draft' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={expense.payment_status !== 'unpaid' || expense.expense_status_code !== 'draft'} title={expense.payment_status !== 'unpaid' ? "Terdapat pembayaran aktif" : (expense.expense_status_code !== 'draft' ? "Harap Unpost terlebih dahulu" : "Void")} on:click={() => { if(expense.payment_status === 'unpaid' && expense.expense_status_code === 'draft') voidExpense(expense.id); }}>Void</Button>
+                                    {:else}
+                                        <span class="text-[10px] font-bold text-red-500 uppercase mt-1">VOIDED</span>
                                     {/if}
-                                    <Button variant="outline" size="sm" class="h-7 text-xs cursor-pointer" on:click={() => viewExpense(expense.id)}>Edit</Button>
                                 </div>
                             </Table.Cell>
                         </Table.Row>

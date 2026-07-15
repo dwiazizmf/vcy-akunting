@@ -116,7 +116,7 @@ Route::post('expenses/{expense}/unpost', [ExpenseController::class, 'unpost'])->
 Route::post('expense-payments/bulk-post', [ExpensePaymentController::class, 'bulkPost'])->name('expense-payments.bulk-post');
 Route::post('expense-payments/{expense_payment}/post', [ExpensePaymentController::class, 'post'])->name('expense-payments.post');
 Route::post('expense-payments/{expense_payment}/unpost', [ExpensePaymentController::class, 'unpost'])->name('expense-payments.unpost');
-Route::resource('expense-payments', ExpensePaymentController::class)->only(['index', 'create', 'store']);
+Route::resource('expense-payments', ExpensePaymentController::class);
 
 Route::get('/customers', function (Illuminate\Http\Request $request) {
     $search = $request->input('search', '');
