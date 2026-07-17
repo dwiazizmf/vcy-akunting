@@ -21,6 +21,15 @@ trait BelongsToCompany
                 $builder->where("{$table}.company_id", $companyId);
             }
         });
+
+        static::creating(function ($model) {
+            if (empty($model->company_id)) {
+                $companyId = session('company_id') ?: (Company::where('enabled', 1)->first()?->id ?? null);
+                if ($companyId !== 'all') {
+                    $model->company_id = $companyId;
+                }
+            }
+        });
     }
 
     /**

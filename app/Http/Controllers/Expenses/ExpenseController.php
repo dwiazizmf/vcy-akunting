@@ -57,6 +57,7 @@ class ExpenseController extends Controller
 
         $paginator->getCollection()->transform(function ($expense) {
             $expense->company_name = $expense->company?->name ?? '-';
+            $expense->is_locked = \App\Helpers\PeriodLockHelper::isLocked($expense->expense_date);
             return $expense;
         });
 
@@ -112,7 +113,7 @@ class ExpenseController extends Controller
 
     public function store(Request $request)
     {
-        \App\Helpers\PeriodLockHelper::validateDate($request->date);
+        \App\Helpers\PeriodLockHelper::validateDate($request->expense_date);
         // Validation logic
         $validated = $request->validate([
             'expense_number' => 'required|string|max:191',
@@ -238,6 +239,8 @@ class ExpenseController extends Controller
         }
 
         try {
+            \App\Helpers\PeriodLockHelper::validateDate($expense->expense_date);
+            
             $this->journalService->postExpense($expense);
             return back()->with('success', 'Expense posted successfully.');
         } catch (\Exception $e) {
@@ -256,6 +259,8 @@ class ExpenseController extends Controller
         }
 
         try {
+            \App\Helpers\PeriodLockHelper::validateDate($expense->expense_date);
+            
             $this->journalService->unpostExpense($expense);
             return back()->with('success', 'Expense unposted successfully.');
         } catch (\Exception $e) {
@@ -274,6 +279,8 @@ class ExpenseController extends Controller
         }
 
         try {
+            \App\Helpers\PeriodLockHelper::validateDate($expense->expense_date);
+            
             $expense->update(['expense_status_code' => 'void']);
             return back()->with('success', 'Expense voided successfully.');
         } catch (\Exception $e) {
@@ -294,6 +301,7 @@ class ExpenseController extends Controller
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
             foreach ($expenses as $expense) {
+                \App\Helpers\PeriodLockHelper::validateDate($expense->expense_date);
                 $this->journalService->postExpense($expense);
                 $count++;
             }

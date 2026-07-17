@@ -745,6 +745,60 @@
                     ></span>
                     <a href="/ledger" class="w-full">General Ledger</a>
                 </DropdownMenu.Item>
+                <DropdownMenu.Item
+                    class={cn(
+                        "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold",
+                        pathname.startsWith("/reports/trial-balance")
+                            ? "bg-teal-50 text-teal-700"
+                            : "text-slate-700 hover:bg-slate-50",
+                    )}
+                >
+                    <span
+                        class={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            pathname.startsWith("/reports/trial-balance")
+                                ? "bg-teal-600"
+                                : "bg-slate-300",
+                        )}
+                    ></span>
+                    <a href="/reports/trial-balance" class="w-full">Trial Balance</a>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                    class={cn(
+                        "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold",
+                        pathname.startsWith("/reports/profit-and-loss")
+                            ? "bg-teal-50 text-teal-700"
+                            : "text-slate-700 hover:bg-slate-50",
+                    )}
+                >
+                    <span
+                        class={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            pathname.startsWith("/reports/profit-and-loss")
+                                ? "bg-teal-600"
+                                : "bg-slate-300",
+                        )}
+                    ></span>
+                    <a href="/reports/profit-and-loss" class="w-full">Profit & Loss</a>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                    class={cn(
+                        "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold",
+                        pathname.startsWith("/reports/balance-sheet")
+                            ? "bg-teal-50 text-teal-700"
+                            : "text-slate-700 hover:bg-slate-50",
+                    )}
+                >
+                    <span
+                        class={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            pathname.startsWith("/reports/balance-sheet")
+                                ? "bg-teal-600"
+                                : "bg-slate-300",
+                        )}
+                    ></span>
+                    <a href="/reports/balance-sheet" class="w-full">Balance Sheet</a>
+                </DropdownMenu.Item>
                 <DropdownMenu.Separator class="bg-slate-100 my-1" />
                 <DropdownMenu.Item
                     class={cn(
@@ -1095,6 +1149,27 @@
                             on:click={() => (mobileMenuOpen = false)}
                         >
                             • General Ledger
+                        </a>
+                        <a
+                            href="/reports/trial-balance"
+                            class="px-3 py-1.5 text-xs text-teal-250 hover:text-white rounded-md"
+                            on:click={() => (mobileMenuOpen = false)}
+                        >
+                            • Trial Balance
+                        </a>
+                        <a
+                            href="/reports/profit-and-loss"
+                            class="px-3 py-1.5 text-xs text-teal-250 hover:text-white rounded-md"
+                            on:click={() => (mobileMenuOpen = false)}
+                        >
+                            • Profit & Loss
+                        </a>
+                        <a
+                            href="/reports/balance-sheet"
+                            class="px-3 py-1.5 text-xs text-teal-250 hover:text-white rounded-md"
+                            on:click={() => (mobileMenuOpen = false)}
+                        >
+                            • Balance Sheet
                         </a>
                         <a
                             href="/settings/bank-accounts"

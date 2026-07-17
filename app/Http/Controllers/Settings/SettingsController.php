@@ -61,7 +61,10 @@ class SettingsController extends Controller
 
         $companyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
 
+        $isAdmin = $request->user()?->hasRole('admin') || $request->user()?->hasRole('super-admin');
+
         return Inertia::render('Settings/Index', [
+            'isAdmin'         => $isAdmin,
             'activeTab'       => $tab,
             'initialCompanies' => [
                 'data'       => $companies->items(),

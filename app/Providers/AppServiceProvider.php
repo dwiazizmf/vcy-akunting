@@ -3,6 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\Accounting\Journal;
+use App\Models\Accounting\Ledger;
+use App\Observers\JournalObserver;
+use App\Observers\LedgerObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Journal::observe(JournalObserver::class);
+        Ledger::observe(LedgerObserver::class);
     }
 }

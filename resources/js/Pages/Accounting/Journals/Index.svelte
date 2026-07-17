@@ -209,20 +209,25 @@
                 </Table.Cell>
               {/if}
               <Table.Cell class="text-right py-3">
-                <div on:click|stopPropagation class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div on:click|stopPropagation class="flex items-center justify-end gap-1 {journal.is_locked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity">
                   {#if journal.status === 'draft'}
-                    <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-teal-600 cursor-pointer" title="Post Journal" on:click={() => updateStatus(journal.id, 'posted')}>
+                    <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-teal-600 {journal.is_locked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={journal.is_locked} title={journal.is_locked ? 'Periode Terkunci' : 'Post Journal'} on:click={() => { if(!journal.is_locked) updateStatus(journal.id, 'posted'); }}>
                       <CheckCircle size={16} />
                     </Button>
                   {/if}
                   {#if journal.status !== 'void'}
-                    <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-red-600 cursor-pointer" title="Void Journal" on:click={() => updateStatus(journal.id, 'void')}>
+                    <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-red-600 {journal.is_locked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={journal.is_locked} title={journal.is_locked ? 'Periode Terkunci' : 'Void Journal'} on:click={() => { if(!journal.is_locked) updateStatus(journal.id, 'void'); }}>
                       <XCircle size={16} />
                     </Button>
                   {/if}
                   <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-blue-600 cursor-pointer" title="Detail" on:click={() => router.get(`/journals/${journal.id}`)}>
                     <ArrowRight size={16} />
                   </Button>
+                  {#if journal.is_locked}
+                    <div class="ml-1 flex items-center gap-1 text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200" title="Periode sudah terkunci">
+                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    </div>
+                  {/if}
                 </div>
               </Table.Cell>
             </Table.Row>

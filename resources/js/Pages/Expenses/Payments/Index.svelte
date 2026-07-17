@@ -119,13 +119,19 @@
               </Table.Cell>
               <Table.Cell class="flex items-center gap-1">
                 {#if p.status === 'posted'}
-                  <button class="p-1.5 rounded-md text-orange-400 hover:text-orange-600 hover:bg-orange-50 transition" on:click={() => unpostPayment(p.id)} title="Unpost Payment">
+                  <button class="p-1.5 rounded-md text-orange-400 hover:text-orange-600 hover:bg-orange-50 transition {p.is_locked ? 'opacity-50 cursor-not-allowed' : ''}" disabled={p.is_locked} on:click={() => { if(!p.is_locked) unpostPayment(p.id); }} title={p.is_locked ? 'Periode Terkunci' : 'Unpost Payment'}>
                     <RefreshCw class="h-4 w-4" />
                   </button>
                 {/if}
                 <button class="p-1.5 rounded-md text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition" on:click={() => router.visit(`/payments/${p.id}`)} title="Lihat Detail">
                   <Eye class="h-4 w-4" />
                 </button>
+                {#if p.is_locked}
+                  <div class="ml-1 flex items-center gap-1 text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200" title="Periode sudah terkunci">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span class="text-[9px] font-bold uppercase">Locked</span>
+                  </div>
+                {/if}
               </Table.Cell>
             </Table.Row>
           {:else}

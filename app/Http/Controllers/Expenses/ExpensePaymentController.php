@@ -44,6 +44,7 @@ class ExpensePaymentController extends Controller
 
         $paginator->getCollection()->transform(function ($payment) {
             $payment->company_name = $payment->company?->name ?? '-';
+            $payment->is_locked = \App\Helpers\PeriodLockHelper::isLocked($payment->payment_date);
             return $payment;
         });
 
@@ -208,6 +209,8 @@ class ExpensePaymentController extends Controller
         }
 
         try {
+            \App\Helpers\PeriodLockHelper::validateDate($expense_payment->payment_date);
+            
             DB::beginTransaction();
             $this->journalService->postExpensePayment($expense_payment);
             $expense_payment->update(['status' => 'posted']);
@@ -226,6 +229,8 @@ class ExpensePaymentController extends Controller
         }
 
         try {
+            \App\Helpers\PeriodLockHelper::validateDate($expense_payment->payment_date);
+            
             DB::beginTransaction();
             $this->journalService->unpostExpensePayment($expense_payment);
             $expense_payment->update(['status' => 'draft']);
@@ -244,6 +249,8 @@ class ExpensePaymentController extends Controller
         }
 
         try {
+            \App\Helpers\PeriodLockHelper::validateDate($expense_payment->payment_date);
+            
             DB::beginTransaction();
             $expense_payment->update(['status' => 'void']);
             
@@ -273,6 +280,7 @@ class ExpensePaymentController extends Controller
         DB::beginTransaction();
         try {
             foreach ($payments as $payment) {
+                \App\Helpers\PeriodLockHelper::validateDate($payment->payment_date);
                 $this->journalService->postExpensePayment($payment);
                 $payment->update(['status' => 'posted']);
                 $count++;

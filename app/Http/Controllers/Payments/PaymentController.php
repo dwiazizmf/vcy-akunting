@@ -43,6 +43,7 @@ class PaymentController extends Controller
             'company_name'   => $p->company?->name ?? '-',
             'customer_name'  => $p->invoices->map(fn($pi) => $pi->invoice?->customer?->name)->filter()->unique()->implode(', '),
             'paid_at'        => $p->paid_at?->format('d M Y'),
+            'is_locked'      => \App\Helpers\PeriodLockHelper::isLocked($p->paid_at),
             'total_amount'   => $p->total_amount,
             'payment_method' => $p->payment_method,
             'bank_name'      => $p->bankAccount?->name ?? '-',
@@ -282,6 +283,8 @@ class PaymentController extends Controller
         }
 
         try {
+            \App\Helpers\PeriodLockHelper::validateDate($payment->paid_at);
+            
             $this->journalService->unpostPaymentJournal($payment);
             $payment->update(['status' => 'draft']);
             return back()->with('success', 'Berhasil membatalkan posting payment.');

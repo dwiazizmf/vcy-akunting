@@ -177,7 +177,7 @@ class JournalService
                 
             if ($journalId) {
                 // Delete ledgers first to be safe (softDeletes or hard deletes)
-                \App\Models\Accounting\Ledger::where('journal_id', $journalId)->forceDelete();
+                \App\Models\Accounting\Ledger::where('journal_id', $journalId)->get()->each->forceDelete();
                 Journal::where('id', $journalId)->forceDelete();
             }
 
@@ -367,7 +367,7 @@ class JournalService
 
         DB::transaction(function () use ($payment) {
             if ($payment->journal_id) {
-                \App\Models\Accounting\Ledger::where('journal_id', $payment->journal_id)->forceDelete();
+                \App\Models\Accounting\Ledger::where('journal_id', $payment->journal_id)->get()->each->forceDelete();
                 Journal::where('id', $payment->journal_id)->forceDelete();
             }
 
@@ -497,7 +497,7 @@ class JournalService
 
         DB::transaction(function () use ($expense) {
             if ($expense->journal_id) {
-                \App\Models\Accounting\Ledger::where('journal_id', $expense->journal_id)->forceDelete();
+                \App\Models\Accounting\Ledger::where('journal_id', $expense->journal_id)->get()->each->forceDelete();
                 Journal::where('id', $expense->journal_id)->forceDelete();
             }
 
@@ -605,7 +605,7 @@ class JournalService
 
         DB::transaction(function () use ($payment) {
             if ($payment->journal_id) {
-                \App\Models\Accounting\Ledger::where('journal_id', $payment->journal_id)->forceDelete();
+                \App\Models\Accounting\Ledger::where('journal_id', $payment->journal_id)->get()->each->forceDelete();
                 Journal::where('id', $payment->journal_id)->forceDelete();
             }
 

@@ -107,6 +107,11 @@ Route::resource('journals', JournalController::class)->except(['edit', 'update',
 
 Route::get('/ledger', [LedgerController::class, 'index'])->name('ledger.index');
 
+// Accounting Reports
+Route::get('reports/trial-balance', [\App\Http\Controllers\Accounting\ReportController::class, 'trialBalance'])->name('reports.trial-balance');
+Route::get('reports/profit-and-loss', [\App\Http\Controllers\Accounting\ReportController::class, 'profitAndLoss'])->name('reports.profit-and-loss');
+Route::get('reports/balance-sheet', [\App\Http\Controllers\Accounting\ReportController::class, 'balanceSheet'])->name('reports.balance-sheet');
+
 // Expenses Routes
 Route::resource('vendors', VendorController::class)->except(['show']);
 Route::post('expenses/bulk-post', [ExpenseController::class, 'bulkPost'])->name('expenses.bulk-post');

@@ -219,18 +219,25 @@
                                 </Table.Cell>
                             {/if}
                             <Table.Cell class="text-right">
-                                {#if payment.status !== 'void'}
-                                    <div class="flex justify-end gap-2">
+                                <div class="flex items-center justify-end gap-2">
+                                    {#if payment.status !== 'void'}
                                         {#if payment.status !== 'posted'}
-                                            <Button variant="outline" size="sm" class="h-7 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 cursor-pointer" on:click={() => postPayment(payment.id)}>Post</Button>
+                                            <Button variant="outline" size="sm" class="h-7 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 {payment.is_locked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={payment.is_locked} on:click={() => { if(!payment.is_locked) postPayment(payment.id); }} title={payment.is_locked ? "Periode Terkunci" : "Post"}>Post</Button>
                                         {:else}
-                                            <Button variant="outline" size="sm" class="h-7 text-xs border-orange-500 text-orange-600 hover:bg-orange-50 cursor-pointer" on:click={() => unpostPayment(payment.id)}>Unpost</Button>
+                                            <Button variant="outline" size="sm" class="h-7 text-xs border-orange-500 text-orange-600 hover:bg-orange-50 {payment.is_locked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={payment.is_locked} on:click={() => { if(!payment.is_locked) unpostPayment(payment.id); }} title={payment.is_locked ? "Periode Terkunci" : "Unpost"}>Unpost</Button>
                                         {/if}
-                                        <Button variant="outline" size="sm" class="h-7 text-xs border-red-500 text-red-600 hover:bg-red-50 {payment.status === 'posted' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={payment.status === 'posted'} title={payment.status === 'posted' ? "Harap Unpost terlebih dahulu" : "Void Payment"} on:click={() => { if(payment.status !== 'posted') voidPayment(payment.id); }}>Void</Button>
-                                    </div>
-                                {:else}
-                                    <span class="text-[10px] font-bold text-red-500 uppercase mt-1">VOIDED</span>
-                                {/if}
+                                        <Button variant="outline" size="sm" class="h-7 text-xs border-red-500 text-red-600 hover:bg-red-50 {payment.status === 'posted' || payment.is_locked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={payment.status === 'posted' || payment.is_locked} title={payment.is_locked ? "Periode Terkunci" : (payment.status === 'posted' ? "Harap Unpost terlebih dahulu" : "Void Payment")} on:click={() => { if(payment.status !== 'posted' && !payment.is_locked) voidPayment(payment.id); }}>Void</Button>
+                                    {:else}
+                                        <span class="text-[10px] font-bold text-red-500 uppercase mt-1">VOIDED</span>
+                                    {/if}
+
+                                    {#if payment.is_locked}
+                                        <div class="flex items-center justify-center gap-1 text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200" title="Periode sudah terkunci">
+                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                            <span class="text-[9px] font-bold uppercase">Locked</span>
+                                        </div>
+                                    {/if}
+                                </div>
                             </Table.Cell>
                         </Table.Row>
                     {/each}

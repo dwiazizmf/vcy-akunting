@@ -25,6 +25,7 @@
   export let initialDiscounts  = { data: [], pagination: {} };
   export let invoiceSetting    = {};
   export let accounts          = [];
+  export let isAdmin           = false;
 
   // ============================================================
   // STATE
@@ -553,15 +554,18 @@
     <!-- Tabs -->
     <div class="border-b border-slate-200">
       <div class="flex gap-0 -mb-px overflow-x-auto">
-        {#each [
-          { id: 'companies', label: 'Perusahaan', icon: Building2 },
-          { id: 'users', label: 'User & Role', icon: Users },
-          { id: 'invoice-setting', label: 'Setting Faktur', icon: FileText },
-          { id: 'taxes', label: 'Pajak', icon: Receipt },
-          { id: 'discounts', label: 'Diskon', icon: Percent },
-          { id: 'invoice-types', label: 'Tipe Invoice', icon: Tag },
-          { id: 'periods', label: 'Kunci Periode', icon: Lock }
-        ] as tab}
+        {#each (() => {
+          let menuItems = [
+            { id: 'companies', label: 'Perusahaan', icon: Building2 },
+            { id: 'users', label: 'User & Role', icon: Users },
+            { id: 'invoice-setting', label: 'Setting Faktur', icon: FileText },
+            { id: 'taxes', label: 'Pajak', icon: Receipt },
+            { id: 'discounts', label: 'Diskon', icon: Percent },
+            { id: 'invoice-types', label: 'Tipe Invoice', icon: Tag }
+          ];
+          if (isAdmin) menuItems.push({ id: 'periods', label: 'Kunci Periode', icon: Lock });
+          return menuItems;
+        })() as tab}
           <button
             id="tab-{tab.id}"
             class="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap

@@ -61,6 +61,7 @@ class InvoiceController extends Controller
                 'namaKapal'       => $inv->nama_kapal,
                 'tglKapBerangkat' => $inv->departure_date ? date('Y-m-d', strtotime($inv->departure_date)) : '-',
                 'invoiceDate'     => $inv->invoiced_at ? date('d M Y', strtotime($inv->invoiced_at)) : '-',
+                'is_locked'       => \App\Helpers\PeriodLockHelper::isLocked($inv->invoiced_at),
                 'dueDate'         => $inv->due_at ? date('d M Y', strtotime($inv->due_at)) : '-',
                 'noDokumenKirim'  => '3 Dokumen',
                 'noTitipInternal' => 'TI-' . str_pad($inv->id % 1000, 4, '0', STR_PAD_LEFT),
@@ -374,6 +375,8 @@ class InvoiceController extends Controller
         }
 
         try {
+            \App\Helpers\PeriodLockHelper::validateDate($invoice->invoiced_at);
+            
             $this->journalService->createInvoiceJournal($invoice);
             return back()->with('success', "Invoice {$invoice->invoice_text} berhasil diposting ke jurnal.");
         } catch (\Exception $e) {
@@ -471,6 +474,7 @@ class InvoiceController extends Controller
             }
 
             try {
+                \App\Helpers\PeriodLockHelper::validateDate($invoice->invoiced_at);
                 $this->journalService->createInvoiceJournal($invoice);
                 $successCount++;
             } catch (\Exception $e) {
@@ -506,6 +510,7 @@ class InvoiceController extends Controller
             return back()->with('error', 'Gagal membatalkan posting: ' . $e->getMessage());
         }
     }
+
 
     public function edit(Invoice $invoice)
     {

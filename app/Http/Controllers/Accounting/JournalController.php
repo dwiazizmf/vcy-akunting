@@ -46,6 +46,7 @@ class JournalController extends Controller
             $journal->total_debit = $journal->ledgers->sum('debit');
             $journal->total_credit = $journal->ledgers->sum('credit');
             $journal->company_name = $journal->company?->name ?? '-';
+            $journal->is_locked = \App\Helpers\PeriodLockHelper::isLocked($journal->date);
             return $journal;
         });
 
@@ -91,6 +92,8 @@ class JournalController extends Controller
             'lines.*.debit' => 'required|numeric|min:0',
             'lines.*.credit' => 'required|numeric|min:0',
         ]);
+        
+        \App\Helpers\PeriodLockHelper::validateDate($validated['date']);
 
         // Validation: Double Entry Must Balance
         $totalDebit = collect($validated['lines'])->sum('debit');
@@ -181,6 +184,8 @@ class JournalController extends Controller
         $validated = $request->validate([
             'status' => 'required|in:posted,void'
         ]);
+        
+        \App\Helpers\PeriodLockHelper::validateDate($journal->date);
         
         if ($journal->status === 'void') {
             return back()->with('error', 'Jurnal yang sudah void tidak dapat diubah.');
