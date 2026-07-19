@@ -13,6 +13,8 @@
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0",
+        "shuchkin/simplexlsx": "^1.1",
+        "shuchkin/simplexlsxgen": "^1.5",
         "spatie/laravel-activitylog": "^5.0",
         "spatie/laravel-permission": "^7.4",
         "tucker-eric/eloquentfilter": "^3.6"

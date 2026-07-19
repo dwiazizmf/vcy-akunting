@@ -4,29 +4,26 @@
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import * as Table from '$lib/components/ui/table';
-  import * as Select from '$lib/components/ui/select';
-  import {
-    Plus, Search, Pencil, Trash2, Save, X
-  } from 'lucide-svelte';
+  import { Plus, Search, Pencil, Trash2, Save, X } from 'lucide-svelte';
   import { showToast } from '../../../Stores/toast.js';
   import { showConfirm } from '../../../Stores/confirmStore.js';
   
-  import Pagination from '../../../Components/Pagination.svelte';
+  import FilterPanel from '../../../Components/FilterPanel.svelte';
+  import TableCard from '../../../Components/TableCard.svelte';
+  import ColumnToggle from '../../../Components/ColumnToggle.svelte';
+  import EmptyState from '../../../Components/EmptyState.svelte';
 
-  export let accounts = { data: [], links: [] };
+  export let accounts = [];
+  export let pagination = { total: 0, perPage: 25, currentPage: 1, lastPage: 1, from: 0, to: 0 };
+  export let categories = [];
   export let types = [];
   export let parentAccounts = [];
-  export let filters = { search: '', type_id: '' };
-
-  $: groupedAccounts = (accounts.data || []).reduce((acc, account) => {
-    const groupName = account.type ? `${account.type.category} - ${account.type.name}` : 'Lainnya';
-    if (!acc.has(groupName)) acc.set(groupName, []);
-    acc.get(groupName).push(account);
-    return acc;
-  }, new Map());
+  export let filters = { search: '', category: '', per_page: 25 };
 
   let search = filters.search || '';
-  let type_id = filters.type_id || '';
+  let category = filters.category || (categories.length > 0 ? categories[0] : 'Asset');
+  let perPage = Number(filters.per_page) || 25;
+
   let isModalOpen = false;
   let isEditing = false;
   let editingId = null;
@@ -40,30 +37,28 @@
     enabled: true
   });
 
-  let searchTimeout;
-  function handleSearch() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      applyFilters();
-    }, 300);
+  // Columns definition
+  let columns = [
+    { key: 'code', label: 'Kode', visible: true },
+    { key: 'name', label: 'Nama Akun', visible: true },
+    { key: 'type', label: 'Tipe', visible: true },
+    { key: 'parent', label: 'Induk', visible: true },
+    { key: 'status', label: 'Status', visible: true },
+  ];
+  $: colVisible = Object.fromEntries(columns.map(c => [c.key, c.visible]));
+
+  function applyFilter() {
+    router.get('/accounts', { search, category, per_page: perPage, page: 1 }, { preserveState: true, replace: true });
   }
 
-  function goToPage(page) {
-    if (page === accounts.current_page) return;
-    router.get('/accounts', { ...filters, page }, {
-      preserveState: true,
-      replace: true
-    });
+  function resetFilter() {
+    search = '';
+    applyFilter();
   }
 
-  function applyFilters() {
-    router.get('/accounts', { 
-      search, 
-      type_id 
-    }, {
-      preserveState: true,
-      replace: true
-    });
+  function selectCategory(cat) {
+    category = cat;
+    applyFilter();
   }
 
   function openCreateModal() {
@@ -97,7 +92,7 @@
           isModalOpen = false;
           showToast('Akun berhasil diperbarui', 'success');
         },
-        onError: (errors) => {
+        onError: () => {
           showToast('Gagal memperbarui akun', 'error');
         }
       });
@@ -107,7 +102,7 @@
           isModalOpen = false;
           showToast('Akun berhasil dibuat', 'success');
         },
-        onError: (errors) => {
+        onError: () => {
           showToast('Gagal membuat akun', 'error');
         }
       });
@@ -139,70 +134,89 @@
         <h2 class="text-2xl font-bold tracking-tight text-slate-900">Chart of Accounts</h2>
         <p class="text-sm text-slate-500">Kelola daftar akun akuntansi perusahaan</p>
       </div>
-      <Button on:click={openCreateModal} class="bg-teal-600 hover:bg-teal-700 text-white gap-2">
-        <Plus size={16} /> Tambah Akun
-      </Button>
+      <div class="flex items-center gap-3">
+        <ColumnToggle bind:columns={columns} />
+        <Button on:click={openCreateModal} class="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+          <Plus size={16} /> Tambah Akun
+        </Button>
+      </div>
     </div>
 
-    <!-- Filter Panel -->
-    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4">
-      <div class="relative w-full sm:w-72">
+    <!-- Category Tabs -->
+    <div class="border-b border-slate-200">
+      <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+        {#each categories as cat}
+          <button 
+            on:click={() => selectCategory(cat)}
+            class="whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors {category === cat ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}"
+          >
+            {cat}
+          </button>
+        {/each}
+      </nav>
+    </div>
+
+    <FilterPanel 
+      hasActiveFilter={search !== ''}
+      onApply={applyFilter}
+      onReset={resetFilter}
+    >
+      <div slot="inputs" class="relative w-full sm:w-72">
         <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
         <Input 
           type="text" 
           placeholder="Cari kode atau nama akun..." 
-          class="pl-9 h-10 w-full"
+          class="pl-9 h-9 w-full bg-white border-slate-200"
           bind:value={search}
-          on:input={handleSearch}
+          on:keydown={(e) => e.key === 'Enter' && applyFilter()}
         />
       </div>
-      
-      <div class="w-full sm:w-64">
-        <select 
-          class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          bind:value={type_id}
-          on:change={applyFilters}
-        >
-          <option value="">Semua Tipe Akun</option>
-          {#each types as type}
-            <option value={type.id}>{type.name} ({type.category})</option>
-          {/each}
-        </select>
-      </div>
-    </div>
+    </FilterPanel>
 
-    <!-- Table -->
-    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-      <div class="overflow-x-auto">
-        <Table.Root>
-          <Table.Header class="bg-slate-50 border-b border-slate-100">
-            <Table.Row>
-              <Table.Head class="w-[120px] font-semibold text-slate-700">Kode</Table.Head>
-              <Table.Head class="font-semibold text-slate-700">Nama Akun</Table.Head>
-              <Table.Head class="font-semibold text-slate-700">Perusahaan</Table.Head>
-              <Table.Head class="font-semibold text-slate-700">Tipe</Table.Head>
-              <Table.Head class="font-semibold text-slate-700">Kategori</Table.Head>
-              <Table.Head class="w-[100px] text-center font-semibold text-slate-700">Status</Table.Head>
+    <TableCard 
+      {pagination}
+      {perPage}
+      hasActiveFilter={search !== ''}
+      onChangePerPage={(e) => { perPage = e.target.value; applyFilter(); }}
+      onGoToPage={(p) => { router.get('/accounts', { search, category, per_page: perPage, page: p }, { preserveState: true, replace: true }) }}
+    >
+      <Table.Header class="bg-slate-50/80 border-b border-slate-200">
+        <Table.Row class="hover:bg-transparent">
+              {#if colVisible.code}<Table.Head class="w-[150px] font-semibold text-slate-700">Kode</Table.Head>{/if}
+              {#if colVisible.name}<Table.Head class="font-semibold text-slate-700">Nama Akun</Table.Head>{/if}
+              {#if colVisible.type}<Table.Head class="w-[200px] font-semibold text-slate-700">Tipe</Table.Head>{/if}
+              {#if colVisible.parent}<Table.Head class="w-[200px] font-semibold text-slate-700">Induk</Table.Head>{/if}
+              {#if colVisible.status}<Table.Head class="w-[100px] text-center font-semibold text-slate-700">Status</Table.Head>{/if}
               <Table.Head class="w-[100px] text-right font-semibold text-slate-700">Aksi</Table.Head>
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {#each [...groupedAccounts] as [groupName, groupAccounts]}
-              <Table.Row class="bg-slate-100 hover:bg-slate-100 border-y border-slate-200">
-                <Table.Cell colspan={7} class="font-semibold text-slate-800 py-3 px-4 shadow-sm">
-                  {groupName}
+            {#if accounts.length === 0}
+              <Table.Row>
+                <Table.Cell colspan={6} class="p-0 border-b-0">
+                  <EmptyState 
+                    icon={Search}
+                    title="Tidak ada data akun"
+                    description="Akun akuntansi untuk kategori {category} belum tersedia atau tidak cocok dengan pencarian Anda."
+                  />
                 </Table.Cell>
               </Table.Row>
-              {#each groupAccounts as account}
-                <Table.Row class="hover:bg-slate-50 transition-colors group">
-                  <Table.Cell class="font-medium text-slate-900 py-2">
+            {:else}
+              {#each accounts as account}
+              <Table.Row class="hover:bg-slate-50/60 transition-colors group border-b border-slate-100">
+                
+                {#if colVisible.code}
+                  <Table.Cell class="font-medium text-slate-900 py-3">
                     {#if account.parent_id}
-                      <span class="pl-4 text-slate-500">-</span> {account.code}
+                      <span class="pl-4 text-slate-400">-</span> {account.code}
                     {:else}
                       {account.code}
                     {/if}
                   </Table.Cell>
-                  <Table.Cell class="py-2">
+                {/if}
+
+                {#if colVisible.name}
+                  <Table.Cell class="py-3">
                     <div class="flex items-center gap-2">
                       <span class={account.parent_id ? 'text-slate-600' : 'font-medium text-slate-800'}>
                         {account.name}
@@ -214,58 +228,47 @@
                       {/if}
                     </div>
                   </Table.Cell>
-                  <Table.Cell class="py-2">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 whitespace-nowrap">
-                      {account.company_name}
-                    </span>
-                  </Table.Cell>
-                  <Table.Cell class="text-slate-600 py-2">{account.type?.name}</Table.Cell>
-                  <Table.Cell class="text-slate-600 py-2">{account.type?.category}</Table.Cell>
-                  <Table.Cell class="text-center py-2">
+                {/if}
+
+                {#if colVisible.type}
+                  <Table.Cell class="text-slate-600 py-3 text-sm">{account.type_name}</Table.Cell>
+                {/if}
+
+                {#if colVisible.parent}
+                  <Table.Cell class="text-slate-500 py-3 text-sm">{account.parent_name}</Table.Cell>
+                {/if}
+
+                {#if colVisible.status}
+                  <Table.Cell class="text-center py-3">
                     {#if account.enabled}
-                      <span class="inline-flex items-center px-2 py-1 rounded-full bg-teal-50 text-teal-700 text-xs font-medium ring-1 ring-inset ring-teal-600/20">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 text-xs font-medium ring-1 ring-inset ring-teal-600/20">
                         Aktif
                       </span>
                     {:else}
-                      <span class="inline-flex items-center px-2 py-1 rounded-full bg-slate-50 text-slate-600 text-xs font-medium ring-1 ring-inset ring-slate-500/20">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 text-xs font-medium ring-1 ring-inset ring-slate-500/20">
                         Nonaktif
                       </span>
                     {/if}
                   </Table.Cell>
-                  <Table.Cell class="text-right py-2">
-                    <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-teal-600" on:click={() => openEditModal(account)}>
-                        <Pencil size={14} />
+                {/if}
+
+                <Table.Cell class="text-right py-3">
+                  <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-full" on:click={() => openEditModal(account)}>
+                      <Pencil size={14} />
+                    </Button>
+                    {#if !account.system}
+                      <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-full" on:click={() => deleteAccount(account.id)}>
+                        <Trash2 size={14} />
                       </Button>
-                      {#if !account.system}
-                        <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50" on:click={() => deleteAccount(account.id)}>
-                          <Trash2 size={14} />
-                        </Button>
-                      {/if}
-                    </div>
-                  </Table.Cell>
-                </Table.Row>
-              {/each}
-            {:else}
-              <Table.Row>
-                <Table.Cell colspan={7} class="h-32 text-center text-slate-500">
-                  Tidak ada data akun yang ditemukan.
+                    {/if}
+                  </div>
                 </Table.Cell>
               </Table.Row>
             {/each}
-          </Table.Body>
-        </Table.Root>
-      </div>
-      
-      {#if accounts.last_page > 1}
-        <div class="border-t border-slate-100">
-          <Pagination 
-            pagination={{ currentPage: accounts.current_page, lastPage: accounts.last_page }}
-            onGoToPage={(p) => goToPage(p)}
-          />
-        </div>
-      {/if}
-    </div>
+          {/if}
+        </Table.Body>
+      </TableCard>
   </div>
 
   <!-- Modal Form -->
@@ -289,7 +292,7 @@
               <label for="type_id" class="text-sm font-medium leading-none">Tipe Akun</label>
               <select 
                 id="type_id"
-                class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                class="flex h-10 w-full items-center justify-between rounded-md border border-slate-300 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
                 bind:value={$form.type_id}
                 required
               >
@@ -305,7 +308,7 @@
               <label for="parent_id" class="text-sm font-medium leading-none">Sub-akun Dari (Opsional)</label>
               <select 
                 id="parent_id"
-                class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                class="flex h-10 w-full items-center justify-between rounded-md border border-slate-300 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
                 bind:value={$form.parent_id}
               >
                 <option value="">Tidak Ada (Akun Utama)</option>
@@ -320,19 +323,19 @@
 
           <div class="space-y-2">
             <label for="code" class="text-sm font-medium leading-none">Kode Akun</label>
-            <Input id="code" bind:value={$form.code} placeholder="Misal: 1-1010" required />
+            <Input id="code" bind:value={$form.code} placeholder="Misal: 1-1010" required class="border-slate-300 focus:border-teal-500 focus:ring-teal-500" />
             {#if $form.errors.code}<p class="text-xs text-red-500">{$form.errors.code}</p>{/if}
           </div>
 
           <div class="space-y-2">
             <label for="name" class="text-sm font-medium leading-none">Nama Akun</label>
-            <Input id="name" bind:value={$form.name} placeholder="Misal: Kas Kecil" required />
+            <Input id="name" bind:value={$form.name} placeholder="Misal: Kas Kecil" required class="border-slate-300 focus:border-teal-500 focus:ring-teal-500" />
             {#if $form.errors.name}<p class="text-xs text-red-500">{$form.errors.name}</p>{/if}
           </div>
           
           <div class="space-y-2">
             <label for="description" class="text-sm font-medium leading-none">Keterangan (Opsional)</label>
-            <Input id="description" bind:value={$form.description} placeholder="Keterangan fungsi akun..." />
+            <Input id="description" bind:value={$form.description} placeholder="Keterangan fungsi akun..." class="border-slate-300 focus:border-teal-500 focus:ring-teal-500" />
           </div>
 
           <div class="flex items-center gap-2 pt-2">
@@ -341,7 +344,7 @@
           </div>
 
           <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
-            <Button type="button" variant="outline" on:click={() => isModalOpen = false}>Batal</Button>
+            <Button type="button" variant="outline" class="border-slate-200" on:click={() => isModalOpen = false}>Batal</Button>
             <Button type="submit" disabled={$form.processing} class="bg-teal-600 hover:bg-teal-700 text-white gap-2">
               <Save size={16} /> Simpan Akun
             </Button>

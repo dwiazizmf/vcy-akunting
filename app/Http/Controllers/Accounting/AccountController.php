@@ -14,9 +14,15 @@ class AccountController extends Controller
     {
         $companyId = session('company_id') ?: 1;
         
+        $categories = AccountType::select('category')->distinct()->pluck('category')->toArray();
+        $category = $request->input('category') ?: ($categories[0] ?? 'Asset');
+
         $query = Account::with(['type', 'parent', 'company'])
             ->when($companyId !== 'all', function ($q) use ($companyId) {
                 return $q->where('company_id', $companyId);
+            })
+            ->whereHas('type', function($q) use ($category) {
+                $q->where('category', $category);
             });
             
         if ($request->filled('search')) {
@@ -27,27 +33,45 @@ class AccountController extends Controller
             });
         }
 
-        if ($request->filled('type_id')) {
-            $query->where('type_id', $request->input('type_id'));
-        }
-
-        $accounts = $query->orderBy('code')->paginate($request->input('per_page', 25))->withQueryString();
+        $perPage = $request->input('per_page', 25);
+        $paginator = $query->orderBy('code')->paginate($perPage)->withQueryString();
         
-        $accounts->getCollection()->transform(function ($account) {
-            $account->company_name = $account->company?->name ?? '-';
-            return $account;
+        $items = $paginator->map(function ($account) {
+            return [
+                'id'           => $account->id,
+                'code'         => $account->code,
+                'name'         => $account->name,
+                'type_name'    => $account->type?->name ?? '-',
+                'type_id'      => $account->type_id,
+                'parent_name'  => $account->parent?->name ?? '-',
+                'parent_id'    => $account->parent_id,
+                'description'  => $account->description,
+                'company_name' => $account->company?->name ?? '-',
+                'enabled'      => $account->enabled,
+                'system'       => $account->system,
+            ];
         });
         
         $types = AccountType::all();
         $parentAccounts = Account::where('company_id', $companyId)->orderBy('code')->get();
 
         return Inertia::render('Accounting/Accounts/Index', [
-            'accounts' => $accounts,
+            'accounts' => $items,
+            'pagination' => [
+                'total'       => $paginator->total(),
+                'perPage'     => $paginator->perPage(),
+                'currentPage' => $paginator->currentPage(),
+                'lastPage'    => $paginator->lastPage(),
+                'from'        => $paginator->firstItem() ?? 0,
+                'to'          => $paginator->lastItem() ?? 0,
+            ],
+            'categories' => $categories,
             'types' => $types,
             'parentAccounts' => $parentAccounts,
             'filters' => [
                 'search' => $request->input('search', ''),
-                'type_id' => $request->input('type_id', '')
+                'category' => $category,
+                'per_page' => $perPage,
             ]
         ]);
     }

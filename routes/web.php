@@ -546,6 +546,7 @@ Route::get('/titip-internal', [\App\Http\Controllers\Incomes\DocumentController:
 Route::get('/upload-no-faktur', function () {
     return Inertia::render('Incomes/UploadNoFaktur/Index');
 });
+Route::post('/upload-no-faktur', [\App\Http\Controllers\Incomes\UploadFakturController::class, 'store']);
 
 // =============================================
 // SETTINGS ROUTES

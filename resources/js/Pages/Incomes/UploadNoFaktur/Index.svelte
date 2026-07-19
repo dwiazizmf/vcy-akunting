@@ -1,32 +1,43 @@
 <script>
   import AppLayout from '../../../Layouts/AppLayout.svelte';
-  import { router } from '@inertiajs/svelte';
+  import { useForm, router } from '@inertiajs/svelte';
   import { Button } from '$lib/components/ui/button';
   import * as Card from '$lib/components/ui/card';
-  import { FileText, Save, X } from 'lucide-svelte';
+  import { FileText, Save, X, Loader2 } from 'lucide-svelte';
 
-  let selectedFile = null;
+  const form = useForm({
+    file: null,
+  });
 
   function handleFileChange(event) {
     const files = event.target.files;
     if (files.length > 0) {
-      selectedFile = files[0];
+      $form.file = files[0];
     } else {
-      selectedFile = null;
+      $form.file = null;
     }
   }
 
   function handleSave() {
-    if (!selectedFile) {
+    if (!$form.file) {
       alert('Silakan pilih file terlebih dahulu.');
       return;
     }
-    alert(`Mengupload file: ${selectedFile.name}`);
+    
+    $form.post('/upload-no-faktur', {
+      preserveScroll: true,
+      onSuccess: () => {
+        $form.file = null;
+        const fileInput = document.getElementById('file-upload');
+        if(fileInput) fileInput.value = '';
+      }
+    });
   }
 
   function handleCancel() {
-    selectedFile = null;
-    // Redirect or clear
+    $form.file = null;
+    const fileInput = document.getElementById('file-upload');
+    if(fileInput) fileInput.value = '';
     router.visit('/invoices');
   }
 </script>
@@ -72,6 +83,41 @@
             />
           </div>
         </div>
+
+        <div class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg max-w-md">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-xs font-semibold text-slate-800">Contoh Format Excel</h4>
+            <a 
+              href="/contoh_upload_faktur.xlsx" 
+              download 
+              class="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1 bg-teal-50 hover:bg-teal-100 px-2 py-1 rounded transition-colors"
+            >
+              <FileText class="h-3.5 w-3.5" />
+              Download File Contoh
+            </a>
+          </div>
+          <div class="border border-slate-200 rounded-md overflow-hidden">
+            <table class="w-full text-left text-[11px] text-slate-600 bg-white">
+              <thead class="border-b border-slate-200 font-semibold text-slate-700 bg-slate-50">
+                <tr>
+                  <th class="py-1.5 px-3">Kolom A (Invoice Text)</th>
+                  <th class="py-1.5 px-3 border-l border-slate-200">Kolom B (No Faktur)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr>
+                  <td class="py-1.5 px-3 font-medium">00001/VI/2026</td>
+                  <td class="py-1.5 px-3 border-l border-slate-100">010.000-26.12345678</td>
+                </tr>
+                <tr>
+                  <td class="py-1.5 px-3 font-medium">00002/VI/2026</td>
+                  <td class="py-1.5 px-3 border-l border-slate-100">010.000-26.12345679</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-2">* Pastikan baris ke-1 berisi Header/Judul kolom. Data akan dibaca mulai dari baris ke-2.</p>
+        </div>
       </div>
 
       <!-- Action Buttons -->
@@ -79,10 +125,16 @@
         <!-- Save Button (Classic Green) -->
         <Button
           on:click={handleSave}
-          class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2 flex items-center gap-1.5 shadow-sm h-9 rounded-md transition-colors"
+          disabled={$form.processing}
+          class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2 flex items-center gap-1.5 shadow-sm h-9 rounded-md transition-colors disabled:opacity-50"
         >
-          <Save class="h-3.5 w-3.5" />
-          Save
+          {#if $form.processing}
+            <Loader2 class="h-3.5 w-3.5 animate-spin" />
+            Menyimpan...
+          {:else}
+            <Save class="h-3.5 w-3.5" />
+            Save
+          {/if}
         </Button>
 
         <!-- Cancel Button -->

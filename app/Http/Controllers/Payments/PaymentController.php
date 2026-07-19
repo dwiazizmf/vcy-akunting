@@ -37,19 +37,47 @@ class PaymentController extends Controller
 
         $paginator = $query->paginate($perPage);
 
-        $items = $paginator->map(fn($p) => [
-            'id'             => $p->id,
-            'payment_number' => $p->payment_number,
-            'company_name'   => $p->company?->name ?? '-',
-            'customer_name'  => $p->invoices->map(fn($pi) => $pi->invoice?->customer?->name)->filter()->unique()->implode(', '),
-            'paid_at'        => $p->paid_at?->format('d M Y'),
-            'is_locked'      => \App\Helpers\PeriodLockHelper::isLocked($p->paid_at),
-            'total_amount'   => $p->total_amount,
-            'payment_method' => $p->payment_method,
-            'bank_name'      => $p->bankAccount?->name ?? '-',
-            'reference'      => $p->reference,
-            'status'         => $p->status,
-        ]);
+        // Fetch all unique account_ids from adjustments to prevent N+1
+        $allAccountIds = collect($paginator->items())
+            ->flatMap(fn($p) => $p->adjustments ?? [])
+            ->pluck('account_id')
+            ->filter()
+            ->unique();
+
+        $accounts = $allAccountIds->isEmpty() 
+            ? collect() 
+            : \App\Models\Accounting\Account::whereIn('id', $allAccountIds)->get()->keyBy('id');
+
+        $items = $paginator->map(function($p) use ($accounts) {
+            $adjs = $p->adjustments ?? [];
+            foreach ($adjs as &$adj) {
+                $acc = $accounts->get($adj['account_id'] ?? null);
+                $adj['account_name'] = $acc ? "{$acc->code} - {$acc->name}" : 'Unknown Account';
+            }
+
+            return [
+                'id'             => $p->id,
+                'payment_number' => $p->payment_number,
+                'company_name'   => $p->company?->name ?? '-',
+                'paid_at'        => $p->paid_at?->format('d M Y'),
+                'is_locked'      => \App\Helpers\PeriodLockHelper::isLocked($p->paid_at),
+                'total_amount'   => $p->total_amount,
+                'payment_method' => $p->payment_method,
+                'bank_name'      => $p->bankAccount?->name ?? '-',
+                'reference'      => $p->reference,
+                'status'         => $p->status,
+                'paid_invoices'  => $p->invoices->map(fn($pi) => [
+                    'id'             => $pi->id,
+                    'invoice_id'     => $pi->invoice_id,
+                    'invoice_number' => $pi->invoice?->invoice_number ?? '-',
+                    'invoice_text'   => $pi->invoice?->invoice_text ?: ($pi->invoice?->invoice_number ?? '-'),
+                    'customer_name'  => $pi->invoice?->customer_name ?? '-',
+                    'invoice_date'   => $pi->invoice?->invoiced_at ? \Carbon\Carbon::parse($pi->invoice->invoiced_at)->format('d M Y') : '-',
+                    'amount'         => $pi->allocated_amount,
+                ]),
+                'adjustments'    => $adjs,
+            ];
+        });
 
         return Inertia::render('Expenses/Payments/Index', [
             'payments'   => $items,
@@ -58,6 +86,8 @@ class PaymentController extends Controller
                 'perPage'     => $paginator->perPage(),
                 'currentPage' => $paginator->currentPage(),
                 'lastPage'    => $paginator->lastPage(),
+                'from'        => $paginator->firstItem() ?? 0,
+                'to'          => $paginator->lastItem() ?? 0,
             ],
             'filters' => ['search' => $search ?? '', 'per_page' => $perPage],
         ]);
@@ -69,10 +99,6 @@ class PaymentController extends Controller
         $customers = Customer::select('id', 'name')->orderBy('name')->get();
         
         $companyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
-        $taxes = \Illuminate\Support\Facades\DB::table('taxes')
-            ->where('enabled', true)
-            ->where('company_id', $companyId)
-            ->get();
 
         $accounts = \App\Models\Accounting\Account::where('company_id', $companyId)
             ->where('enabled', true)
@@ -81,7 +107,6 @@ class PaymentController extends Controller
         return Inertia::render('Expenses/Payments/Create', [
             'banks'     => $banks,
             'customers' => $customers,
-            'taxes'     => $taxes,
             'accounts'  => $accounts,
         ]);
     }
@@ -128,7 +153,6 @@ class PaymentController extends Controller
         \App\Helpers\PeriodLockHelper::validateDate($request->paid_at);
         $validated = $request->validate([
             'paid_at'         => 'required|date',
-            'tax_id'          => 'nullable|exists:taxes,id',
             'payment_method'  => 'required|string',
             'bank_account_id' => 'required|exists:bank_accounts,id',
             'reference'       => 'nullable|string',
@@ -180,8 +204,6 @@ class PaymentController extends Controller
                 'payment_number'     => $this->journalService->generatePaymentNumber(),
                 'paid_at'            => $validated['paid_at'],
                 'total_amount'       => $totalAmount,
-                'tax_id'             => null,
-                'tax_amount'         => 0,
                 'adjustments'        => $adjustments,
                 'payment_method'     => $validated['payment_method'],
                 'bank_account_id'    => $validated['bank_account_id'],
@@ -215,7 +237,7 @@ class PaymentController extends Controller
 
     public function show(Payment $payment)
     {
-        $payment->load(['bankAccount', 'tax', 'invoices.invoice.customer', 'journal.ledgers.account']);
+        $payment->load(['bankAccount', 'invoices.invoice.customer', 'journal.ledgers.account']);
 
         $allocations = $payment->invoices->map(fn($pi) => [
             'invoice_id'       => $pi->invoice_id,
@@ -249,8 +271,6 @@ class PaymentController extends Controller
                 'reference'      => $payment->reference,
                 'notes'          => $payment->notes,
                 'overpayment'    => (float) $payment->overpayment_amount,
-                'tax_amount'     => (float) $payment->tax_amount,
-                'tax_name'       => $payment->tax?->name,
                 'adjustments'    => $adjs,
                 'status'         => $payment->status,
             ],

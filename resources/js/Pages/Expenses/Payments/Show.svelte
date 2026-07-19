@@ -117,13 +117,6 @@
                 <td class="px-4 py-2 text-right text-sm font-semibold text-slate-700">{fmt(totalAllocated)}</td>
               </tr>
 
-              {#if payment.tax_amount > 0}
-                <tr class="border-t border-teal-200/50">
-                  <td class="px-4 py-2 text-sm text-teal-700 font-medium">PPN {payment.tax_name ? `(${payment.tax_name})` : ''} (Legacy)</td>
-                  <td class="px-4 py-2 text-right text-sm font-medium text-teal-700">+{fmt(payment.tax_amount)}</td>
-                </tr>
-              {/if}
-
               {#if payment.adjustments && payment.adjustments.length > 0}
                 {#each payment.adjustments as adj}
                   <tr class="border-t border-teal-200/50">
