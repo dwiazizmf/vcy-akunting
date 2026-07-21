@@ -191,6 +191,10 @@ class JournalController extends Controller
             return back()->with('error', 'Jurnal yang sudah void tidak dapat diubah.');
         }
         
+        if (!$journal->is_manual) {
+            return back()->with('error', 'Jurnal otomatis tidak dapat diubah secara manual. Silakan void dokumen terkait (Invoice/Pembayaran/dll).');
+        }
+        
         $journal->status = $validated['status'];
         
         if ($validated['status'] === 'posted') {

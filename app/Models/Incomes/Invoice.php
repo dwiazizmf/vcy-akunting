@@ -8,7 +8,7 @@ use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Settings\Company;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Invoice extends Model
 {
@@ -30,7 +30,7 @@ class Invoice extends Model
         return LogOptions::defaults()
             ->logAll()
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
     public function modelFilter()

@@ -72,7 +72,18 @@ class InvoiceController extends Controller
                 'statusCreated'   => $inv->create_on ?: '-',
                 'faktur'          => $inv->no_faktur_pajak ?? $inv->no_faktur_int ?? '-',
                 'bpb'             => $inv->isBpb ? 'Ya' : 'Tidak',
-                'items'           => $inv->items, // Passing items array
+                'items'           => $inv->items->map(fn($item) => [
+                    'name'     => $item->name,
+                    'quantity' => $item->quantity,
+                    'price'    => $item->price,
+                    'total'    => $item->total,
+                ]),
+                'subtotal'        => (float) $inv->subtotal,
+                'discount_amount' => (float) ($inv->discount_amount ?? 0),
+                'tax_amount'      => (float) ($inv->tax_amount ?? 0),
+                'grand_total_raw' => (float) $inv->grand_total,
+                'taxes'           => $inv->header_tax_details ?? [],
+                'discounts'       => $inv->header_discount_details ?? [],
                 'documents'       => $inv->documents->map(function ($doc) {
                     return [
                         'id'      => $doc->id,
@@ -210,9 +221,10 @@ class InvoiceController extends Controller
 
         $headerDiscounts = collect($validated['header_discount_details'] ?? [])->map(function ($discount) {
             return [
-                'name' => $discount['name'] ?? 'Unknown Discount',
-                'rate' => (float) ($discount['rate'] ?? 0),
-                'amount' => (float) ($discount['amount'] ?? 0),
+                'discount_id' => $discount['discount_id'] ?? $discount['id'] ?? null, // preserve id for COA lookup
+                'name'        => $discount['name'] ?? 'Unknown Discount',
+                'rate'        => (float) ($discount['rate'] ?? 0),
+                'amount'      => (float) ($discount['amount'] ?? 0),
             ];
         })->toArray();
         $totalDiscount = 0;
@@ -608,9 +620,10 @@ class InvoiceController extends Controller
 
         $headerDiscounts = collect($validated['header_discount_details'] ?? [])->map(function ($discount) {
             return [
-                'name' => $discount['name'] ?? 'Unknown Discount',
-                'rate' => (float) ($discount['rate'] ?? 0),
-                'amount' => (float) ($discount['amount'] ?? 0),
+                'discount_id' => $discount['discount_id'] ?? $discount['id'] ?? null,
+                'name'        => $discount['name'] ?? 'Unknown Discount',
+                'rate'        => (float) ($discount['rate'] ?? 0),
+                'amount'      => (float) ($discount['amount'] ?? 0),
             ];
         })->toArray();
         $totalDiscount = 0;

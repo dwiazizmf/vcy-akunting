@@ -119,6 +119,7 @@ class PaymentController extends Controller
         $customerId = $request->query('customer_id');
 
         $query = Invoice::with('customer')
+            ->where('invoice_status_code', 'posted')
             ->whereIn('payment_status', ['unpaid', 'partial']);
 
         if ($customerId) {
@@ -291,9 +292,25 @@ class PaymentController extends Controller
     public function destroy(Payment $payment)
     {
         \App\Helpers\PeriodLockHelper::validateDate($payment->paid_at);
-        // TODO: Reverse journal before deleting
-        $payment->delete();
-        return redirect()->route('payments.index')->with('success', 'Pembayaran dihapus.');
+
+        // If it's still posted, unpost it first to clean up journals
+        if ($payment->status === 'posted') {
+            $this->journalService->unpostPaymentJournal($payment);
+        }
+
+        // Grab invoice IDs to recalculate their status after deletion
+        $invoiceIds = $payment->invoices()->pluck('invoice_id')->unique();
+
+        // Hard delete the allocations and the payment itself to avoid junk data
+        $payment->invoices()->delete();
+        $payment->forceDelete();
+
+        // Recalculate invoice payment_status
+        foreach ($invoiceIds as $invoiceId) {
+            $this->journalService->updateInvoicePaymentStatus($invoiceId);
+        }
+
+        return redirect()->route('payments.index')->with('success', 'Pembayaran berhasil dihapus permanen.');
     }
 
     public function unpost(Payment $payment)

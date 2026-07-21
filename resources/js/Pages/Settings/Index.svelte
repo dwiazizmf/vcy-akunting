@@ -1,6 +1,7 @@
 <script>
   import AppLayout from '../../Layouts/AppLayout.svelte';
   import CoaSelect from '../../Components/CoaSelect.svelte';
+  import { router } from '@inertiajs/svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import * as Card from '$lib/components/ui/card';
@@ -9,7 +10,7 @@
     Building2, Users, FileText, Receipt, Settings, Search, Plus,
     Pencil, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Save, X, AlertCircle, CheckCircle, Shield, Key,
-    Upload, Image, Tag, Percent, Lock, Unlock
+    Upload, Image, Tag, Percent, Lock, Unlock, Landmark
   } from 'lucide-svelte';
 
   // ============================================================
@@ -25,6 +26,8 @@
   export let initialDiscounts  = { data: [], pagination: {} };
   export let invoiceSetting    = {};
   export let accounts          = [];
+  export let banks             = [];
+  export let assetAccounts     = [];
   export let isAdmin           = false;
 
   // ============================================================
@@ -70,6 +73,50 @@
   let editingInvoiceType = null;
   let invoiceTypeForm = { name: '' };
 
+  // Bank Accounts
+  $: bankAccountsList = banks;
+  let showBankModal = false;
+  let isEditingBank = false;
+  let bankForm = { id: null, name: '', type: 'bank', bank_name: '', account_number: '', account_id: null, is_default: false, enabled: true };
+
+  function openCreateBank() {
+    bankForm = { id: null, name: '', type: 'bank', bank_name: '', account_number: '', account_id: null, is_default: false, enabled: true };
+    isEditingBank = false;
+    showBankModal = true;
+  }
+
+  function openEditBank(bank) {
+    bankForm = { ...bank, account_id: bank.account_id };
+    isEditingBank = true;
+    showBankModal = true;
+  }
+
+  function saveBank() {
+    if (!bankForm.name) { showToast('Nama bank wajib diisi', 'error'); return; }
+    if (!bankForm.account_id) { showToast('Pilih akun COA untuk bank ini', 'error'); return; }
+
+    const url = isEditingBank ? `/settings/bank-accounts/${bankForm.id}` : '/settings/bank-accounts';
+    const method = isEditingBank ? 'put' : 'post';
+
+    router[method](url, bankForm, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showToast(isEditingBank ? 'Bank account diperbarui!' : 'Bank account ditambahkan!', 'success');
+        showBankModal = false;
+      },
+      onError: (e) => showToast(Object.values(e)[0] || 'Gagal menyimpan.', 'error'),
+    });
+  }
+
+  async function deleteBank(id) {
+    if (await showConfirm('Hapus bank account ini?')) {
+      router.delete(`/settings/bank-accounts/${id}`, {
+        preserveScroll: true,
+        onSuccess: () => showToast('Bank account dihapus.', 'success'),
+      });
+    }
+  }
+
   // Users
   let users = initialUsers.data;
   let usersPag = initialUsers.pagination;
@@ -77,7 +124,7 @@
   let userLoading = false;
   let showUserModal = false;
   let editingUser = null;
-  let userForm = { name: '', email: '', password: '', roles: [], companies: [] };
+  let userForm = { name: '', username: '', email: '', password: '', roles: [], companies: [] };
 
   // Roles
   let roles = initialRoles;
@@ -126,31 +173,35 @@
      loadPeriods();
   }
 
-  // ============================================================
-  // CSRF TOKEN
-  // ============================================================
-  function getCsrf() {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-  }
+  import axios from 'axios';
 
   async function apiFetch(url, options = {}) {
-    const defaults = {
-      headers: {
-        'X-CSRF-TOKEN': getCsrf(),
-        'Accept': 'application/json',
-        ...options.headers,
-      },
-    };
-    if (!(options.body instanceof FormData)) {
-      defaults.headers['Content-Type'] = 'application/json';
-      if (options.body && typeof options.body === 'object') {
-        options.body = JSON.stringify(options.body);
+    try {
+      const axiosOptions = {
+        url,
+        method: options.method || 'GET',
+        headers: {
+          'Accept': 'application/json',
+          ...(options.headers || {})
+        },
+        data: options.body
+      };
+
+      if (!(options.body instanceof FormData)) {
+        if (options.body && typeof options.body === 'object') {
+          // Axios automatically serializes objects to JSON if we don't stringify
+          // but just to be safe, we let axios handle it
+        }
       }
+
+      const res = await axios(axiosOptions);
+      return res.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        throw error.response.data;
+      }
+      throw { message: error.message };
     }
-    const res = await fetch(url, { ...options, ...defaults, headers: { ...defaults.headers, ...(options.headers || {}) } });
-    const data = await res.json();
-    if (!res.ok) throw data;
-    return data;
   }
 
   // ============================================================
@@ -190,7 +241,10 @@
 
   async function saveCompany() {
     const fd = new FormData();
-    Object.entries(companyForm).forEach(([k, v]) => fd.append(k, v));
+    Object.entries(companyForm).forEach(([k, v]) => {
+      if (typeof v === 'boolean') fd.append(k, v ? 1 : 0);
+      else fd.append(k, v);
+    });
     if (companyLogoFile) fd.append('logo', companyLogoFile);
 
     try {
@@ -277,9 +331,9 @@
   function openDiscountModal(discount = null) {
     editingDiscount = discount;
     if (discount) {
-      discountForm = { name: discount.name, rate: discount.rate, type: discount.type, description: discount.description || '', enabled: discount.enabled };
+      discountForm = { name: discount.name, rate: discount.rate, type: discount.type, account_id: discount.account_id || '', description: discount.description || '', enabled: discount.enabled };
     } else {
-      discountForm = { name: '', rate: '', type: 'percentage', description: '', enabled: true };
+      discountForm = { name: '', rate: '', type: 'percentage', account_id: '', description: '', enabled: true };
     }
     showDiscountModal = true;
   }
@@ -388,9 +442,9 @@
     if (user) {
       const roleIds = roles.filter(r => user.roles.includes(r.name)).map(r => r.id);
       const compIds = user.companies.map(c => c.id);
-      userForm = { name: user.name, email: user.email, password: '', roles: roleIds, companies: compIds };
+      userForm = { name: user.name, username: user.username || '', email: user.email, password: '', roles: roleIds, companies: compIds };
     } else {
-      userForm = { name: '', email: '', password: '', roles: [], companies: [] };
+      userForm = { name: '', username: '', email: '', password: '', roles: [], companies: [] };
     }
     showUserModal = true;
   }
@@ -558,6 +612,7 @@
           let menuItems = [
             { id: 'companies', label: 'Perusahaan', icon: Building2 },
             { id: 'users', label: 'User & Role', icon: Users },
+            { id: 'bank-accounts', label: 'Bank & Kas', icon: Landmark },
             { id: 'invoice-setting', label: 'Setting Faktur', icon: FileText },
             { id: 'taxes', label: 'Pajak', icon: Receipt },
             { id: 'discounts', label: 'Diskon', icon: Percent },
@@ -990,6 +1045,7 @@
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Nama Pajak</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Rate</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Tipe</Table.Head>
+                <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Akun (COA)</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Keterangan</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Status</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500 text-right">Aksi</Table.Head>
@@ -1013,6 +1069,7 @@
                         {tax.type === 'percentage' ? 'Persentase' : 'Tetap'}
                       </span>
                     </Table.Cell>
+                    <Table.Cell class="py-1.5 px-3 text-xs font-mono text-slate-600">{tax.account_name || '-'}</Table.Cell>
                     <Table.Cell class="py-1.5 px-3 text-xs text-slate-500">{tax.description || '-'}</Table.Cell>
                     <Table.Cell class="py-1.5 px-3">
                       <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold
@@ -1075,6 +1132,7 @@
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Nama Diskon</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Rate</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Tipe</Table.Head>
+                <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Akun (COA)</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Keterangan</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500">Status</Table.Head>
                 <Table.Head class="py-2 px-3 text-xs font-semibold text-slate-500 text-right">Aksi</Table.Head>
@@ -1098,6 +1156,7 @@
                         {discount.type === 'percentage' ? 'Persentase' : 'Tetap'}
                       </span>
                     </Table.Cell>
+                    <Table.Cell class="py-1.5 px-3 text-xs font-mono text-slate-600">{discount.account_name || '-'}</Table.Cell>
                     <Table.Cell class="py-1.5 px-3 text-xs text-slate-500">{discount.description || '-'}</Table.Cell>
                     <Table.Cell class="py-1.5 px-3">
                       <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold
@@ -1206,6 +1265,80 @@
               </div>
             </div>
           {/if}
+        </Card.Content>
+      </Card.Root>
+    {/if}
+
+    <!-- Bank & Kas Tab -->
+    {#if currentTab === 'bank-accounts'}
+      <Card.Root class="shadow-sm border-slate-200">
+        <Card.Header class="bg-slate-50/50 border-b border-slate-100 pb-3">
+          <div class="flex items-center justify-between">
+            <div class="space-y-1">
+              <Card.Title class="text-base text-slate-800">Master Bank & Kas</Card.Title>
+              <Card.Description class="text-xs">Kelola rekening bank dan kas yang terhubung ke akun COA.</Card.Description>
+            </div>
+            <Button size="sm" class="bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 h-8 text-xs cursor-pointer" on:click={openCreateBank}>
+              <Plus class="h-3.5 w-3.5" /> Tambah Bank
+            </Button>
+          </div>
+        </Card.Header>
+        <Card.Content class="p-0">
+          <Table.Root>
+            <Table.Header class="bg-slate-50/50">
+              <Table.Row>
+                <Table.Head class="text-xs font-bold uppercase text-slate-500">Nama</Table.Head>
+                <Table.Head class="text-xs font-bold uppercase text-slate-500">Tipe</Table.Head>
+                <Table.Head class="text-xs font-bold uppercase text-slate-500">Bank / Kas</Table.Head>
+                <Table.Head class="text-xs font-bold uppercase text-slate-500">No. Rekening</Table.Head>
+                <Table.Head class="text-xs font-bold uppercase text-slate-500">COA Account</Table.Head>
+                <Table.Head class="text-xs font-bold uppercase text-slate-500 text-center">Default</Table.Head>
+                <Table.Head class="text-xs font-bold uppercase text-slate-500 text-center">Status</Table.Head>
+                <Table.Head class="w-20 text-right pr-4">Aksi</Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {#each bankAccountsList as bank}
+                <Table.Row class="hover:bg-slate-50/50">
+                  <Table.Cell class="font-semibold text-slate-800 text-xs py-2.5">{bank.name}</Table.Cell>
+                  <Table.Cell class="py-2.5">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-medium {bank.type === 'bank' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}">
+                      {bank.type === 'bank' ? 'Bank' : 'Kas'}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell class="text-slate-600 text-xs py-2.5">{bank.bank_name || '-'}</Table.Cell>
+                  <Table.Cell class="font-mono text-xs text-slate-500 py-2.5">{bank.account_number || '-'}</Table.Cell>
+                  <Table.Cell class="text-xs text-slate-600 py-2.5">{bank.account_name}</Table.Cell>
+                  <Table.Cell class="text-center py-2.5">
+                    {#if bank.is_default}
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700">Default</span>
+                    {/if}
+                  </Table.Cell>
+                  <Table.Cell class="text-center py-2.5">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-medium {bank.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+                      {bank.enabled ? 'Aktif' : 'Nonaktif'}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell class="py-2.5 text-right pr-4">
+                    <div class="flex items-center gap-1 justify-end">
+                      <button class="p-1 rounded text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition cursor-pointer" on:click={() => openEditBank(bank)} title="Edit">
+                        <Pencil class="h-3.5 w-3.5" />
+                      </button>
+                      <button class="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer" on:click={() => deleteBank(bank.id)} title="Hapus">
+                        <Trash2 class="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              {:else}
+                <Table.Row>
+                  <Table.Cell colspan={8} class="text-center py-10 text-xs text-slate-400">
+                    Belum ada bank/kas. Klik "Tambah Bank" untuk mulai.
+                  </Table.Cell>
+                </Table.Row>
+              {/each}
+            </Table.Body>
+          </Table.Root>
         </Card.Content>
       </Card.Root>
     {/if}
@@ -1416,6 +1549,10 @@
         </div>
       </div>
       <div class="space-y-1.5">
+        <label class="text-xs font-medium">Akun Diskon (COA)</label>
+        <CoaSelect bind:value={discountForm.account_id} options={accounts} placeholder="Pilih Akun Diskon..." />
+      </div>
+      <div class="space-y-1.5">
         <label class="text-xs font-medium">Keterangan</label>
         <Input bind:value={discountForm.description} placeholder="Keterangan opsional" class="h-8 text-xs border-slate-200" />
       </div>
@@ -1449,9 +1586,13 @@
           <Input bind:value={userForm.name} placeholder="Nama Lengkap" class="h-8 text-xs border-slate-200" />
         </div>
         <div class="space-y-1.5">
+          <label class="text-xs font-medium">Username <span class="text-rose-500">*</span></label>
+          <Input bind:value={userForm.username} placeholder="Username Login" class="h-8 text-xs border-slate-200" />
+        </div>
+      </div>
+      <div class="space-y-1.5">
           <label class="text-xs font-medium">Email <span class="text-rose-500">*</span></label>
           <Input bind:value={userForm.email} type="email" placeholder="email@domain.com" class="h-8 text-xs border-slate-200" />
-        </div>
       </div>
       <div class="space-y-1.5">
         <label class="text-xs font-medium">{editingUser ? 'Password Baru (kosongkan jika tidak diubah)' : 'Password *'}</label>
@@ -1557,6 +1698,63 @@
     <div class="modal-ftr">
       <Button variant="outline" class="h-8 text-xs border-slate-200" on:click={() => showInvoiceTypeModal = false}>Batal</Button>
       <Button class="h-8 text-xs bg-teal-700 hover:bg-teal-800 gap-1.5" on:click={saveInvoiceType}>
+        <Save class="h-3.5 w-3.5" /> Simpan
+      </Button>
+    </div>
+  </div>
+</div>
+{/if}
+
+<!-- Bank Account Modal -->
+{#if showBankModal}
+<div class="modal-backdrop" on:click|self={() => showBankModal = false}>
+  <div class="modal-box modal-md">
+    <div class="modal-hdr">
+      <h3 class="text-sm font-semibold text-slate-800">{isEditingBank ? 'Edit Bank Account' : 'Tambah Bank Account'}</h3>
+      <button class="h-6 w-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400" on:click={() => showBankModal = false}><X class="h-4 w-4" /></button>
+    </div>
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="col-span-2 space-y-1.5">
+          <label class="text-xs font-medium">Nama <span class="text-rose-500">*</span></label>
+          <Input bind:value={bankForm.name} placeholder="Contoh: BCA Operasional" class="h-8 text-xs border-slate-200" />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-medium">Tipe <span class="text-rose-500">*</span></label>
+          <select bind:value={bankForm.type} class="w-full h-8 px-2 rounded-md border border-slate-200 bg-white text-xs outline-none focus:border-teal-500">
+            <option value="bank">Bank</option>
+            <option value="cash">Kas</option>
+          </select>
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-medium">Nama Bank</label>
+          <Input bind:value={bankForm.bank_name} placeholder="BCA, Mandiri, dll" class="h-8 text-xs border-slate-200" />
+        </div>
+        <div class="col-span-2 space-y-1.5">
+          <label class="text-xs font-medium">No. Rekening</label>
+          <Input bind:value={bankForm.account_number} placeholder="0123-456-789" class="h-8 text-xs border-slate-200" />
+        </div>
+        <div class="col-span-2 space-y-1.5">
+          <label class="text-xs font-medium">Akun COA <span class="text-rose-500">*</span></label>
+          <CoaSelect bind:value={bankForm.account_id} options={assetAccounts} placeholder="Pilih Akun..." />
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600">
+            <input type="checkbox" bind:checked={bankForm.is_default} class="rounded border-slate-300 text-teal-600 focus:ring-teal-500" />
+            Set sebagai default
+          </label>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600">
+            <input type="checkbox" bind:checked={bankForm.enabled} class="rounded border-slate-300 text-teal-600 focus:ring-teal-500" />
+            Aktif
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <Button variant="outline" class="h-8 text-xs border-slate-200" on:click={() => showBankModal = false}>Batal</Button>
+      <Button class="h-8 text-xs bg-teal-600 hover:bg-teal-700 gap-1.5 text-white" on:click={saveBank}>
         <Save class="h-3.5 w-3.5" /> Simpan
       </Button>
     </div>

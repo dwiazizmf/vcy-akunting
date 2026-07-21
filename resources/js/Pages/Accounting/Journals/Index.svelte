@@ -163,6 +163,9 @@
                   <div class="flex items-center gap-2">
                     <FileText size={14} class="text-slate-400" />
                     {journal.journal_number}
+                    {#if !journal.is_manual}
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-purple-100 text-purple-700" title="Jurnal Otomatis">AUTO</span>
+                    {/if}
                   </div>
                 </Table.Cell>
               {/if}
@@ -210,12 +213,12 @@
               {/if}
               <Table.Cell class="text-right py-3">
                 <div on:click|stopPropagation class="flex items-center justify-end gap-1 {journal.is_locked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity">
-                  {#if journal.status === 'draft'}
+                  {#if journal.status === 'draft' && journal.is_manual}
                     <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-teal-600 {journal.is_locked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={journal.is_locked} title={journal.is_locked ? 'Periode Terkunci' : 'Post Journal'} on:click={() => { if(!journal.is_locked) updateStatus(journal.id, 'posted'); }}>
                       <CheckCircle size={16} />
                     </Button>
                   {/if}
-                  {#if journal.status !== 'void'}
+                  {#if journal.status !== 'void' && journal.is_manual}
                     <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:text-red-600 {journal.is_locked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" disabled={journal.is_locked} title={journal.is_locked ? 'Periode Terkunci' : 'Void Journal'} on:click={() => { if(!journal.is_locked) updateStatus(journal.id, 'void'); }}>
                       <XCircle size={16} />
                     </Button>

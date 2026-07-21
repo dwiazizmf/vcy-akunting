@@ -11,7 +11,7 @@ use App\Models\Expenses\Vendor;
 use App\Models\Settings\BankAccount;
 use App\Models\Accounting\Journal;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Expense extends Model
 {
@@ -31,7 +31,7 @@ class Expense extends Model
         return LogOptions::defaults()
             ->logAll()
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
     public function vendor()

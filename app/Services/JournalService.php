@@ -92,12 +92,14 @@ class JournalService
                 'reference'      => $invoice->invoice_number,
                 'description'    => "Invoice: {$invoiceText} - {$invoice->customer_name}",
                 'status'         => 'posted',
+                'is_manual'      => false,
                 'posted_at'      => now(),
                 'posted_by'      => auth()->id(),
             ]);
 
-            $grandTotal = (float) $invoice->grand_total; // grand total (subtotal + tax)
-            $subtotal   = (float) $invoice->subtotal;
+            $grandTotal = (float) $invoice->grand_total; // grand total (subtotal - discount + tax)
+            $subtotal   = (float) $invoice->subtotal;     // raw subtotal before discount/tax
+            $discountTotal = (float) ($invoice->discount_amount ?? 0);
 
             // 2. DEBIT Customer COA (full grand total)
             Ledger::create([
@@ -112,7 +114,52 @@ class JournalService
                 'description'      => "Piutang - {$invoice->customer_name}",
             ]);
 
-            // 3. CREDIT Revenue Account (subtotal only)
+            // 3. Process discounts — if discount COA is set, debit to discount account,
+            //    otherwise reduce revenue credit directly.
+            $revenueCredit = $subtotal; // start full, will be reduced if no dedicated discount account
+            $headerDiscounts = is_array($invoice->header_discount_details) ? $invoice->header_discount_details : [];
+
+            foreach ($headerDiscounts as $discountDetail) {
+                $discountAmt = (float) ($discountDetail['amount'] ?? 0);
+                if ($discountAmt <= 0) continue;
+
+                $discountId = $discountDetail['discount_id'] ?? $discountDetail['id'] ?? null;
+                $discountRecord = null;
+
+                if ($discountId) {
+                    $discountRecord = \DB::table('discounts')
+                        ->where('id', $discountId)
+                        ->whereNotNull('account_id')
+                        ->first();
+                }
+                if (!$discountRecord) {
+                    $discountRecord = \DB::table('discounts')
+                        ->where('name', $discountDetail['name'] ?? '')
+                        ->whereNotNull('account_id')
+                        ->first();
+                }
+
+                if ($discountRecord?->account_id) {
+                    // Debit the dedicated discount/contra-revenue account
+                    Ledger::create([
+                        'company_id'       => $companyId,
+                        'journal_id'       => $journal->id,
+                        'account_id'       => $discountRecord->account_id,
+                        'contact_id'       => $customer->id,
+                        'ledgerable_type'  => Invoice::class,
+                        'ledgerable_id'    => $invoice->id,
+                        'debit'            => $discountAmt,
+                        'credit'           => 0,
+                        'description'      => ($discountDetail['name'] ?? 'Diskon') . " - {$invoiceText}",
+                    ]);
+                    // Revenue stays full because discount is separately accounted for
+                } else {
+                    // No COA for this discount → net it from revenue credit
+                    $revenueCredit -= $discountAmt;
+                }
+            }
+
+            // 4. CREDIT Revenue Account (net after discounts that have no dedicated account)
             Ledger::create([
                 'company_id'       => $companyId,
                 'journal_id'       => $journal->id,
@@ -121,29 +168,47 @@ class JournalService
                 'ledgerable_type'  => Invoice::class,
                 'ledgerable_id'    => $invoice->id,
                 'debit'            => 0,
-                'credit'           => $subtotal,
+                'credit'           => $revenueCredit,
                 'description'      => "Pendapatan - {$invoiceText}",
             ]);
 
-            // 4. CREDIT Tax accounts (from header_tax_details)
+
+            // 5. CREDIT Tax accounts (from header_tax_details)
             $headerTaxes = is_array($invoice->header_tax_details) ? $invoice->header_tax_details : [];
             foreach ($headerTaxes as $taxDetail) {
                 $taxAmount = (float) ($taxDetail['amount'] ?? 0);
                 if ($taxAmount <= 0) continue;
 
-                // Find tax account_id from taxes table by name or rate
-                $taxRecord = \DB::table('taxes')
-                    ->where('name', $taxDetail['name'] ?? '')
-                    ->orWhere('rate', $taxDetail['rate'] ?? 0)
-                    ->whereNotNull('account_id')
-                    ->first();
+                // Lookup tax COA: prefer by id, fallback by name
+                $taxId = $taxDetail['tax_id'] ?? $taxDetail['id'] ?? null;
+                $taxRecord = null;
 
-                $taxAccountId = $taxRecord?->account_id ?? $invoice->account_id; // fallback ke revenue
+                if ($taxId) {
+                    $taxRecord = \DB::table('taxes')
+                        ->where('id', $taxId)
+                        ->whereNotNull('account_id')
+                        ->first();
+                }
+
+                if (!$taxRecord) {
+                    // Fallback: search by exact name, no orWhere to avoid ambiguity
+                    $taxRecord = \DB::table('taxes')
+                        ->where('name', $taxDetail['name'] ?? '')
+                        ->whereNotNull('account_id')
+                        ->first();
+                }
+
+                if (!$taxRecord?->account_id) {
+                    throw new \RuntimeException(
+                        "Pajak [{$taxDetail['name']}] belum memiliki Akun COA. "
+                        . "Silakan atur COA pajak di menu Settings > Pajak sebelum posting."
+                    );
+                }
 
                 Ledger::create([
                     'company_id'       => $companyId,
                     'journal_id'       => $journal->id,
-                    'account_id'       => $taxAccountId,
+                    'account_id'       => $taxRecord->account_id,
                     'contact_id'       => $customer->id,
                     'ledgerable_type'  => Invoice::class,
                     'ledgerable_id'    => $invoice->id,
@@ -153,7 +218,7 @@ class JournalService
                 ]);
             }
 
-            // 5. Update invoice: mark as posted
+            // 6. Update invoice: mark as posted
             $invoice->update([
                 'isPosted'             => true,
                 'invoice_status_code'  => 'posted',
@@ -221,6 +286,7 @@ class JournalService
                 'reference'      => $payment->payment_number,
                 'description'    => "Pembayaran: {$payment->payment_number} - {$payment->customer_name}",
                 'status'         => 'posted',
+                'is_manual'      => false,
                 'posted_at'      => now(),
                 'posted_by'      => auth()->id(),
             ]);
@@ -415,21 +481,69 @@ class JournalService
                 'total_debit'    => $expense->grand_total,
                 'total_credit'   => $expense->grand_total,
                 'status'         => 'posted',
+                'is_manual'      => false,
             ]);
 
-            // DEBIT Expense Accounts (from items)
+            // DEBIT Expense Accounts (from items) — amount only, tax is debited separately
             foreach ($expense->items as $item) {
+                $itemAmount = (float) $item->amount;
+                $itemTaxAmount = (float) $item->tax_amount;
+
+                // Debit the expense/cost account with the net amount (before tax)
                 Ledger::create([
                     'company_id'  => $companyId,
                     'journal_id'  => $journal->id,
                     'account_id'  => $item->account_id,
-                    'contact_id'  => $expense->vendor_id, // can be null
+                    'contact_id'  => $expense->vendor_id,
                     'ledgerable_type' => \App\Models\Expenses\Expense::class,
                     'ledgerable_id'   => $expense->id,
-                    'debit'       => $item->total,
+                    'debit'       => $itemAmount,
                     'credit'      => 0,
                     'description' => $item->description,
                 ]);
+
+                // Debit the tax account if item has tax (PPN Masukan / Input Tax)
+                if ($itemTaxAmount > 0 && is_array($item->tax_details)) {
+                    foreach ($item->tax_details as $td) {
+                        $tdAmount = (float) ($td['amount'] ?? 0);
+                        if ($tdAmount <= 0) continue;
+
+                        $tdId = $td['id'] ?? $td['tax_id'] ?? null;
+                        $taxRecord = null;
+
+                        if ($tdId) {
+                            $taxRecord = \DB::table('taxes')
+                                ->where('id', $tdId)
+                                ->whereNotNull('account_id')
+                                ->first();
+                        }
+                        if (!$taxRecord) {
+                            $taxRecord = \DB::table('taxes')
+                                ->where('name', $td['name'] ?? '')
+                                ->whereNotNull('account_id')
+                                ->first();
+                        }
+
+                        if (!$taxRecord?->account_id) {
+                            throw new \RuntimeException(
+                                "Pajak [{$td['name']}] belum memiliki Akun COA. "
+                                . "Silakan atur COA pajak di menu Settings > Pajak sebelum posting."
+                            );
+                        }
+
+                        Ledger::create([
+                            'company_id'  => $companyId,
+                            'journal_id'  => $journal->id,
+                            'account_id'  => $taxRecord->account_id,
+                            'contact_id'  => $expense->vendor_id,
+                            'ledgerable_type' => \App\Models\Expenses\Expense::class,
+                            'ledgerable_id'   => $expense->id,
+                            'debit'       => $tdAmount,
+                            'credit'      => 0,
+                            'description' => ($td['name'] ?? 'Tax') . ' Masukan - ' . $expense->expense_number,
+                        ]);
+                    }
+                }
             }
 
             // CREDIT
@@ -522,6 +636,7 @@ class JournalService
                 'reference'      => $payment->payment_number,
                 'description'    => "Pembayaran Bill: " . $payment->payment_number,
                 'status'         => 'posted',
+                'is_manual'      => false,
             ]);
 
             $vendor = \App\Models\Expenses\Vendor::find($payment->vendor_id);

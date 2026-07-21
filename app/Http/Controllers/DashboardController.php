@@ -139,9 +139,9 @@ class DashboardController extends Controller
         });
 
         // If no data exists, fall back to some mock data to make sure dashboard doesn't look empty
-        if ($currentMonthRevenue == 0 && $currentMonthExpense == 0 && $recentInvoices->isEmpty()) {
-            return $this->renderMockDashboard();
-        }
+        // if ($currentMonthRevenue == 0 && $currentMonthExpense == 0 && $recentInvoices->isEmpty()) {
+        //     return $this->renderMockDashboard();
+        // }
 
         return Inertia::render('Dashboard/Index', [
             'stats' => [

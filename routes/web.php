@@ -36,6 +36,10 @@ use App\Http\Controllers\Expenses\ExpensePaymentController;
 |
 */
 
+Route::get('/', function () {
+    return redirect('/login');
+});
+
 Route::get('/login', function () {
     return Inertia::render('Auth/Login');
 })->name('login');

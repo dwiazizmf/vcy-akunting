@@ -4,7 +4,7 @@
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import * as Table from '$lib/components/ui/table';
-  import { Plus, Search, Eye, RefreshCw, CreditCard, ChevronDown, ChevronRight } from 'lucide-svelte';
+  import { Plus, Search, Eye, RefreshCw, CreditCard, ChevronDown, ChevronRight, Trash2 } from 'lucide-svelte';
   import { showConfirm } from '../../../Stores/confirmStore.js';
   import { showToast } from '../../../Stores/toast.js';
 
@@ -74,6 +74,16 @@
     }
   }
 
+  async function deletePayment(id, number) {
+    if (await showConfirm(`Hapus pembayaran ${number} secara permanen? Data yang dihapus tidak bisa dikembalikan.`)) {
+      router.delete(`/payments/${id}`, {
+        preserveScroll: true,
+        onSuccess: () => showToast('Pembayaran berhasil dihapus.', 'success'),
+        onError: (e) => showToast(Object.values(e)[0] || 'Gagal menghapus payment.', 'error'),
+      });
+    }
+  }
+
   const methodLabel = { cash: 'Tunai', transfer: 'Transfer', giro: 'Giro', cheque: 'Cek' };
   const methodColor = {
     cash: 'bg-amber-50 text-amber-700',
@@ -136,7 +146,7 @@
           {#if colVisible.bank}<Table.Head class="text-xs font-bold uppercase text-slate-500">Bank / Kas</Table.Head>{/if}
           {#if colVisible.reference}<Table.Head class="text-xs font-bold uppercase text-slate-500">Referensi</Table.Head>{/if}
           {#if colVisible.status}<Table.Head class="text-xs font-bold uppercase text-slate-500">Status</Table.Head>{/if}
-          <Table.Head class="w-20"></Table.Head>
+          <Table.Head class="w-24 text-right text-xs font-bold uppercase text-slate-500">Aksi</Table.Head>
         </Table.Row>
       </Table.Header>
       
@@ -213,6 +223,9 @@
                     <RefreshCw class="h-4 w-4" />
                   </button>
                 {/if}
+                <button class="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition {p.is_locked ? 'opacity-50 cursor-not-allowed' : ''}" disabled={p.is_locked} on:click={() => { if(!p.is_locked) deletePayment(p.id, p.payment_number); }} title={p.is_locked ? 'Periode Terkunci' : 'Hapus Payment'}>
+                  <Trash2 class="h-4 w-4" />
+                </button>
                 <button class="p-1.5 rounded-md text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition" on:click={() => router.visit(`/payments/${p.id}`)} title="Lihat Detail">
                   <Eye class="h-4 w-4" />
                 </button>

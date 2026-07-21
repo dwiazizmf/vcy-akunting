@@ -22,6 +22,7 @@ class UserController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('username', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             });
         }
@@ -32,6 +33,7 @@ class UserController extends Controller
             return [
                 'id'         => $user->id,
                 'name'       => $user->name,
+                'username'   => $user->username,
                 'email'      => $user->email,
                 'roles'      => $user->roles->pluck('name')->toArray(),
                 'companies'  => $user->companies->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->toArray(),
@@ -59,6 +61,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name'       => 'required|string|max:191',
+            'username'   => 'required|string|max:191|unique:users,username',
             'email'      => 'required|email|unique:users,email',
             'password'   => 'required|string|min:8',
             'roles'      => 'nullable|array',
@@ -69,6 +72,7 @@ class UserController extends Controller
 
         $user = User::create([
             'name'     => $validated['name'],
+            'username' => $validated['username'],
             'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
@@ -91,6 +95,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name'       => 'required|string|max:191',
+            'username'   => 'required|string|max:191|unique:users,username,' . $id,
             'email'      => 'required|email|unique:users,email,' . $id,
             'password'   => 'nullable|string|min:8',
             'roles'      => 'nullable|array',

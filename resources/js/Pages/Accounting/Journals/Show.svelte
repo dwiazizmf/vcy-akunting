@@ -57,6 +57,9 @@
         <div>
           <h2 class="text-2xl font-bold tracking-tight text-slate-900">
             Jurnal: {journal.journal_number}
+            {#if !journal.is_manual}
+              <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-700 align-middle" title="Jurnal Otomatis">AUTO</span>
+            {/if}
           </h2>
           <div class="flex items-center gap-2 mt-1">
             <span class="text-sm text-slate-500">Dibuat pada {formatDate(journal.created_at)}</span>
@@ -73,6 +76,11 @@
                 Void
               </span>
             {/if}
+            {#if !journal.is_manual}
+              <span class="text-xs text-slate-400 italic ml-2 border-l border-slate-200 pl-2">
+                Tidak dapat diubah manual
+              </span>
+            {/if}
           </div>
         </div>
       </div>
@@ -80,12 +88,12 @@
         <Button variant="outline" class="gap-2 bg-white" on:click={() => window.print()}>
           <Printer size={16} /> Cetak
         </Button>
-        {#if journal.status === 'draft'}
+        {#if journal.status === 'draft' && journal.is_manual}
           <Button class="bg-teal-600 hover:bg-teal-700 text-white gap-2" on:click={() => updateStatus('posted')}>
             <CheckCircle size={16} /> Post Jurnal
           </Button>
         {/if}
-        {#if journal.status !== 'void'}
+        {#if journal.status !== 'void' && journal.is_manual}
           <Button variant="outline" class="text-red-600 hover:text-red-700 hover:bg-red-50 gap-2 border-red-200" on:click={() => updateStatus('void')}>
             <XCircle size={16} /> Void Jurnal
           </Button>

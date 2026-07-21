@@ -18,6 +18,7 @@ class Tax extends Model
         'name',
         'rate',
         'type',
+        'account_id',
         'description',
         'enabled',
     ];
@@ -26,6 +27,11 @@ class Tax extends Model
         'rate'    => 'decimal:2',
         'enabled' => 'boolean',
     ];
+
+    public function account()
+    {
+        return $this->belongsTo(\App\Models\Accounting\Account::class);
+    }
 
     /**
      * Global scope: hanya tampilkan pajak yang aktif secara default.

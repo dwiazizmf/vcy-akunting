@@ -60,12 +60,32 @@ class SettingsController extends Controller
         $invoiceSetting = InvoiceSetting::getSetting();
 
         $companyId = session('company_id') ?: Company::where('enabled', 1)->first()?->id;
-
         $isAdmin = $request->user()?->hasRole('admin') || $request->user()?->hasRole('super-admin');
+
+        $banks = \App\Models\Settings\BankAccount::where('company_id', $companyId)->with('account')->get()->map(fn($b) => [
+            'id'             => $b->id,
+            'name'           => $b->name,
+            'type'           => $b->type,
+            'bank_name'      => $b->bank_name,
+            'account_number' => $b->account_number,
+            'account_id'     => $b->account_id,
+            'account_name'   => $b->account ? "{$b->account->code} - {$b->account->name}" : '-',
+            'is_default'     => $b->is_default,
+            'enabled'        => $b->enabled,
+        ]);
+
+        $assetAccountsQuery = Account::where('company_id', $companyId)
+            ->whereHas('type', fn($q) => $q->where('category', 'Asset'))
+            ->where('code', 'not like', '12%')
+            ->where('enabled', 1)
+            ->get(['id', 'code', 'name', 'parent_id']);
+        $assetAccounts = \App\Helpers\AccountHelper::formatAccountsList($assetAccountsQuery);
 
         return Inertia::render('Settings/Index', [
             'isAdmin'         => $isAdmin,
             'activeTab'       => $tab,
+            'banks'           => $banks,
+            'assetAccounts'   => $assetAccounts,
             'initialCompanies' => [
                 'data'       => $companies->items(),
                 'pagination' => [

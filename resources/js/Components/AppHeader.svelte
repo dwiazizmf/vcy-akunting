@@ -799,27 +799,7 @@
                     ></span>
                     <a href="/reports/balance-sheet" class="w-full">Balance Sheet</a>
                 </DropdownMenu.Item>
-                <DropdownMenu.Separator class="bg-slate-100 my-1" />
-                <DropdownMenu.Item
-                    class={cn(
-                        "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer font-semibold",
-                        pathname.startsWith("/settings/bank-accounts")
-                            ? "bg-teal-50 text-teal-700"
-                            : "text-slate-700 hover:bg-slate-50",
-                    )}
-                >
-                    <span
-                        class={cn(
-                            "w-1.5 h-1.5 rounded-full",
-                            pathname.startsWith("/settings/bank-accounts")
-                                ? "bg-teal-600"
-                                : "bg-slate-300",
-                        )}
-                    ></span>
-                    <a href="/settings/bank-accounts" class="w-full"
-                        >Master Bank & Kas</a
-                    >
-                </DropdownMenu.Item>
+
             </DropdownMenu.Content>
         </DropdownMenu.Root>
 
@@ -1171,13 +1151,7 @@
                         >
                             • Balance Sheet
                         </a>
-                        <a
-                            href="/settings/bank-accounts"
-                            class="px-3 py-1.5 text-xs text-teal-250 hover:text-white rounded-md"
-                            on:click={() => (mobileMenuOpen = false)}
-                        >
-                            • Master Bank & Kas
-                        </a>
+
                     </div>
                 {/if}
             </div>

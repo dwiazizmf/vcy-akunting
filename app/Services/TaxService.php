@@ -18,7 +18,9 @@ class TaxService
 
     /**
      * Parse and validate header tax details from JSON payload.
-     * Example expected format: [{"name": "PPN", "rate": 11, "amount": 11000}]
+     * Preserves tax_id / id so JournalService can do precise COA lookup.
+     *
+     * Expected format: [{id: 1, "name": "PPN", "rate": 11, "amount": 11000}]
      */
     public function parseHeaderTaxes(?array $headerTaxes): array
     {
@@ -26,11 +28,11 @@ class TaxService
             return [];
         }
 
-        // Basic validation or filtering can happen here
         return collect($headerTaxes)->map(function ($tax) {
             return [
-                'name' => $tax['name'] ?? 'Unknown Tax',
-                'rate' => (float) ($tax['rate'] ?? 0),
+                'tax_id' => $tax['tax_id'] ?? $tax['id'] ?? null, // preserve tax id for COA lookup
+                'name'   => $tax['name'] ?? 'Unknown Tax',
+                'rate'   => (float) ($tax['rate'] ?? 0),
                 'amount' => (float) ($tax['amount'] ?? 0),
             ];
         })->toArray();

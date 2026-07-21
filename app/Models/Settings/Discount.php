@@ -15,7 +15,13 @@ class Discount extends Model
         'name',
         'rate',
         'type',
+        'account_id',
         'description',
         'enabled',
     ];
+
+    public function account()
+    {
+        return $this->belongsTo(\App\Models\Accounting\Account::class);
+    }
 }

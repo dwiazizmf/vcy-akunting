@@ -10,7 +10,7 @@ use App\Models\Settings\User;
 use App\Models\Settings\BankAccount;
 use App\Models\Accounting\Journal;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Payment extends Model
 {
@@ -35,7 +35,7 @@ class Payment extends Model
         return LogOptions::defaults()
             ->logAll()
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
     public function invoices()

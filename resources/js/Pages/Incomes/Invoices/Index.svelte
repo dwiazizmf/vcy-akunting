@@ -88,8 +88,8 @@
         onSuccess: () => {
           showToast('Invoice berhasil divoid/dihapus.', 'success');
         },
-        onError: () => {
-          showToast('Gagal membatalkan invoice.', 'error');
+        onError: (e) => {
+          showToast(Object.values(e)[0] || 'Gagal membatalkan invoice.', 'error');
         }
       });
     }
@@ -613,6 +613,80 @@
                             </tr>
                           {/each}
                         </tbody>
+                        <!-- Summary footer: Subtotal, Discounts, Taxes, Grand Total -->
+                        <tfoot class="border-t-2 border-slate-200 bg-slate-50/50 text-xs">
+                          <!-- Subtotal -->
+                          <tr class="border-t border-slate-100">
+                            <td colspan="4" class="px-4 py-1.5 text-right text-slate-500 font-medium">Subtotal</td>
+                            <td class="px-4 py-1.5 text-right font-mono font-semibold text-slate-700">
+                              Rp {(inv.subtotal || 0).toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+
+                          <!-- Discounts (if any) -->
+                          {#if inv.discounts && inv.discounts.length > 0}
+                            {#each inv.discounts as disc}
+                              <tr class="border-t border-dashed border-orange-100">
+                                <td colspan="4" class="px-4 py-1 text-right text-orange-600 font-medium">
+                                  <span class="inline-flex items-center gap-1">
+                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                    Diskon — {disc.name}
+                                    {#if disc.rate > 0}
+                                      <span class="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">{disc.rate}%</span>
+                                    {/if}
+                                  </span>
+                                </td>
+                                <td class="px-4 py-1 text-right font-mono font-medium text-orange-600">
+                                  - Rp {(parseFloat(disc.amount)||0).toLocaleString('id-ID')}
+                                </td>
+                              </tr>
+                            {/each}
+                          {:else if inv.discount_amount > 0}
+                            <tr class="border-t border-dashed border-orange-100">
+                              <td colspan="4" class="px-4 py-1 text-right text-orange-600 font-medium">Diskon</td>
+                              <td class="px-4 py-1 text-right font-mono font-medium text-orange-600">
+                                - Rp {(inv.discount_amount || 0).toLocaleString('id-ID')}
+                              </td>
+                            </tr>
+                          {/if}
+
+                          <!-- Taxes (if any) -->
+                          {#if inv.taxes && inv.taxes.length > 0}
+                            {#each inv.taxes as tax}
+                              <tr class="border-t border-dashed border-blue-100">
+                                <td colspan="4" class="px-4 py-1 text-right text-blue-600 font-medium">
+                                  <span class="inline-flex items-center gap-1">
+                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    {tax.name}
+                                    {#if tax.rate > 0}
+                                      <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">{tax.rate}%</span>
+                                    {/if}
+                                  </span>
+                                </td>
+                                <td class="px-4 py-1 text-right font-mono font-medium text-blue-600">
+                                  + Rp {(parseFloat(tax.amount)||0).toLocaleString('id-ID')}
+                                </td>
+                              </tr>
+                            {/each}
+                          {:else if inv.tax_amount > 0}
+                            <tr class="border-t border-dashed border-blue-100">
+                              <td colspan="4" class="px-4 py-1 text-right text-blue-600 font-medium">Pajak</td>
+                              <td class="px-4 py-1 text-right font-mono font-medium text-blue-600">
+                                + Rp {(inv.tax_amount || 0).toLocaleString('id-ID')}
+                              </td>
+                            </tr>
+                          {/if}
+
+                          <!-- Grand Total -->
+                          <tr class="border-t-2 border-teal-200 bg-teal-50/60">
+                            <td colspan="4" class="px-4 py-2.5 text-right text-teal-800 font-bold text-[12px] uppercase tracking-wide">
+                              Total Tagihan
+                            </td>
+                            <td class="px-4 py-2.5 text-right font-mono font-bold text-teal-800 text-[13px]">
+                              Rp {(inv.grand_total_raw || inv.amount_raw || 0).toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+                        </tfoot>
                       </table>
                     </div>
                     {/if}

@@ -15,7 +15,7 @@ class TaxController extends Controller
         $page = (int) $request->input('page', 1);
         $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 25;
 
-        $query = Tax::query();
+        $query = Tax::with('account');
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -25,8 +25,14 @@ class TaxController extends Controller
 
         $paginator = $query->orderBy('id', 'asc')->paginate($perPage, ['*'], 'page', $page);
 
+        $taxes = $paginator->getCollection()->map(function ($tax) {
+            $data = $tax->toArray();
+            $data['account_name'] = $tax->account ? $tax->account->code . ' - ' . $tax->account->name : '-';
+            return $data;
+        });
+
         return response()->json([
-            'taxes'      => $paginator->items(),
+            'taxes'      => $taxes,
             'pagination' => [
                 'total'       => $paginator->total(),
                 'perPage'     => $paginator->perPage(),

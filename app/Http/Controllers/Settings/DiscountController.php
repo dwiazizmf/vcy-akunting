@@ -15,7 +15,7 @@ class DiscountController extends Controller
         $page = (int) $request->input('page', 1);
         $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 25;
 
-        $query = Discount::query();
+        $query = Discount::with('account');
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -25,8 +25,15 @@ class DiscountController extends Controller
 
         $paginator = $query->orderBy('id', 'asc')->paginate($perPage, ['*'], 'page', $page);
 
+        // Format to include account info
+        $discounts = $paginator->getCollection()->map(function ($discount) {
+            $data = $discount->toArray();
+            $data['account_name'] = $discount->account ? $discount->account->code . ' - ' . $discount->account->name : '-';
+            return $data;
+        });
+
         return response()->json([
-            'discounts'  => $paginator->items(),
+            'discounts'  => $discounts,
             'pagination' => [
                 'total'       => $paginator->total(),
                 'perPage'     => $paginator->perPage(),
@@ -45,6 +52,7 @@ class DiscountController extends Controller
             'name'        => 'required|string|max:100',
             'type'        => 'required|in:percentage,fixed',
             'rate'        => 'required|numeric|min:0|max:' . ($request->input('type') === 'percentage' ? '100' : '999999999999.99'),
+            'account_id'  => 'nullable|integer|exists:accounts,id',
             'description' => 'nullable|string',
             'enabled'     => 'boolean',
         ]);
@@ -65,13 +73,14 @@ class DiscountController extends Controller
             'name'        => 'required|string|max:100',
             'type'        => 'required|in:percentage,fixed',
             'rate'        => 'required|numeric|min:0|max:' . ($request->input('type') === 'percentage' ? '100' : '999999999999.99'),
+            'account_id'  => 'nullable|integer|exists:accounts,id',
             'description' => 'nullable|string',
             'enabled'     => 'boolean',
         ]);
 
         $discount->update($validated);
 
-        return response()->json(['success' => true, 'discount' => $discount->fresh()]);
+        return response()->json(['success' => true, 'discount' => $discount->fresh('account')]);
     }
 
     public function destroy($id)
