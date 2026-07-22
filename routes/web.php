@@ -169,23 +169,30 @@ Route::get('/customers', function (Illuminate\Http\Request $request) {
             'id' => $customer->id,
             'name' => $customer->name,
             'company_name' => $customer->company?->name,
-            'email' => 'N/A',
-            'phone' => 'N/A',
+            'address' => ($customer->address === 'NULL') ? '' : ($customer->address ?? ''),
+            'npwp' => ($customer->npwp === 'NULL') ? '' : ($customer->npwp ?? ''),
+            'reference' => ($customer->reference === 'NULL') ? '' : ($customer->reference ?? ''),
+            'account_id' => $customer->account_id,
             'unpaid' => $unpaidPerCustomer[$customer->id] ?? 0,
             'is_active' => (bool)$customer->enabled,
         ];
     });
 
-    // Calculate global total unpaid
-    $globalInvoices = \App\Models\Incomes\Invoice::whereIn('payment_status', ['unpaid', 'partial'])
+    // Calculate total unpaid for filtered customers
+    $filteredCustomerIds = (clone $query)->pluck('id');
+    $filteredInvoices = \App\Models\Incomes\Invoice::whereIn('customer_id', $filteredCustomerIds)
+        ->whereIn('payment_status', ['unpaid', 'partial'])
         ->where('invoice_status_code', 'posted')
         ->get(['id', 'grand_total']);
-    $globalPaid = \App\Models\Expenses\PaymentInvoice::whereIn('invoice_id', $globalInvoices->pluck('id'))
+    $filteredPaid = \App\Models\Expenses\PaymentInvoice::whereIn('invoice_id', $filteredInvoices->pluck('id'))
         ->sum('allocated_amount');
-    $globalUnpaid = $globalInvoices->sum('grand_total') - $globalPaid;
+    $filteredUnpaid = $filteredInvoices->sum('grand_total') - $filteredPaid;
+
+    $accounts = \App\Models\Accounting\Account::where('enabled', true)->get(['id', 'code', 'name']);
 
     return Inertia::render('Customers/Index', [
         'customers' => $items,
+        'accounts' => $accounts,
         'pagination' => [
             'total' => $paginator->total(),
             'perPage' => $paginator->perPage(),
@@ -195,10 +202,10 @@ Route::get('/customers', function (Illuminate\Http\Request $request) {
             'to' => $paginator->lastItem() ?: 0,
         ],
         'stats' => [
-            'total' => \App\Models\Incomes\Customer::count(),
-            'active' => \App\Models\Incomes\Customer::where('enabled', true)->count(),
-            'inactive' => \App\Models\Incomes\Customer::where('enabled', false)->count(),
-            'totalUnpaid' => $globalUnpaid
+            'total' => (clone $query)->count(),
+            'active' => (clone $query)->where('enabled', true)->count(),
+            'inactive' => (clone $query)->where('enabled', false)->count(),
+            'totalUnpaid' => $filteredUnpaid
         ],
         'filters' => [
             'search' => $search,
@@ -209,16 +216,20 @@ Route::get('/customers', function (Illuminate\Http\Request $request) {
 });
 
 Route::get('/customers/create', function () {
-    return Inertia::render('Customers/Create');
+    $accounts = \App\Models\Accounting\Account::where('enabled', true)->get(['id', 'code', 'name']);
+    return Inertia::render('Customers/Create', [
+        'accounts' => $accounts
+    ]);
 });
 
 Route::post('/customers', function (\Illuminate\Http\Request $request) {
     $validated = $request->validate([
         'name' => 'required|string|max:191',
         'address' => 'nullable|string',
-        'tax_number' => 'nullable|string', // mapped to npwp
-        'is_active' => 'boolean',          // mapped to enabled
+        'npwp' => 'nullable|string',
+        'is_active' => 'boolean',
         'reference' => 'nullable|string|max:191',
+        'account_id' => 'required|exists:accounts,id',
     ]);
     
     $company_id = session('company_id') ?: \App\Models\Settings\Company::where('enabled', 1)->first()?->id;
@@ -226,16 +237,17 @@ Route::post('/customers', function (\Illuminate\Http\Request $request) {
     \App\Models\Incomes\Customer::create([
         'name' => $validated['name'],
         'address' => $validated['address'] ?? null,
-        'npwp' => $validated['tax_number'] ?? null,
+        'npwp' => $validated['npwp'] ?? null,
         'enabled' => $validated['is_active'] ?? true,
         'reference' => $validated['reference'] ?? null,
+        'account_id' => $validated['account_id'],
         'company_id' => $company_id,
     ]);
     
     return redirect('/customers')->with('success', 'Customer created successfully.');
 });
 
-Route::get('/customers/{customer}', function (\App\Models\Customer $customer) {
+Route::get('/customers/{customer}', function (\App\Models\Incomes\Customer $customer) {
     // Calculate customer unpaid
     $invoices = \App\Models\Incomes\Invoice::where('customer_id', $customer->id)
         ->whereIn('payment_status', ['unpaid', 'partial'])
@@ -250,44 +262,49 @@ Route::get('/customers/{customer}', function (\App\Models\Customer $customer) {
         'customer' => [
             'id' => $customer->id,
             'name' => $customer->name,
-            'address' => $customer->address,
-            'npwp' => $customer->npwp,
+            'address' => $customer->address ?? '',
+            'npwp' => $customer->npwp ?? '',
             'enabled' => (bool)$customer->enabled,
-            'reference' => $customer->reference,
+            'reference' => $customer->reference ?? '',
             'unpaid' => $customerUnpaid,
+            'account_id' => $customer->account_id,
         ]
     ]);
 });
 
-Route::get('/customers/{customer}/edit', function (\App\Models\Customer $customer) {
-    // For edit page
+Route::get('/customers/{customer}/edit', function (\App\Models\Incomes\Customer $customer) {
+    $accounts = \App\Models\Accounting\Account::where('enabled', true)->get(['id', 'code', 'name']);
     return Inertia::render('Customers/Edit', [
         'customer' => [
             'id' => $customer->id,
             'name' => $customer->name,
-            'address' => $customer->address,
-            'tax_number' => $customer->npwp,
-            'is_active' => (bool)$customer->enabled,
-            'reference' => $customer->reference,
-        ]
+            'address' => $customer->address ?? '',
+            'npwp' => $customer->npwp ?? '',
+            'enabled' => (bool)$customer->enabled,
+            'reference' => $customer->reference ?? '',
+            'account_id' => $customer->account_id,
+        ],
+        'accounts' => $accounts
     ]);
 });
 
-Route::put('/customers/{customer}', function (\Illuminate\Http\Request $request, \App\Models\Customer $customer) {
+Route::put('/customers/{customer}', function (\Illuminate\Http\Request $request, \App\Models\Incomes\Customer $customer) {
     $validated = $request->validate([
         'name' => 'required|string|max:191',
         'address' => 'nullable|string',
-        'tax_number' => 'nullable|string',
+        'npwp' => 'nullable|string',
         'is_active' => 'boolean',
         'reference' => 'nullable|string|max:191',
+        'account_id' => 'required|exists:accounts,id',
     ]);
 
     $customer->update([
         'name' => $validated['name'],
         'address' => $validated['address'] ?? null,
-        'npwp' => $validated['tax_number'] ?? null,
+        'npwp' => $validated['npwp'] ?? null,
         'enabled' => $validated['is_active'] ?? true,
         'reference' => $validated['reference'] ?? null,
+        'account_id' => $validated['account_id'],
     ]);
 
     return redirect('/customers')->with('success', 'Customer updated successfully.');
