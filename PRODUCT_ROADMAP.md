@@ -1,7 +1,7 @@
-# Proyek VCY Accounting - Project Overview
+# Proyek VCY Accounting - Product Roadmap
 
 Dokumen ini berfungsi sebagai peta jalan dan spesifikasi fitur utama untuk VCY Accounting. Dokumentasi proyek dibagi menjadi tiga bagian terpisah:
-1. **Peta Jalan & Aturan Bisnis**: [project_overview.md](file:///home/dwiazizmf/work/vcy-accounting/project_overview.md) (File ini)
+1. **Peta Jalan & Aturan Bisnis**: [PRODUCT_ROADMAP.md](file:///home/dwiazizmf/work/vcy-accounting/PRODUCT_ROADMAP.md) (File ini)
 2. **Desain Tampilan & Interaksi Frontend**: [desain.md](file:///home/dwiazizmf/work/vcy-accounting/desain.md)
 3. **Desain Struktur Database PostgreSQL**: [database_desain.md](file:///home/dwiazizmf/work/vcy-accounting/database_desain.md)
 

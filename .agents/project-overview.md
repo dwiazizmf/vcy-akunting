@@ -224,3 +224,20 @@ Connection name: mysql (di .env)
 ```
 
 Session driver: **database** — pastikan tabel `sessions` ada, atau ganti ke `file`/`cookie`.
+
+---
+
+## 🔒 Aturan Bisnis & Logika Keuangan (Wajib Diikuti Kode)
+
+1. **Multi-Perusahaan**: Seluruh transaksi, COA, customer/vendor, dan laporan diisolasi secara ketat per `company_id` (tidak boleh bocor antar-perusahaan).
+2. **Keseimbangan Jurnal**: `SUM(journal_items.debit) === SUM(journal_items.credit)` pada setiap jurnal. Jika tidak seimbang, transaksi **WAJIB di-rollback**.
+3. **Pemisahan Status Dokumen vs Status Pembayaran**:
+   - **`status` (Status Dokumen)**: `draft` (belum diproses), `posted` (tervalidasi & dijurnal), `void` (dibatalkan).
+   - **`payment_status` (Status Pembayaran)**: `unpaid`, `partial`, `paid`.
+   - *Catatan:* Dokumen bisa berstatus `posted` dan `unpaid` secara bersamaan.
+4. **Alur Posting, Unposting, & Period Lock**:
+   - **Kunci Periode**: Jika periode di `list_posted_periode` dikunci (`closed`), transaksi tidak boleh di-edit, di-unpost, atau dihapus.
+   - **Unposting Tingkat Dokumen**: Unposting hanya mengubah `isPosted` menjadi `false`, status kembali ke `draft`, dan **hanya menghapus jurnal milik dokumen tersebut** (tidak merusak jurnal dokumen lain).
+   - **Cegat Hapus (Intercept Delete)**: Sistem menolak *Hard Delete* untuk transaksi terintegrasi API/cpanel; ubah status menjadi `void` dan terima revisi sebagai draft baru dengan *Revision Tag* (`INV-001.R1`, `INV-001.R2`).
+5. **Audit Trail**: Setiap perubahan data keuangan penting direkam menggunakan `spatie/laravel-activitylog` (`causer_id`, `event`, `old` vs `attributes`).
+
